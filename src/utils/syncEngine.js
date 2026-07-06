@@ -32,7 +32,7 @@ export function generateTSX(rootNodeId, nodesMap) {
 
     if (node.type === 'text' || node.type === 'button') {
       const textVal = node.text || '';
-      return `${indent}<${tag}${idAttr}${styleAttr}${classAttr}>"${textVal}"</${tag}>`;
+      return `${indent}<${tag}${idAttr}${styleAttr}${classAttr}>${textVal}</${tag}>`;
     }
 
     if (node.type === 'image') {
@@ -42,6 +42,23 @@ export function generateTSX(rootNodeId, nodesMap) {
 
     if (node.type === 'line') {
       return `${indent}<hr${idAttr}${styleAttr}${classAttr} />`;
+    }
+
+    if (node.type === 'shape') {
+      if (node.shapeKind === 'arrow') {
+        return `${indent}<div${idAttr}${styleAttr}${classAttr} role="presentation" />`;
+      }
+      return `${indent}<div${idAttr}${styleAttr}${classAttr} />`;
+    }
+
+    if (node.type === 'vector') {
+      const stroke = node.vectorKind === 'pencil' ? '#64748b' : '#2563eb';
+      const path = node.path || 'M 8 60 Q 40 10, 80 40';
+      return `${indent}<svg${idAttr} width="${node.style?.width || 140}" height="${node.style?.height || 80}" viewBox="0 0 140 80"><path d="${path}" fill="none" stroke="${stroke}" strokeWidth="2" /></svg>`;
+    }
+
+    if (node.type === 'comment') {
+      return `${indent}{/* Comment: ${(node.text || '').replace(/\*/g, '')} */}`;
     }
 
     const childrenJSX = (node.children || [])

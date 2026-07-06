@@ -8,6 +8,10 @@ export default function WorkspaceHeader({
   onFeedback,
   onShowAbout,
   onOpenInterviewGuide,
+  onOpenExportDeploy,
+  onOpenMarketingKit,
+  onOpenFigmaImport,
+  onOpenAI,
   onCopyLink,
   facilitatorActions
 }) {
@@ -60,7 +64,7 @@ export default function WorkspaceHeader({
                     onClick={() => { onFileChange(fileId); setFileOpen(false); }}
                   >
                     <span>{file.label}</span>
-                    {file.isPage && <span className="workspace-dropdown-tag">page</span>}
+                    {file.isPage && <span className="workspace-dropdown-tag">{file.isMarketing ? 'marketing' : 'page'}</span>}
                   </button>
                 );
               })}
@@ -70,6 +74,30 @@ export default function WorkspaceHeader({
       </div>
 
       <div className="workspace-header-right">
+        <button
+          type="button"
+          className="workspace-ai-btn"
+          onClick={onOpenAI}
+          title="Generate UI and marketing with AI"
+        >
+          AI Generate
+        </button>
+        <button
+          type="button"
+          className="workspace-marketing-btn"
+          onClick={onOpenMarketingKit}
+          title="Generate landing page, copy, and social images from your design"
+        >
+          Marketing
+        </button>
+        <button
+          type="button"
+          className="workspace-export-btn"
+          onClick={onOpenExportDeploy}
+          title="Export as Vite app and deploy to Vercel"
+        >
+          Export app
+        </button>
         <span className="sync-indicator sync-indicator-minimal" title="Canvas and code in sync">
           <span className="sync-dot" />
         </span>
@@ -86,6 +114,19 @@ export default function WorkspaceHeader({
           </button>
           {menuOpen && (
             <div className="workspace-dropdown workspace-menu-dropdown">
+              <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { onOpenAI?.(); setMenuOpen(false); }}>
+                AI Generate
+              </button>
+              <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { onOpenMarketingKit?.(); setMenuOpen(false); }}>
+                Marketing kit
+              </button>
+              <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { onOpenExportDeploy?.(); setMenuOpen(false); }}>
+                Export & deploy
+              </button>
+              <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { onOpenFigmaImport?.(); setMenuOpen(false); }}>
+                Import from Figma
+              </button>
+              <div className="workspace-dropdown-divider" />
               <button type="button" className="workspace-dropdown-item" onClick={() => { onCopyLink?.(); setMenuOpen(false); }}>
                 Copy demo link
               </button>

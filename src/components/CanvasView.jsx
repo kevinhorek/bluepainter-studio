@@ -1,5 +1,8 @@
 import { useRef, useState, useEffect } from 'react';
 import { getWorkspaceFile } from '../data/workspaceFiles';
+import { isPlacableTool, getCanvasTool } from '../data/canvasTools';
+import { isLeafNode } from '../utils/nodeFactory';
+import CanvasToolbar from './CanvasToolbar';
 
 export default function CanvasView({
   rootNodeId,
@@ -20,6 +23,9 @@ export default function CanvasView({
   onOpenComponentFile = null
 }) {
   const canvasRef = useRef(null);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const panStartRef = useRef({ x: 0, y: 0, offsetX: 0, offsetY: 0 });
   
   // Resizing state
   const [isResizing, setIsResizing] = useState(false);
@@ -145,6 +151,41 @@ export default function CanvasView({
     };
   }, [isResizing, isDragging, resizeStart, dragStart, nodesMap, onUpdateNode]);
 
+  useEffect(() => {
+    if (activeCanvasTool !== 'hand') return;
+
+    const handlePanMove = (e) => {
+      if (!isPanning) return;
+      setPanOffset({
+        x: panStartRef.current.offsetX + (e.clientX - panStartRef.current.x),
+        y: panStartRef.current.offsetY + (e.clientY - panStartRef.current.y)
+      });
+    };
+
+    const handlePanUp = () => setIsPanning(false);
+
+    if (isPanning) {
+      document.addEventListener('mousemove', handlePanMove);
+      document.addEventListener('mouseup', handlePanUp);
+    }
+    return () => {
+      document.removeEventListener('mousemove', handlePanMove);
+      document.removeEventListener('mouseup', handlePanUp);
+    };
+  }, [activeCanvasTool, isPanning]);
+
+  const handlePanStart = (e) => {
+    if (activeCanvasTool !== 'hand') return;
+    e.preventDefault();
+    setIsPanning(true);
+    panStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      offsetX: panOffset.x,
+      offsetY: panOffset.y
+    };
+  };
+
   if (!rootNodeId || !nodesMap) {
     return (
       <div className={`canvas-container ${isFigma ? 'canvas-figma-dots' : (theme === 'light' ? 'canvas-grid-light' : 'canvas-grid-dark')}`}>
@@ -155,7 +196,8 @@ export default function CanvasView({
 
   // Click-to-place dynamic node insertion
   const handleCanvasClick = (e, targetNodeId) => {
-    if (!activeCanvasTool || activeCanvasTool === 'select') return;
+    if (activeCanvasTool === 'hand' || activeCanvasTool === 'scale') return;
+    if (!isPlacableTool(activeCanvasTool)) return;
 
     e.stopPropagation();
     e.preventDefault();
@@ -164,7 +206,7 @@ export default function CanvasView({
     let targetNode = nodesMap[targetNodeId];
     
     // If we clicked a leaf node, find its parent container
-    if (targetNode && (targetNode.type === 'text' || targetNode.type === 'button' || targetNode.type === 'image' || targetNode.type === 'line')) {
+    if (targetNode && isLeafNode(targetNode)) {
       const parent = Object.values(nodesMap).find(n => n.children && n.children.includes(targetNodeId));
       if (parent) {
         parentId = parent.id;
@@ -190,8 +232,9 @@ export default function CanvasView({
 
   const handleOuterCanvasClick = (e) => {
     if (onFocus) onFocus();
-    if (!activeCanvasTool || activeCanvasTool === 'select') {
-      onSelectNode(null);
+    if (activeCanvasTool === 'hand') return;
+    if (!isPlacableTool(activeCanvasTool)) {
+      if (activeCanvasTool === 'select') onSelectNode(null);
       return;
     }
     
@@ -332,8 +375,8 @@ export default function CanvasView({
       userSelect: 'none'
     };
 
-    const isEditable = node.type === 'text' || node.type === 'button';
-    const isLeaf = isEditable || node.type === 'image' || node.type === 'line';
+    const isEditable = node.type === 'text' || node.type === 'button' || node.type === 'comment';
+    const isLeaf = isLeafNode(node);
     const dragOverProps = !isLeaf ? {
       onDragOver: (e) => {
         e.preventDefault();
@@ -361,7 +404,7 @@ export default function CanvasView({
     const clickHandler = (e) => {
       e.stopPropagation();
       if (onFocus) onFocus();
-      if (activeCanvasTool && activeCanvasTool !== 'select') {
+      if (activeCanvasTool && isPlacableTool(activeCanvasTool)) {
         handleCanvasClick(e, nodeId);
       } else {
         onSelectNode(nodeId);
@@ -420,17 +463,51 @@ export default function CanvasView({
       </div>
     );
 
-    // Wrapper for image or line to allow correct overlay placement without violating HTML rules
-    if (node.type === 'image' || node.type === 'line') {
-      const innerElement = node.type === 'image' ? (
-        <img
-          src={node.src || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200'}
-          style={{ width: '100%', height: '100%', borderRadius: 'inherit', objectFit: 'cover', pointerEvents: 'none' }}
-          alt=""
-        />
-      ) : (
-        <hr style={{ width: '100%', height: '100%', border: 'none', borderTop: `${node.style.borderTopWidth || 1}px ${node.style.borderStyle || 'solid'} ${node.style.borderColor || '#94a3b8'}`, margin: 0 }} />
-      );
+    // Wrapper for image, line, shape, comment, vector
+    if (node.type === 'image' || node.type === 'line' || node.type === 'shape' || node.type === 'comment' || node.type === 'vector') {
+      let innerElement = null;
+
+      if (node.type === 'image') {
+        innerElement = (
+          <img
+            src={node.src || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200'}
+            style={{ width: '100%', height: '100%', borderRadius: 'inherit', objectFit: 'cover', pointerEvents: 'none' }}
+            alt=""
+          />
+        );
+      } else if (node.type === 'line') {
+        innerElement = (
+          <hr style={{ width: '100%', height: '100%', border: 'none', borderTop: `${node.style.borderTopWidth || 1}px ${node.style.borderStyle || 'solid'} ${node.style.borderColor || '#94a3b8'}`, margin: 0 }} />
+        );
+      } else if (node.type === 'shape' && node.shapeKind === 'arrow') {
+        innerElement = (
+          <svg width="100%" height="100%" viewBox="0 0 120 24" preserveAspectRatio="none" style={{ pointerEvents: 'none' }}>
+            <line x1="4" y1="12" x2="100" y2="12" stroke={node.style.borderColor || '#64748b'} strokeWidth="2" />
+            <polyline points="92,6 104,12 92,18" fill="none" stroke={node.style.borderColor || '#64748b'} strokeWidth="2" />
+          </svg>
+        );
+      } else if (node.type === 'shape') {
+        innerElement = null;
+      } else if (node.type === 'comment') {
+        innerElement = (
+          <div className="canvas-comment-pin" style={{ pointerEvents: 'none' }}>
+            <span className="canvas-comment-dot" />
+            <div className="canvas-comment-bubble">{node.text || 'Comment'}</div>
+          </div>
+        );
+      } else if (node.type === 'vector') {
+        innerElement = (
+          <svg width="100%" height="100%" viewBox="0 0 140 80" preserveAspectRatio="none" style={{ pointerEvents: 'none' }}>
+            <path
+              d={node.path || 'M 8 60 Q 40 10, 80 40'}
+              fill="none"
+              stroke={node.vectorKind === 'pencil' ? '#64748b' : 'var(--blue-primary)'}
+              strokeWidth={node.vectorKind === 'pencil' ? 1.5 : 2}
+              strokeLinecap="round"
+            />
+          </svg>
+        );
+      }
 
       return (
         <div
@@ -441,7 +518,7 @@ export default function CanvasView({
           style={{
             ...baseStyle,
             display: 'block',
-            overflow: 'visible'
+            overflow: node.type === 'comment' ? 'visible' : 'visible'
           }}
           className={node.className || ''}
         >
@@ -485,69 +562,13 @@ export default function CanvasView({
     ? 'canvas-figma-dots' 
     : (theme === 'light' ? 'canvas-grid-light' : 'canvas-grid-dark');
 
-  const tools = [
-    { 
-      id: 'select', 
-      name: 'Move / Select', 
-      icon: (
-        <svg style={{ width: 16, height: 16 }} fill="currentColor" viewBox="0 0 24 24">
-          <path d="M9 3.01v17.98l4.47-4.47 3.53 7.5 2.12-1-3.53-7.5 6.41-.01L9 3.01z"/>
-        </svg>
-      ) 
-    },
-    { 
-      id: 'frame', 
-      name: 'Frame Container', 
-      icon: (
-        <svg style={{ width: 16, height: 16 }} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-          <rect x="3" y="3" width="18" height="18" rx="2" strokeDasharray="3 3"/>
-        </svg>
-      ) 
-    },
-    { 
-      id: 'text', 
-      name: 'Text Box', 
-      icon: (
-        <span style={{ fontSize: '1.05rem', fontWeight: 'bold', fontFamily: 'Outfit, sans-serif', lineHeight: 1 }}>T</span>
-      ) 
-    },
-    { 
-      id: 'button', 
-      name: 'CTA Button', 
-      icon: (
-        <svg style={{ width: 16, height: 16 }} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-          <rect x="3" y="6" width="18" height="12" rx="3" />
-          <circle cx="12" cy="12" r="1.5" fill="currentColor" />
-        </svg>
-      ) 
-    },
-    { 
-      id: 'image', 
-      name: 'Rectangle Image', 
-      icon: (
-        <svg style={{ width: 16, height: 16 }} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-          <rect x="3" y="3" width="18" height="18" rx="2" />
-          <circle cx="8.5" cy="8.5" r="1.5" />
-          <polyline points="21 15 16 10 5 21" />
-        </svg>
-      ) 
-    },
-    { 
-      id: 'line', 
-      name: 'Line Divider', 
-      icon: (
-        <svg style={{ width: 16, height: 16 }} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-          <line x1="4" y1="20" x2="20" y2="4" />
-        </svg>
-      ) 
-    }
-  ];
-
   const getCursorStyle = () => {
-    if (!activeCanvasTool || activeCanvasTool === 'select') return 'default';
-    return 'crosshair';
+    if (activeCanvasTool === 'hand') return isPanning ? 'grabbing' : 'grab';
+    if (isPlacableTool(activeCanvasTool)) return 'crosshair';
+    return 'default';
   };
 
+  const activeToolMeta = getCanvasTool(activeCanvasTool);
   const isPageView = Boolean(pageViewport);
 
   return (
@@ -558,6 +579,7 @@ export default function CanvasView({
       onDragOver={(e) => e.preventDefault()}
       onDrop={handleCanvasDrop}
       onClick={handleOuterCanvasClick}
+      onMouseDown={handlePanStart}
       style={{
         display: 'flex',
         alignItems: isPageView ? 'flex-start' : 'center',
@@ -568,13 +590,16 @@ export default function CanvasView({
       }}
     >
       {/* Root board coordinate space */}
-      <div style={{
+      <div
+        id={isPageView ? 'canvas-page-frame' : undefined}
+        style={{
         position: 'relative',
         width: isPageView ? pageViewport.width : '100%',
         height: isPageView ? pageViewport.height : '100%',
         minWidth: isPageView ? pageViewport.width : 800,
         minHeight: isPageView ? pageViewport.height : 600,
-        flexShrink: 0
+        flexShrink: 0,
+        transform: `translate(${panOffset.x}px, ${panOffset.y}px)`
       }}>
         {renderASTNode(rootNodeId)}
       </div>
@@ -591,105 +616,19 @@ export default function CanvasView({
             <>
               <span className="canvas-status-label">Component</span>
               <span className="canvas-status-value">
-                {activeCanvasTool !== 'select' ? `Placing ${activeCanvasTool}` : 'Select'}
+                {activeToolMeta ? activeToolMeta.name : 'Select'}
               </span>
             </>
           )}
         </div>
       )}
 
-      {/* Figma Floating Bottom Toolbar */}
       {!hideToolbar && (
-        <div 
-          style={{
-            position: 'absolute',
-            bottom: 100,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: 'rgba(15, 23, 42, 0.85)',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-            border: '1px solid rgba(255, 255, 255, 0.12)',
-            borderRadius: '16px',
-            padding: '6px 8px',
-            display: 'flex',
-            gap: 4,
-            alignItems: 'center',
-            zIndex: 100,
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4)'
-          }}
-        >
-          {activeCanvasTool !== 'select' && (
-            <div 
-              style={{
-                position: 'absolute',
-                top: -36,
-                left: '50%',
-                transform: 'translateX(-50%)',
-                background: isFigma ? 'var(--purple-figma)' : 'var(--blue-primary)',
-                color: 'white',
-                fontSize: '0.65rem',
-                fontWeight: 600,
-                padding: '4px 8px',
-                borderRadius: 6,
-                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.2)',
-                whiteSpace: 'nowrap',
-                pointerEvents: 'none'
-              }}
-            >
-              ✏️ Click container to place {activeCanvasTool}
-            </div>
-          )}
-
-          {tools.map(tool => {
-            const isActive = activeCanvasTool === tool.id;
-            const activeBg = isFigma ? 'var(--purple-figma)' : 'var(--blue-primary)';
-            return (
-              <button
-                key={tool.id}
-                onClick={() => {
-                  if (setActiveCanvasTool) {
-                    setActiveCanvasTool(tool.id);
-                  }
-                }}
-                draggable={tool.id !== 'select'}
-                onDragStart={(e) => {
-                  e.dataTransfer.setData('layerType', tool.id);
-                }}
-                title={`${tool.name} (Click to place or drag onto canvas)`}
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 10,
-                  border: 'none',
-                  background: isActive ? activeBg : 'transparent',
-                  color: isActive ? '#ffffff' : '#94a3b8',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
-                  outline: 'none',
-                  position: 'relative'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                    e.currentTarget.style.color = '#ffffff';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.color = '#94a3b8';
-                  }
-                }}
-              >
-                {tool.icon}
-              </button>
-            );
-          })}
-        </div>
+        <CanvasToolbar
+          activeTool={activeCanvasTool}
+          setActiveTool={setActiveCanvasTool}
+          isFigma={isFigma}
+        />
       )}
 
     </div>

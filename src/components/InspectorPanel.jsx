@@ -240,7 +240,7 @@ export default function InspectorPanel({
         )}
 
         {/* SECTION C: TEXT CONTENT & TYPOGRAPHY */}
-        {(node.type === 'text' || node.type === 'button') && (
+        {(node.type === 'text' || node.type === 'button' || node.type === 'comment') && (
           <div>
             <div style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', color: '#64748b', marginBottom: 8, letterSpacing: '0.05em' }}>Typography</div>
             

@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { generateTSX, parseTSX } from './utils/syncEngine';
 import { applyBrokenDesignScenario, applyFixedDesignScenario, getFreshHeroNodes, getFreshPricingNodes, getFreshDashboardNodes } from './utils/demoScenarios';
+import { getFreshMarketingNodes } from './data/marketingPage';
+import { captureCanvasPageFrame } from './utils/canvasCapture';
 import { getWorkspaceFile } from './data/workspaceFiles';
 import { downloadValidationExport, getFeedbackSummary } from './utils/validationExport';
 import { loadReceiptPolicy, saveReceiptPolicy } from './data/defaultReceiptPolicy';
@@ -22,7 +24,13 @@ import DemoTour from './components/DemoTour';
 import FeedbackModal from './components/FeedbackModal';
 import DemoScriptModal from './components/DemoScriptModal';
 import SpecModal from './components/SpecModal';
-import PresenterToast from './components/PresenterToast';
+import ExportDeployModal from './components/ExportDeployModal';
+import MarketingKitModal from './components/MarketingKitModal';
+import { getEmptyFigmaImportNodes } from './utils/figmaImport';
+import FigmaImportModal from './components/FigmaImportModal';
+import AIGeneratePanel from './components/AIGeneratePanel';
+import { createNodeFromTool, canDropIntoNode, isLeafNode } from './utils/nodeFactory';
+import { getToolByShortcut } from './data/canvasTools';
 
 const VALID_PHASES = ['landing', 'phase1', 'phase2', 'phase3', 'phase4'];
 const TOUR_SEEN_KEY = 'bluepainter-tour-seen';
@@ -54,6 +62,15 @@ export default function App() {
   const [phase, setPhase] = useState(initialRoute.phase === 'landing' ? 'phase1' : initialRoute.phase);
   const [aboutOpen, setAboutOpen] = useState(Boolean(initialRoute.openAbout));
   const [validationScriptOpen, setValidationScriptOpen] = useState(false);
+  const [exportDeployOpen, setExportDeployOpen] = useState(false);
+  const [marketingKitOpen, setMarketingKitOpen] = useState(false);
+  const [marketingActiveFieldId, setMarketingActiveFieldId] = useState(null);
+  const [screenshotBlob, setScreenshotBlob] = useState(null);
+  const [useScreenshotInImages, setUseScreenshotInImages] = useState(true);
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  const [aiInitialType, setAiInitialType] = useState('full-marketing');
+  const [figmaImportOpen, setFigmaImportOpen] = useState(false);
+  const [fileViewports, setFileViewports] = useState({});
   const [welcomeOpen, setWelcomeOpen] = useState(() => !hasSeenWelcome());
   const [toast, setToast] = useState(null);
   const [activeFile, setActiveFile] = useState('dashboard');
@@ -64,7 +81,9 @@ export default function App() {
   const [nodesByFile, setNodesByFile] = useState(() => ({
     pricing: getFreshPricingNodes(),
     hero: getFreshHeroNodes(),
-    dashboard: getFreshDashboardNodes()
+    dashboard: getFreshDashboardNodes(),
+    marketing: getFreshMarketingNodes(),
+    figma: getEmptyFigmaImportNodes()
   }));
   const [code, setCode] = useState('');
 
@@ -81,10 +100,14 @@ export default function App() {
   const [dismissedRules, setDismissedRules] = useState(() => new Set());
   const [learningSummary, setLearningSummary] = useState(() => getLearningSummary());
   const presenterCancelRef = useRef(null);
+  const toolBeforeSpaceRef = useRef('select');
 
   const refreshLearningSummary = () => setLearningSummary(getLearningSummary());
 
-  const fileConfig = getWorkspaceFile(activeFile);
+  const fileConfig = {
+    ...getWorkspaceFile(activeFile),
+    ...(fileViewports[activeFile] ? { viewport: fileViewports[activeFile] } : {})
+  };
   const activeNodesMap = nodesByFile[activeFile];
   const activeRootId = fileConfig.rootId;
   const setActiveNodesMap = useCallback((updater) => {
@@ -98,6 +121,111 @@ export default function App() {
     setActiveFile(file);
     setSelectedNodeId(getWorkspaceFile(file).defaultSelection);
   }, []);
+
+  const notify = useCallback((message) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 3500);
+  }, []);
+
+  const handleUpdateNodeByFile = useCallback((fileId, nodeId, updatedFields) => {
+    setNodesByFile((prev) => {
+      const map = prev[fileId];
+      const node = map?.[nodeId];
+      if (!node) return prev;
+      return {
+        ...prev,
+        [fileId]: {
+          ...map,
+          [nodeId]: {
+            ...node,
+            ...updatedFields,
+            style: { ...(node.style || {}), ...(updatedFields.style || {}) }
+          }
+        }
+      };
+    });
+  }, []);
+
+  const handleSelectMarketingField = useCallback((field) => {
+    setMarketingActiveFieldId(field.id);
+    setActiveFile(field.fileId);
+    setSelectedNodeId(field.nodeId);
+    setFocusedPanel('canvas');
+  }, []);
+
+  const handleEditMarketingOnCanvas = useCallback((field) => {
+    handleSelectMarketingField(field);
+    setMarketingKitOpen(true);
+  }, [handleSelectMarketingField]);
+
+  const handleOpenMarketingPage = useCallback(() => {
+    setActiveFile('marketing');
+    setSelectedNodeId('marketing-page');
+    setFocusedPanel('canvas');
+  }, []);
+
+  const handleOpenMarketingKit = useCallback(() => {
+    setAiPanelOpen(false);
+    setMarketingKitOpen(true);
+    setActiveFile('marketing');
+    setSelectedNodeId('marketing-page');
+  }, []);
+
+  const handleOpenAI = useCallback((type = 'full-marketing') => {
+    setMarketingKitOpen(false);
+    setAiInitialType(type);
+    setAiPanelOpen(true);
+  }, []);
+
+  const handleFigmaImported = useCallback(({ targetFile, nodes, rootId, viewport, frameName, nodeCount }) => {
+    const file = getWorkspaceFile(targetFile);
+    let finalNodes = { ...nodes };
+    let selectionId = rootId;
+
+    if (targetFile !== 'figma' && rootId !== file.rootId && finalNodes[rootId]) {
+      finalNodes[file.rootId] = { ...finalNodes[rootId], id: file.rootId };
+      delete finalNodes[rootId];
+      selectionId = file.rootId;
+    }
+
+    setNodesByFile((prev) => ({ ...prev, [targetFile]: finalNodes }));
+    if (viewport) {
+      setFileViewports((prev) => ({ ...prev, [targetFile]: viewport }));
+    }
+    setActiveFile(targetFile);
+    setSelectedNodeId(selectionId);
+    setFocusedPanel('canvas');
+    logLearningEvent('figma_import', { targetFile, nodeCount, frameName });
+    notify(`Imported "${frameName || 'frame'}" — ${nodeCount} layers`);
+  }, [notify]);
+
+  const handleApplyAI = useCallback(({ type, updates, message, source }) => {
+    const { nodesByFile: next, applied } = applyAIUpdates(nodesByFile, updates, type);
+    setNodesByFile(next);
+    const target = getFirstUpdateTarget(updates, type);
+    if (target) {
+      setActiveFile(target.fileId);
+      setSelectedNodeId(target.nodeId);
+      setFocusedPanel('canvas');
+    }
+    logLearningEvent('ai_generate_applied', { type, applied, source });
+    notify(message || `Applied ${applied} updates to canvas`);
+  }, [nodesByFile, notify]);
+
+  const handleCaptureDashboardScreenshot = useCallback(async () => {
+    if (activeFile !== 'dashboard') {
+      setActiveFile('dashboard');
+      setSelectedNodeId('dashboard-page');
+      await new Promise((r) => setTimeout(r, 350));
+    }
+    const blob = await captureCanvasPageFrame();
+    if (blob) {
+      setScreenshotBlob(blob);
+      notify('Dashboard captured for social images');
+    } else {
+      notify('Open DashboardPage on canvas, then capture again');
+    }
+  }, [activeFile, notify]);
 
   const setPhaseWithHash = useCallback((nextPhase, options = {}) => {
     setPhase(nextPhase);
@@ -114,10 +242,42 @@ export default function App() {
     }
   }, []);
 
-  const notify = useCallback((message) => {
-    setToast(message);
-    setTimeout(() => setToast(null), 3500);
-  }, []);
+  useEffect(() => {
+    const isTypingTarget = (el) => {
+      if (!el) return false;
+      const tag = el.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable;
+    };
+
+    const onKeyDown = (e) => {
+      if (isTypingTarget(e.target)) return;
+      if (e.key === ' ' && !e.repeat) {
+        e.preventDefault();
+        toolBeforeSpaceRef.current = activeCanvasTool;
+        setActiveCanvasTool('hand');
+        return;
+      }
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const tool = getToolByShortcut(e.key, e.shiftKey);
+      if (tool) {
+        e.preventDefault();
+        setActiveCanvasTool(tool.id);
+      }
+    };
+
+    const onKeyUp = (e) => {
+      if (e.key === ' ' && activeCanvasTool === 'hand') {
+        setActiveCanvasTool(toolBeforeSpaceRef.current || 'select');
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+    };
+  }, [activeCanvasTool]);
 
   const handleWelcomeStart = () => {
     markWelcomeSeen();
@@ -214,27 +374,18 @@ export default function App() {
   };
 
   const handleAddNode = (type, leftOffset = 20, topOffset = 20, parentId = activeRootId) => {
+    if (!isPlacableTool(type)) return;
+
     const parent = activeNodesMap[parentId];
     if (!parent) return;
-    if (['text', 'button', 'image', 'line'].includes(parent.type)) {
+    if (!canDropIntoNode(parent)) {
       notify('Select a frame or container first, not a leaf element.');
       return;
     }
 
     const newId = `${type}-${Date.now().toString().slice(-4)}`;
-    let newNode = {};
-
-    if (type === 'text') {
-      newNode = { id: newId, type: 'text', name: 'New Text Layer', tag: 'p', style: { position: 'absolute', left: leftOffset, top: topOffset, fontSize: 14, color: '#475569' }, text: 'New Text Layer' };
-    } else if (type === 'button') {
-      newNode = { id: newId, type: 'button', name: 'New Button Layer', tag: 'button', style: { position: 'absolute', left: leftOffset, top: topOffset, background: '#2563eb', color: '#ffffff', borderWidth: 0, padding: '8px 16px', borderRadius: 6, cursor: 'pointer' }, text: 'Action Button' };
-    } else if (type === 'frame') {
-      newNode = { id: newId, type: 'frame', name: 'New Frame Group', tag: 'div', style: { position: 'absolute', left: leftOffset, top: topOffset, display: 'flex', flexDirection: 'column', padding: 24, gap: 12, background: '#f1f5f9', borderRadius: 8, width: 180, height: 120, borderWidth: 1, borderColor: '#cbd5e1', borderStyle: 'solid' }, children: [] };
-    } else if (type === 'image') {
-      newNode = { id: newId, type: 'image', name: 'New Image Shape', tag: 'img', style: { position: 'absolute', left: leftOffset, top: topOffset, width: 120, height: 80, borderRadius: 6, objectFit: 'cover' }, src: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200' };
-    } else if (type === 'line') {
-      newNode = { id: newId, type: 'line', name: 'New Line Divider', tag: 'hr', style: { position: 'absolute', left: leftOffset, top: topOffset, borderWidth: 0, borderTopWidth: 1, borderColor: '#94a3b8', borderStyle: 'solid', width: 150, height: 1 } };
-    }
+    const newNode = createNodeFromTool(type, newId, leftOffset, topOffset);
+    if (!newNode) return;
 
     setActiveNodesMap(prev => ({
       ...prev,
@@ -260,7 +411,7 @@ export default function App() {
 
     const parent = activeNodesMap[dropParent];
     if (!parent) return;
-    if (['text', 'button', 'image', 'line', 'component-instance'].includes(parent.type)) {
+    if (['text', 'button', 'image', 'line', 'shape', 'comment', 'vector', 'component-instance'].includes(parent.type)) {
       notify('Drop onto a frame or page section.');
       return;
     }
@@ -308,8 +459,11 @@ export default function App() {
     setNodesByFile({
       pricing: getFreshPricingNodes(),
       hero: getFreshHeroNodes(),
-      dashboard: getFreshDashboardNodes()
+      dashboard: getFreshDashboardNodes(),
+      marketing: getFreshMarketingNodes(),
+      figma: getEmptyFigmaImportNodes()
     });
+    setFileViewports({});
     handleSetActiveFile('dashboard');
     setSelectedNodeId('dashboard-page');
     setDismissedRules(new Set());
@@ -432,13 +586,17 @@ export default function App() {
   const workspacePhase = facilitator ? phase : 'phase1';
 
   return (
-    <div className="app-container">
+    <div className={`app-container ${marketingKitOpen ? 'marketing-kit-open' : ''} ${aiPanelOpen ? 'ai-panel-open' : ''}`}>
       <WorkspaceHeader
         activeFile={activeFile}
         onFileChange={handleSetActiveFile}
         onFeedback={() => setFeedbackOpen(true)}
         onShowAbout={() => setAboutOpen(true)}
         onOpenInterviewGuide={() => setValidationScriptOpen(true)}
+        onOpenExportDeploy={() => setExportDeployOpen(true)}
+        onOpenMarketingKit={handleOpenMarketingKit}
+        onOpenFigmaImport={() => setFigmaImportOpen(true)}
+        onOpenAI={() => handleOpenAI('full-marketing')}
         onCopyLink={handleCopyLink}
         facilitatorActions={facilitator ? {
           onBreakDesign: handleBreakDesign,
@@ -488,6 +646,44 @@ export default function App() {
 
       <FeedbackModal isOpen={feedbackOpen} onClose={handleFeedbackClose} />
       <ValidationScriptModal isOpen={validationScriptOpen} onClose={() => setValidationScriptOpen(false)} />
+      <ExportDeployModal
+        isOpen={exportDeployOpen}
+        onClose={() => setExportDeployOpen(false)}
+        nodesByFile={nodesByFile}
+        onExported={() => setToast('Project downloaded — see DEPLOY.md in the zip')}
+      />
+      <MarketingKitModal
+        isOpen={marketingKitOpen}
+        onClose={() => { setMarketingKitOpen(false); setMarketingActiveFieldId(null); }}
+        nodesByFile={nodesByFile}
+        activeFieldId={marketingActiveFieldId}
+        onSelectField={handleSelectMarketingField}
+        onUpdateField={handleUpdateNodeByFile}
+        onEditOnCanvas={handleEditMarketingOnCanvas}
+        onCaptureScreenshot={handleCaptureDashboardScreenshot}
+        screenshotBlob={screenshotBlob}
+        useScreenshot={useScreenshotInImages}
+        onToggleScreenshot={setUseScreenshotInImages}
+        onOpenMarketingPage={handleOpenMarketingPage}
+        onOpenAI={handleOpenAI}
+        onExported={() => notify('Marketing kit downloaded')}
+        onCopyToast={notify}
+      />
+      <FigmaImportModal
+        isOpen={figmaImportOpen}
+        onClose={() => setFigmaImportOpen(false)}
+        onImported={handleFigmaImported}
+        onNotify={notify}
+      />
+      <AIGeneratePanel
+        isOpen={aiPanelOpen}
+        onClose={() => setAiPanelOpen(false)}
+        nodesByFile={nodesByFile}
+        activeFile={activeFile}
+        initialType={aiInitialType}
+        onApply={handleApplyAI}
+        onNotify={notify}
+      />
       {facilitator && <DemoScriptModal isOpen={scriptOpen} onClose={() => setScriptOpen(false)} />}
       {facilitator && <SpecModal isOpen={specOpen} onClose={() => setSpecOpen(false)} />}
       {facilitator && <PresenterToast message={presenterMessage} />}

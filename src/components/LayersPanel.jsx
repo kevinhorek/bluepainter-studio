@@ -55,6 +55,26 @@ export default function LayersPanel({
         return (
           <span style={{ color: '#a78bfa', fontSize: '0.7rem', fontWeight: 700 }}>◆</span>
         );
+      case 'shape':
+        return (
+          <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>▢</span>
+        );
+      case 'line':
+        return (
+          <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>—</span>
+        );
+      case 'image':
+        return (
+          <span style={{ color: '#38bdf8', fontSize: '0.75rem' }}>🖼</span>
+        );
+      case 'comment':
+        return (
+          <span style={{ color: '#fbbf24', fontSize: '0.75rem' }}>💬</span>
+        );
+      case 'vector':
+        return (
+          <span style={{ color: '#a78bfa', fontSize: '0.75rem' }}>✎</span>
+        );
       default:
         return <span>▪</span>;
     }

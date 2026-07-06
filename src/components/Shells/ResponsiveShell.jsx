@@ -4,6 +4,7 @@ import ReceiptsPanel from '../ReceiptsPanel';
 import LayersPanel from '../LayersPanel';
 import InspectorPanel from '../InspectorPanel';
 import CanvasView from '../CanvasView';
+import CanvasToolbar from '../CanvasToolbar';
 
 export default function ResponsiveShell({
   rootNodeId,
@@ -28,64 +29,6 @@ export default function ResponsiveShell({
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [codeCollapsed, setCodeCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
-
-  const tools = [
-    { 
-      id: 'select', 
-      name: 'Move / Select', 
-      icon: (
-        <svg style={{ width: 16, height: 16 }} fill="currentColor" viewBox="0 0 24 24">
-          <path d="M9 3.01v17.98l4.47-4.47 3.53 7.5 2.12-1-3.53-7.5 6.41-.01L9 3.01z"/>
-        </svg>
-      ) 
-    },
-    { 
-      id: 'frame', 
-      name: 'Frame Container', 
-      icon: (
-        <svg style={{ width: 16, height: 16 }} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-          <rect x="3" y="3" width="18" height="18" rx="2" strokeDasharray="3 3"/>
-        </svg>
-      ) 
-    },
-    { 
-      id: 'text', 
-      name: 'Text Box', 
-      icon: (
-        <span style={{ fontSize: '1.05rem', fontWeight: 'bold', fontFamily: 'Outfit, sans-serif', lineHeight: 1 }}>T</span>
-      ) 
-    },
-    { 
-      id: 'button', 
-      name: 'CTA Button', 
-      icon: (
-        <svg style={{ width: 16, height: 16 }} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-          <rect x="3" y="6" width="18" height="12" rx="3" />
-          <circle cx="12" cy="12" r="1.5" fill="currentColor" />
-        </svg>
-      ) 
-    },
-    { 
-      id: 'image', 
-      name: 'Rectangle Image', 
-      icon: (
-        <svg style={{ width: 16, height: 16 }} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-          <rect x="3" y="3" width="18" height="18" rx="2" />
-          <circle cx="8.5" cy="8.5" r="1.5" />
-          <polyline points="21 15 16 10 5 21" />
-        </svg>
-      ) 
-    },
-    { 
-      id: 'line', 
-      name: 'Line Divider', 
-      icon: (
-        <svg style={{ width: 16, height: 16 }} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-          <line x1="4" y1="20" x2="20" y2="4" />
-        </svg>
-      ) 
-    }
-  ];
 
   // Dynamic layout grid: code takes up more space if focused, otherwise canvas does.
   // Account for left/right collapses.
@@ -300,96 +243,10 @@ export default function ResponsiveShell({
           </div>
         </div>
 
-        {/* Figma Floating Bottom Toolbar (single shared) */}
-        <div 
-          style={{
-            position: 'absolute',
-            bottom: 100,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: 'rgba(15, 23, 42, 0.85)',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-            border: '1px solid rgba(255, 255, 255, 0.12)',
-            borderRadius: '16px',
-            padding: '6px 8px',
-            display: 'flex',
-            gap: 4,
-            alignItems: 'center',
-            zIndex: 100,
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4)'
-          }}
-        >
-          {activeCanvasTool !== 'select' && (
-            <div 
-              style={{
-                position: 'absolute',
-                top: -36,
-                left: '50%',
-                transform: 'translateX(-50%)',
-                background: 'var(--blue-primary)',
-                color: 'white',
-                fontSize: '0.65rem',
-                fontWeight: 600,
-                padding: '4px 8px',
-                borderRadius: 6,
-                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.2)',
-                whiteSpace: 'nowrap',
-                pointerEvents: 'none'
-              }}
-            >
-              ✏️ Click container to place {activeCanvasTool}
-            </div>
-          )}
-
-          {tools.map(tool => {
-            const isActive = activeCanvasTool === tool.id;
-            return (
-              <button
-                key={tool.id}
-                onClick={() => {
-                  if (setActiveCanvasTool) {
-                    setActiveCanvasTool(tool.id);
-                  }
-                }}
-                draggable={tool.id !== 'select'}
-                onDragStart={(e) => {
-                  e.dataTransfer.setData('layerType', tool.id);
-                }}
-                title={`${tool.name} (Click to place or drag onto canvas)`}
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 10,
-                  border: 'none',
-                  background: isActive ? 'var(--blue-primary)' : 'transparent',
-                  color: isActive ? '#ffffff' : '#94a3b8',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
-                  outline: 'none',
-                  position: 'relative'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                    e.currentTarget.style.color = '#ffffff';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.color = '#94a3b8';
-                  }
-                }}
-              >
-                {tool.icon}
-              </button>
-            );
-          })}
-        </div>
+        <CanvasToolbar
+          activeTool={activeCanvasTool}
+          setActiveTool={setActiveCanvasTool}
+        />
       </div>
 
       {/* 3. Code Editor (middle right) */}

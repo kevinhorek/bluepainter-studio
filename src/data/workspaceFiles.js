@@ -8,6 +8,16 @@ export const WORKSPACE_FILES = {
     viewport: { width: 1280, height: 800 },
     defaultSelection: 'dashboard-page'
   },
+  marketing: {
+    id: 'marketing',
+    label: 'MarketingPage.tsx',
+    rootId: 'marketing-page',
+    componentName: 'MarketingPage',
+    isPage: true,
+    viewport: { width: 1280, height: 1680 },
+    defaultSelection: 'marketing-page',
+    isMarketing: true
+  },
   pricing: {
     id: 'pricing',
     label: 'PricingCard.tsx',
@@ -23,10 +33,23 @@ export const WORKSPACE_FILES = {
     componentName: 'HeroSection',
     isPage: false,
     defaultSelection: 'hero-frame'
+  },
+  figma: {
+    id: 'figma',
+    label: 'FigmaImport.tsx',
+    rootId: 'figma-import-page',
+    componentName: 'FigmaImport',
+    isPage: true,
+    viewport: { width: 1280, height: 800 },
+    defaultSelection: 'figma-import-page',
+    isFigmaImport: true
   }
 };
 
-export const FILE_ORDER = ['dashboard', 'pricing', 'hero'];
+export const FILE_ORDER = ['dashboard', 'marketing', 'figma', 'pricing', 'hero'];
+
+/** Files included in app export (excludes marketing meta-page). */
+export const APP_EXPORT_FILE_IDS = ['dashboard', 'pricing', 'hero'];
 
 export const LIBRARY_FILE_IDS = FILE_ORDER.filter((id) => !WORKSPACE_FILES[id].isPage);
 
