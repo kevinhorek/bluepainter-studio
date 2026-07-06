@@ -48,7 +48,7 @@ export default function VSCodeShell({
 
   const handleSelectNode = (id) => {
     onSelectNode(id);
-    openDrawer('inspect');
+    if (id) openDrawer('inspect');
   };
 
   return (

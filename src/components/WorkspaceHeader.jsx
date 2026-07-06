@@ -8,6 +8,7 @@ export default function WorkspaceHeader({
   onFeedback,
   onShowAbout,
   onOpenInterviewGuide,
+  onCopyLink,
   facilitatorActions
 }) {
   const facilitator = isFacilitatorMode();
@@ -34,6 +35,7 @@ export default function WorkspaceHeader({
         <div className="workspace-brand">
           <div className="logo-icon"><div className="logo-dot" /></div>
           <span className="workspace-brand-name">BluePainter</span>
+        <span className="workspace-prototype-badge">Prototype</span>
         </div>
 
         <div className="workspace-file-picker" ref={fileRef}>
@@ -84,6 +86,9 @@ export default function WorkspaceHeader({
           </button>
           {menuOpen && (
             <div className="workspace-dropdown workspace-menu-dropdown">
+              <button type="button" className="workspace-dropdown-item" onClick={() => { onCopyLink?.(); setMenuOpen(false); }}>
+                Copy demo link
+              </button>
               <button type="button" className="workspace-dropdown-item" onClick={() => { onFeedback(); setMenuOpen(false); }}>
                 Share feedback
               </button>

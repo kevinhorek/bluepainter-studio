@@ -12,6 +12,10 @@ import TauriShell from './components/Shells/TauriShell';
 import FigmaShell from './components/Shells/FigmaShell';
 import ResponsiveShell from './components/Shells/ResponsiveShell';
 import ValidationScriptModal from './components/ValidationScriptModal';
+import WelcomeModal from './components/WelcomeModal';
+import { hasSeenWelcome, markWelcomeSeen } from './utils/welcomeStorage';
+import AppToast from './components/AppToast';
+import { copyDemoLink, DEMO_URL } from './utils/shareDemo';
 import AboutPanel from './components/AboutPanel';
 import WorkspaceHeader from './components/WorkspaceHeader';
 import DemoTour from './components/DemoTour';
@@ -50,6 +54,8 @@ export default function App() {
   const [phase, setPhase] = useState(initialRoute.phase === 'landing' ? 'phase1' : initialRoute.phase);
   const [aboutOpen, setAboutOpen] = useState(Boolean(initialRoute.openAbout));
   const [validationScriptOpen, setValidationScriptOpen] = useState(false);
+  const [welcomeOpen, setWelcomeOpen] = useState(() => !hasSeenWelcome());
+  const [toast, setToast] = useState(null);
   const [activeFile, setActiveFile] = useState('dashboard');
   const [selectedNodeId, setSelectedNodeId] = useState('dashboard-page');
   const [activeCanvasTool, setActiveCanvasTool] = useState('select');
@@ -101,6 +107,39 @@ export default function App() {
       setTourStep(0);
     }
   }, []);
+
+  useEffect(() => {
+    if (!window.location.hash || window.location.hash === '#/' || window.location.hash === '#') {
+      window.location.hash = '#/studio';
+    }
+  }, []);
+
+  const notify = useCallback((message) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 3500);
+  }, []);
+
+  const handleWelcomeStart = () => {
+    markWelcomeSeen();
+    setWelcomeOpen(false);
+  };
+
+  const handleWelcomeShowReceipts = () => {
+    markWelcomeSeen();
+    setWelcomeOpen(false);
+    setNodesByFile((prev) => ({
+      ...prev,
+      pricing: applyBrokenDesignScenario(prev.pricing)
+    }));
+    handleSetActiveFile('pricing');
+    setSelectedNodeId('cta-button');
+    notify('Select the button — receipt messages appear at the bottom');
+  };
+
+  const handleCopyLink = async () => {
+    const ok = await copyDemoLink();
+    notify(ok ? 'Demo link copied!' : `Copy this link: ${DEMO_URL}/#/studio`);
+  };
 
   useEffect(() => {
     const onHashChange = () => {
@@ -178,7 +217,7 @@ export default function App() {
     const parent = activeNodesMap[parentId];
     if (!parent) return;
     if (['text', 'button', 'image', 'line'].includes(parent.type)) {
-      alert('Cannot insert children inside a leaf element! Select a Frame/Container first.');
+      notify('Select a frame or container first, not a leaf element.');
       return;
     }
 
@@ -207,7 +246,7 @@ export default function App() {
 
   const handleAddComponentInstance = useCallback((refFile, parentId) => {
     if (!fileConfig.isPage) {
-      alert('Open a page file (e.g. DashboardPage.tsx) to place components.');
+      notify('Open a page file (DashboardPage.tsx) to place components.');
       return;
     }
 
@@ -222,7 +261,7 @@ export default function App() {
     const parent = activeNodesMap[dropParent];
     if (!parent) return;
     if (['text', 'button', 'image', 'line', 'component-instance'].includes(parent.type)) {
-      alert('Drop components onto a frame or page section, not a leaf element.');
+      notify('Drop onto a frame or page section.');
       return;
     }
 
@@ -248,7 +287,7 @@ export default function App() {
     setSelectedNodeId(newId);
     logLearningEvent('component_instance_added', { refFile, page: activeFile });
     refreshLearningSummary();
-  }, [activeFile, activeNodesMap, activeRootId, fileConfig.isPage, setActiveNodesMap]);
+  }, [activeFile, activeNodesMap, activeRootId, fileConfig.isPage, setActiveNodesMap, notify]);
 
   const handleBreakDesign = () => {
     handleSetActiveFile('pricing');
@@ -400,6 +439,7 @@ export default function App() {
         onFeedback={() => setFeedbackOpen(true)}
         onShowAbout={() => setAboutOpen(true)}
         onOpenInterviewGuide={() => setValidationScriptOpen(true)}
+        onCopyLink={handleCopyLink}
         facilitatorActions={facilitator ? {
           onBreakDesign: handleBreakDesign,
           onFixAll: handleFixAll,
@@ -420,6 +460,15 @@ export default function App() {
         {facilitator && workspacePhase === 'phase3' && <FigmaShell {...shellProps} />}
         {facilitator && workspacePhase === 'phase4' && <ResponsiveShell {...shellProps} />}
       </main>
+
+      {welcomeOpen && (
+        <WelcomeModal
+          onStart={handleWelcomeStart}
+          onShowReceipts={handleWelcomeShowReceipts}
+        />
+      )}
+
+      <AppToast message={toast} onDismiss={() => setToast(null)} />
 
       <AboutPanel
         open={aboutOpen}
