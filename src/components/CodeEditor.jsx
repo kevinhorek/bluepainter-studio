@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { getFileLabel } from '../data/workspaceFiles';
 
-export default function CodeEditor({ code, onChange, onFocus, activeFile, onCollapse }) {
+export default function CodeEditor({ code, onChange, onFocus, activeFile, onCollapse, paneLayout, onToggleExpand }) {
   const textareaRef = useRef(null);
   const highlightRef = useRef(null);
 
@@ -83,39 +83,39 @@ export default function CodeEditor({ code, onChange, onFocus, activeFile, onColl
   return (
     <div className="editor-pane" data-tour="code" onClick={handleFocus}>
       <div className="editor-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-        <span>{getFileLabel(activeFile)}</span>
-        {onCollapse && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onCollapse();
-            }}
-            title="Collapse Editor"
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: '#64748b',
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-              display: 'flex',
-              alignItems: 'center',
-              padding: '2px 6px',
-              borderRadius: '4px',
-              transition: 'color 0.2s, background-color 0.2s',
-              lineHeight: 1
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = '#ffffff';
-              e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = '#64748b';
-              e.currentTarget.style.backgroundColor = 'transparent';
-            }}
-          >
-            ▶
-          </button>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+          <span className="studio-pane-bar-kind" style={{ fontSize: '0.65rem' }}>Code</span>
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getFileLabel(activeFile)}</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+          {onToggleExpand && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleExpand();
+              }}
+              title={paneLayout === 'code' ? 'Restore split view' : 'Expand code (~90%)'}
+              className={`studio-pane-bar-btn ${paneLayout === 'code' ? 'active' : ''}`}
+              aria-pressed={paneLayout === 'code'}
+            >
+              {paneLayout === 'code' ? '⊟' : '⊞'}
+            </button>
+          )}
+          {onCollapse && !onToggleExpand && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onCollapse();
+              }}
+              title="Collapse Editor"
+              className="studio-pane-bar-btn"
+            >
+              ▶
+            </button>
+          )}
+        </div>
       </div>
       <div className="editor-wrapper" style={{ display: 'flex' }}>
         {/* Line Numbers Gutter */}
