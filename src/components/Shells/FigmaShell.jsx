@@ -16,7 +16,8 @@ export default function FigmaShell({
   onCodeChange,
   onAddNode,
   activeCanvasTool,
-  setActiveCanvasTool
+  setActiveCanvasTool,
+  receiptsConfig
 }) {
   const [activePluginTab, setActivePluginTab] = useState('canvas'); // 'canvas' (Layers + Inspector), 'code', 'receipts'
   const [syncBack, setSyncBack] = useState(true);
@@ -151,7 +152,8 @@ export default function FigmaShell({
                 component={node} 
                 nodesMap={nodesMap}
                 onUpdateNode={onUpdateNode}
-                lightMode={true} 
+                lightMode={true}
+                {...receiptsConfig}
               />
             )}
 

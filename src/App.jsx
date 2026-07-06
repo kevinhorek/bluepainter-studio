@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { generateTSX, parseTSX } from './utils/syncEngine';
 import { applyBrokenDesignScenario, applyFixedDesignScenario, getFreshHeroNodes, getFreshPricingNodes } from './utils/demoScenarios';
-import { downloadFeedbackJSON, getFeedbackSummary } from './utils/feedbackStorage';
+import { downloadValidationExport, getFeedbackSummary } from './utils/validationExport';
+import { loadReceiptPolicy, saveReceiptPolicy } from './data/defaultReceiptPolicy';
+import { logLearningEvent, getLearningSummary } from './utils/learningLoop';
 import { runPresenterSequence } from './utils/presenterMode';
 import VSCodeShell from './components/Shells/VSCodeShell';
 import TauriShell from './components/Shells/TauriShell';
@@ -12,6 +14,7 @@ import DemoTour from './components/DemoTour';
 import DemoControls from './components/DemoControls';
 import FeedbackModal from './components/FeedbackModal';
 import DemoScriptModal from './components/DemoScriptModal';
+import SpecModal from './components/SpecModal';
 import PresenterToast from './components/PresenterToast';
 
 const VALID_PHASES = ['landing', 'phase1', 'phase2', 'phase3', 'phase4'];
@@ -52,10 +55,16 @@ export default function App() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackPromptShown, setFeedbackPromptShown] = useState(false);
   const [scriptOpen, setScriptOpen] = useState(false);
+  const [specOpen, setSpecOpen] = useState(false);
   const [presenterMessage, setPresenterMessage] = useState(null);
   const [presenterRunning, setPresenterRunning] = useState(false);
   const [feedbackCount, setFeedbackCount] = useState(() => getFeedbackSummary().total);
+  const [receiptPolicy, setReceiptPolicy] = useState(() => loadReceiptPolicy());
+  const [dismissedRules, setDismissedRules] = useState(() => new Set());
+  const [learningSummary, setLearningSummary] = useState(() => getLearningSummary());
   const presenterCancelRef = useRef(null);
+
+  const refreshLearningSummary = () => setLearningSummary(getLearningSummary());
 
   const activeNodesMap = activeFile === 'pricing' ? pricingNodes : heroNodes;
   const activeRootId = activeFile === 'pricing' ? 'pricing-card-frame' : 'hero-frame';
@@ -110,6 +119,8 @@ export default function App() {
   const handleCodeChange = (newCode) => {
     setCode(newCode);
     setActiveNodesMap(parseTSX(newCode, activeNodesMap));
+    logLearningEvent('round_trip_code', { source: 'editor' });
+    refreshLearningSummary();
   };
 
   const handleUpdateNode = (nodeId, updatedFields) => {
@@ -125,6 +136,8 @@ export default function App() {
         }
       };
     });
+    logLearningEvent('round_trip_canvas', { nodeId, source: 'canvas' });
+    refreshLearningSummary();
   };
 
   const handleDeleteNode = (nodeId) => {
@@ -201,6 +214,25 @@ export default function App() {
     setHeroNodes(getFreshHeroNodes());
     handleSetActiveFile('pricing');
     setSelectedNodeId('pricing-card-frame');
+    setDismissedRules(new Set());
+  };
+
+  const handlePolicyChange = (nextPolicy) => {
+    setReceiptPolicy(nextPolicy);
+    saveReceiptPolicy(nextPolicy);
+    logLearningEvent('policy_updated', { policy: nextPolicy });
+    refreshLearningSummary();
+  };
+
+  const handleDismissRule = (ruleId) => {
+    setDismissedRules((prev) => new Set([...prev, ruleId]));
+    logLearningEvent('rule_dismissed', { ruleId });
+    refreshLearningSummary();
+  };
+
+  const handleReceiptFix = (ruleId, fixKey) => {
+    logLearningEvent('fix_applied', { ruleId, fixKey });
+    refreshLearningSummary();
   };
 
   const handleTourComplete = () => {
@@ -225,8 +257,9 @@ export default function App() {
   };
 
   const handleExportFeedback = () => {
-    downloadFeedbackJSON();
+    downloadValidationExport();
     setFeedbackCount(getFeedbackSummary().total);
+    refreshLearningSummary();
   };
 
   const handleRunPresenter = () => {
@@ -266,6 +299,15 @@ export default function App() {
     };
   }, []);
 
+  const receiptsConfig = {
+    policy: receiptPolicy,
+    onPolicyChange: handlePolicyChange,
+    dismissedRules,
+    onDismissRule: handleDismissRule,
+    onFixApplied: handleReceiptFix,
+    learningSummary
+  };
+
   const shellProps = {
     rootNodeId: activeRootId,
     nodesMap: activeNodesMap,
@@ -280,7 +322,8 @@ export default function App() {
     setActiveCanvasTool,
     focusedPanel,
     setFocusedPanel,
-    activeFile
+    activeFile,
+    receiptsConfig
   };
 
   return (
@@ -295,10 +338,10 @@ export default function App() {
 
           <div className="phase-selector" data-tour="phases">
             {[
-              { id: 'phase1', label: 'Phase 1', sub: 'VS Code / Cursor' },
-              { id: 'phase2', label: 'Phase 2', sub: 'Tauri desktop' },
-              { id: 'phase3', label: 'Phase 3', sub: 'Figma plugin', figma: true },
-              { id: 'phase4', label: 'Phase 4', sub: 'Responsive Canvas' }
+              { id: 'phase1', label: 'Phase 1', sub: 'VS Code / Cursor', v1: true },
+              { id: 'phase2', label: 'Phase 2', sub: 'Tauri desktop', vision: true },
+              { id: 'phase3', label: 'Phase 3', sub: 'Figma plugin', figma: true, vision: true },
+              { id: 'phase4', label: 'Phase 4', sub: 'Responsive Canvas', vision: true }
             ].map((p) => (
               <button
                 key={p.id}
@@ -306,6 +349,8 @@ export default function App() {
                 onClick={() => setPhaseWithHash(p.id)}
               >
                 {p.label}
+                {p.v1 && <span className="phase-badge-v1">v1</span>}
+                {p.vision && !p.v1 && <span className="phase-badge-vision">vision</span>}
                 <span>{p.sub}</span>
               </button>
             ))}
@@ -337,6 +382,7 @@ export default function App() {
               onShowFeedback={() => setFeedbackOpen(true)}
               onRunPresenter={handleRunPresenter}
               onOpenScript={() => setScriptOpen(true)}
+              onOpenSpec={() => setSpecOpen(true)}
               onExportFeedback={handleExportFeedback}
               feedbackCount={feedbackCount}
               presenterRunning={presenterRunning}
@@ -364,6 +410,7 @@ export default function App() {
           <MarketingPage
             onLaunchDemo={handleLaunchDemo}
             onOpenScript={() => setScriptOpen(true)}
+            onOpenSpec={() => setSpecOpen(true)}
             onRunPresenter={handleRunPresenter}
             onExportFeedback={handleExportFeedback}
             feedbackCount={feedbackCount}
@@ -389,6 +436,7 @@ export default function App() {
 
       <FeedbackModal isOpen={feedbackOpen} onClose={handleFeedbackClose} />
       <DemoScriptModal isOpen={scriptOpen} onClose={() => setScriptOpen(false)} />
+      <SpecModal isOpen={specOpen} onClose={() => setSpecOpen(false)} />
       <PresenterToast message={presenterMessage} />
     </div>
   );

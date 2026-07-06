@@ -20,7 +20,8 @@ export default function TauriShell({
   setActiveCanvasTool,
   focusedPanel,
   setFocusedPanel,
-  activeFile
+  activeFile,
+  receiptsConfig
 }) {
   const node = nodesMap[selectedNodeId];
 
@@ -287,6 +288,7 @@ export default function TauriShell({
                     nodesMap={nodesMap}
                     onUpdateNode={onUpdateNode}
                     lightMode={true}
+                    {...receiptsConfig}
                   />
                 </div>
 

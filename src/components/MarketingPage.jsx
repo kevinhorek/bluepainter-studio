@@ -3,6 +3,7 @@ import { useState } from 'react';
 export default function MarketingPage({
   onLaunchDemo,
   onOpenScript,
+  onOpenSpec,
   onRunPresenter,
   onExportFeedback,
   feedbackCount = 0,
@@ -82,6 +83,7 @@ export default function MarketingPage({
           <span>BluePainter <span style={{ fontWeight: 400, opacity: 0.8 }}>Studio</span></span>
         </div>
         <nav style={{ display: 'flex', gap: 32, fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8' }}>
+          <a href="#strategy" style={{ color: 'inherit', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e=>e.target.style.color='#fff'} onMouseOut={e=>e.target.style.color='#94a3b8'}>Strategy</a>
           <a href="#features" style={{ color: 'inherit', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e=>e.target.style.color='#fff'} onMouseOut={e=>e.target.style.color='#94a3b8'}>Features</a>
           <a href="#demo" style={{ color: 'inherit', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e=>e.target.style.color='#fff'} onMouseOut={e=>e.target.style.color='#94a3b8'}>Interactive Sandbox</a>
           <a href="#pricing" style={{ color: 'inherit', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e=>e.target.style.color='#fff'} onMouseOut={e=>e.target.style.color='#94a3b8'}>Pricing</a>
@@ -132,7 +134,7 @@ export default function MarketingPage({
           marginBottom: '28px',
           letterSpacing: '0.05em'
         }}>
-          <span>✨</span> THE Figmative Web Development workflow is here
+          <span>✨</span> Workflow moat, not an LLM wrapper
         </div>
         
         <h1 style={{
@@ -159,7 +161,7 @@ export default function MarketingPage({
           maxWidth: '750px',
           margin: '0 auto 40px auto'
         }}>
-          BluePainter is a visual canvas ↔ code workspace where edits in either surface update the other in real time, with **Designer's Receipts** running continuously scoring hierarchy, contrast, and spacing.
+          BluePainter preserves <strong style={{ color: '#e2e8f0', fontWeight: 600 }}>AST round-trips</strong> and <strong style={{ color: '#e2e8f0', fontWeight: 600 }}>team design policy</strong> inside your repo — with a learning loop that compounds from every fix, dismiss, and merge.
         </p>
 
         <div style={{ display: 'flex', justifyContent: 'center', gap: 16 }}>
@@ -207,6 +209,50 @@ export default function MarketingPage({
         </div>
       </section>
 
+      {/* STRATEGY — moat & bear case */}
+      <section id="strategy" style={{
+        padding: '60px 64px',
+        maxWidth: '1100px',
+        margin: '0 auto',
+        position: 'relative',
+        zIndex: 10
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+          <h2 style={{ fontFamily: 'var(--font-title)', fontSize: '2rem', fontWeight: 800, marginBottom: '12px' }}>
+            Built to survive the two clocks
+          </h2>
+          <p style={{ color: '#94a3b8', fontSize: '0.95rem', maxWidth: '680px', margin: '0 auto', lineHeight: 1.6 }}>
+            Models get cheaper. Incumbents ship fast. Our moat is the learning loop — fixes, dismissals, and team policy that improve with every session.
+          </p>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
+          {[
+            { title: 'Learning loop moat', desc: 'Receipt fixes, dismissals, and policy changes log locally (production: per team). Product gets better with usage — not with the next GPT release.', color: '#2563eb' },
+            { title: 'Bear case test', desc: 'If Figma + Cursor ship this in 90 days, we still win on repo round-trip + team policy. If the answer is "nicer UI," we don\'t build it.', color: '#db2777' },
+            { title: 'v1 = Phase 1 only', desc: 'Ship VS Code / Cursor extension with real Recast sync. Phases 2–4 are vision demos — explicitly deferred.', color: '#7c3aed' }
+          ].map((card) => (
+            <div key={card.title} style={{
+              background: 'rgba(30, 41, 59, 0.3)',
+              border: '1px solid rgba(255, 255, 255, 0.06)',
+              borderRadius: '14px',
+              padding: '24px'
+            }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: card.color, marginBottom: 12 }} />
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#fff', marginBottom: 8 }}>{card.title}</h3>
+              <p style={{ fontSize: '0.85rem', color: '#94a3b8', lineHeight: 1.5 }}>{card.desc}</p>
+            </div>
+          ))}
+        </div>
+        <div style={{ textAlign: 'center', marginTop: 28 }}>
+          <button type="button" onClick={onOpenSpec} style={{
+            background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', color: '#cbd5e1',
+            padding: '10px 18px', borderRadius: 8, fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer'
+          }}>
+            📄 Read full product spec
+          </button>
+        </div>
+      </section>
+
       {/* CORE CAPABILITIES GRID */}
       <section id="features" style={{
         padding: '80px 64px',
@@ -217,9 +263,9 @@ export default function MarketingPage({
       }}>
         <div style={{ textAlign: 'center', marginBottom: '60px' }}>
           <h2 style={{ fontFamily: 'var(--font-title)', fontSize: '2.25rem', fontWeight: 800, marginBottom: '12px' }}>
-            Why BluePainter beats actual visual editors
+            Why BluePainter is defensible
           </h2>
-          <p style={{ color: '#94a3b8', fontSize: '1rem' }}>No code runtimes lock-in. Clean, formatted, shippable React code directly in your repo.</p>
+          <p style={{ color: '#94a3b8', fontSize: '1rem' }}>Not a generator — a repo-native workflow with compounding team policy.</p>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '30px' }}>
@@ -237,9 +283,9 @@ export default function MarketingPage({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18.76" />
               </svg>
             </div>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '8px', color: '#ffffff' }}>Bidirectional AST Sync</h3>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '8px', color: '#ffffff' }}>AST-Preserving Sync</h3>
             <p style={{ fontSize: '0.875rem', color: '#94a3b8', lineHeight: 1.5 }}>
-              Edits in canvas update code; edits in code update canvas. Using Recast to preserve your spacing, comments, and formatting on visual round-trips.
+              Canvas ↔ code round-trip in your repo. v1 targets Recast/Babel — formatting and comments survive visual edits. (Prototype uses regex; see spec.)
             </p>
           </div>
 
@@ -257,9 +303,9 @@ export default function MarketingPage({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
               </svg>
             </div>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '8px', color: '#ffffff' }}>Designer's Receipts</h3>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '8px', color: '#ffffff' }}>Team Policy Receipts</h3>
             <p style={{ fontSize: '0.875rem', color: '#94a3b8', lineHeight: 1.5 }}>
-              Continuous real-time auditing of design compliance. Checks relative luminance contrast ratios, spacing grids, CTA copy, and truncates features bloat.
+              Configurable governance: contrast floor, spacing grid, CTA blocklist, feature limits. Fix, dismiss, or customize — every action feeds the learning loop.
             </p>
           </div>
 
@@ -277,9 +323,9 @@ export default function MarketingPage({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
               </svg>
             </div>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '8px', color: '#ffffff' }}>Multi-Device Canvas</h3>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '8px', color: '#ffffff' }}>IDE-First Distribution</h3>
             <p style={{ fontSize: '0.875rem', color: '#94a3b8', lineHeight: 1.5 }}>
-              Check layouts in Desktop, Tablet, and Mobile viewport frames side-by-side. Double click text, slide variables, and inspect how files flex dynamically.
+              v1 ships where developers live: VS Code / Cursor extension reading/writing src/. Vision surfaces (Figma, Tauri, responsive) follow if validation passes.
             </p>
           </div>
         </div>
@@ -473,9 +519,9 @@ export default function MarketingPage({
       }}>
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
           <h2 style={{ fontFamily: 'var(--font-title)', fontSize: '2rem', fontWeight: 800 }}>
-            Four Form Factors, One Source of Truth
+            Four Form Factors — vision after v1
           </h2>
-          <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Deploying visual-code sync directly to where developers and designers live.</p>
+          <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Phase 1 is the v1 build target. Phases 2–4 demonstrate long-term surface area if validation succeeds.</p>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
@@ -495,7 +541,7 @@ export default function MarketingPage({
             onMouseOut={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,0.04)'; e.currentTarget.style.background='rgba(30, 41, 59, 0.2)'}}
           >
             <div style={{ fontSize: '1.25rem', marginBottom: 8 }}>Phase 1</div>
-            <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'white', marginBottom: 4 }}>VS Code / Cursor</div>
+            <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'white', marginBottom: 4 }}>VS Code / Cursor <span style={{ fontSize: '0.6rem', background: '#2563eb', padding: '2px 6px', borderRadius: 4, marginLeft: 6 }}>v1</span></div>
             <p style={{ fontSize: '0.725rem', color: '#94a3b8', lineHeight: 1.4 }}>IDE Webview canvas renders component side-by-side with Editor.</p>
             <span style={{ fontSize: '0.65rem', color: 'var(--blue-primary)', fontWeight: 700, marginTop: 12, display: 'block' }}>Launch Phase 1 →</span>
           </div>
@@ -657,10 +703,40 @@ export default function MarketingPage({
             <button type="button" className="facilitator-btn" onClick={onOpenScript}>
               📋 Interview Script
             </button>
+            <button type="button" className="facilitator-btn" onClick={onOpenSpec}>
+              📄 Product Spec
+            </button>
             <button type="button" className="facilitator-btn" onClick={onExportFeedback}>
               ⬇ Export Feedback{feedbackCount > 0 ? ` (${feedbackCount})` : ''}
             </button>
           </div>
+        </div>
+      </section>
+
+      {/* NOT BUILDING */}
+      <section id="not-building" style={{
+        padding: '0 64px 48px',
+        maxWidth: '900px',
+        margin: '0 auto',
+        position: 'relative',
+        zIndex: 10
+      }}>
+        <div style={{
+          border: '1px dashed rgba(239, 68, 68, 0.25)',
+          borderRadius: 12,
+          padding: '24px 28px',
+          background: 'rgba(239, 68, 68, 0.04)'
+        }}>
+          <h3 style={{ fontFamily: 'var(--font-title)', fontSize: '1.1rem', fontWeight: 800, color: '#fca5a5', marginBottom: 12 }}>
+            Explicitly NOT building (v1)
+          </h3>
+          <ul style={{ listStyle: 'none', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: '0.8rem', color: '#94a3b8' }}>
+            {['AI whole-app generator', 'Figma replacement', 'Website builder', 'Four platforms in v1', 'Hosted proprietary runtime', 'Features with no incumbent defense'].map((item) => (
+              <li key={item} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <span style={{ color: '#ef4444' }}>✕</span> {item}
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
 

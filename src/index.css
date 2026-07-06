@@ -169,6 +169,166 @@ html {
   opacity: 0.6;
 }
 
+.phase-badge-v1 {
+  font-size: 0.55rem !important;
+  font-weight: 800 !important;
+  opacity: 1 !important;
+  background: rgba(37, 99, 235, 0.35);
+  color: #93c5fd !important;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: 4px;
+  letter-spacing: 0.04em;
+}
+
+.phase-badge-vision {
+  font-size: 0.5rem !important;
+  font-weight: 700 !important;
+  opacity: 0.7 !important;
+  color: #64748b !important;
+  margin-left: 4px;
+  text-transform: uppercase;
+}
+
+.receipts-subtitle {
+  display: block;
+  font-size: 0.55rem;
+  font-weight: 500;
+  opacity: 0.55;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 2px;
+}
+
+.team-policy-panel {
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.team-policy-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+}
+
+.team-policy-badge {
+  font-size: 0.6rem;
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--success-color);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.team-policy-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.team-policy-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.65rem;
+  color: #64748b;
+}
+
+.team-policy-grid select,
+.team-policy-grid input {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  color: #e2e8f0;
+  font-size: 0.7rem;
+  padding: 4px 6px;
+}
+
+.team-policy-note {
+  font-size: 0.6rem;
+  color: #64748b;
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
+.learning-loop-strip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(124, 58, 237, 0.12);
+  border: 1px solid rgba(124, 58, 237, 0.25);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 12px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #c4b5fd;
+}
+
+.rule-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.rule-dismiss-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #94a3b8;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.rule-dismiss-btn:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.rule-card.error-rule {
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+.spec-section-body {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.spec-modal {
+  max-width: 680px;
+}
+
+.receipts-light .team-policy-panel {
+  background: #f8fafc;
+  border-color: var(--tauri-border);
+}
+
+.receipts-light .team-policy-grid select,
+.receipts-light .team-policy-grid input {
+  background: #ffffff;
+  border-color: var(--tauri-border);
+  color: var(--tauri-text-dark);
+}
+
+.receipts-light .learning-loop-strip {
+  background: rgba(124, 58, 237, 0.08);
+  color: #6d28d9;
+}
+
+
 .phase-tab:hover {
   color: #ffffff;
 }

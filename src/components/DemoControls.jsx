@@ -6,6 +6,7 @@ export default function DemoControls({
   onShowFeedback,
   onRunPresenter,
   onOpenScript,
+  onOpenSpec,
   onExportFeedback,
   feedbackCount = 0,
   presenterRunning = false
@@ -34,6 +35,9 @@ export default function DemoControls({
       <span className="demo-controls-divider">|</span>
       <button type="button" className="demo-control-btn demo-control-ghost" onClick={onOpenScript} title="Open validation interview script">
         📋 Script
+      </button>
+      <button type="button" className="demo-control-btn demo-control-ghost" onClick={onOpenSpec} title="View product spec">
+        📄 Spec
       </button>
       <button type="button" className="demo-control-btn demo-control-ghost" onClick={onStartTour}>
         ? Tour

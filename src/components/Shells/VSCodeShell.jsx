@@ -19,7 +19,8 @@ export default function VSCodeShell({
   setActiveCanvasTool,
   focusedPanel,
   setFocusedPanel,
-  activeFile
+  activeFile,
+  receiptsConfig
 }) {
   const node = nodesMap[selectedNodeId];
 
@@ -211,6 +212,7 @@ export default function VSCodeShell({
                   component={node}
                   nodesMap={nodesMap}
                   onUpdateNode={onUpdateNode}
+                  {...receiptsConfig}
                 />
               </div>
 

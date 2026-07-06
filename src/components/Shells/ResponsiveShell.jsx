@@ -19,7 +19,8 @@ export default function ResponsiveShell({
   setActiveCanvasTool,
   focusedPanel,
   setFocusedPanel,
-  activeFile
+  activeFile,
+  receiptsConfig
 }) {
   const node = nodesMap[selectedNodeId];
 
@@ -465,6 +466,7 @@ export default function ResponsiveShell({
                 component={node}
                 nodesMap={nodesMap}
                 onUpdateNode={onUpdateNode}
+                {...receiptsConfig}
               />
             </div>
 

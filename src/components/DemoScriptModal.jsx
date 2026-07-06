@@ -6,58 +6,61 @@ const DEMO_SCRIPT = {
     {
       heading: '1. Hook (30 sec)',
       items: [
-        'Open the landing page. Ask: "How do you go from design to shippable React code today?"',
-        'One-liner: "BluePainter is a visual canvas ↔ code workspace — edit either side, both stay in sync, with live design-quality receipts."'
+        'Ask: "How do you go from design to shippable React code in your repo today?"',
+        'One-liner: "BluePainter is AST-preserving canvas ↔ code sync with team policy receipts — not an AI generator."',
+        'Bear case: "If Cursor + Figma ship this in 90 days, we win on repo round-trip + learning loop, not UI."'
       ]
     },
     {
       heading: '2. Mini playground (1 min)',
       items: [
-        'Scroll to Interactive Sandbox on the landing page.',
-        'Drag padding and radius sliders — point out the live TSX preview updating.',
-        'Click "Fails Contrast" — note how a real product would catch this automatically.'
+        'Scroll to Interactive Sandbox — sliders update live TSX.',
+        'Click "Fails Contrast" — receipts catch this in the full workspace.',
+        'Point to Strategy section: learning loop is the moat, not model intelligence.'
       ]
     },
     {
-      heading: '3. Full workspace (2 min)',
+      heading: '3. Full workspace — v1 surface (2 min)',
       items: [
-        'Click "Launch Free Sandbox" or use ▶ Present in the header for an auto walkthrough.',
-        'Select the CTA button on the canvas — show Inspector on the right.',
-        'Click "Break Design" — Receipts panel flags contrast, spacing, copy, feature count.',
-        'Click "Fix All" — canvas and code editor both update. Emphasize bidirectional sync.',
-        'Edit padding in the code editor — canvas reflects the change.'
+        'Launch Phase 1 (v1 target) — VS Code / Cursor layout.',
+        'Open Team Policy in Receipts — change grid or contrast floor; note it persists.',
+        '▶ Present or Break Design → show receipt warnings → Fix All or Dismiss.',
+        'Edit code — canvas updates (round-trip logged to learning loop).',
+        'Show learning loop strip: fixes + syncs compound over time.'
       ]
     },
     {
-      heading: '4. Multi-surface vision (1 min)',
+      heading: '4. Vision surfaces (30 sec — do not oversell)',
       items: [
-        'Phase 1 — VS Code / Cursor side-by-side layout.',
-        'Phase 3 — Figma plugin concept (designers stay in Figma).',
-        'Phase 4 — same component across mobile, tablet, desktop.'
+        'Phase 2–4 are vision mocks deferred from v1 (see 📄 Spec).',
+        'Only mention if time: Figma import in v2, not bidirectional v1.'
       ]
     },
     {
       heading: '5. Validation questions (2 min)',
       items: [
-        'Would you use this in your current workflow? Why or why not?',
+        'Would you pilot this in a real repo on your team?',
         'What would make this a must-have vs. nice-to-have?',
-        'Who on your team would pay for this — design, eng, or both?',
-        "What's the one thing you'd need before trusting the generated code in production?"
+        'Who pays — design, eng, or both?',
+        'What do you need before trusting generated code in production?',
+        'Bear case: "Is Cursor/Figma good enough for your flow today?"'
       ]
     },
     {
-      heading: '6. Close',
+      heading: '6. Close & decision gate',
       items: [
-        'Open Share Feedback — capture their interest level and role.',
-        'After sessions: Export Feedback (JSON) from the header to review responses.',
-        'Decision gate: 3+ "very interested" from target users → build narrow v1 (one surface + real AST sync).'
+        'Share Feedback — capture interest + role.',
+        '⬇ Export validation JSON (feedback + learning loop + policy + decision gate).',
+        'Build v1 if: 3+ "very interested" willing to pilot in real repo.',
+        'Kill if: after 10 sessions, <3 would pay or incumbents are "good enough".'
       ]
     }
   ],
   notes: [
-    'Reset between sessions so each viewer starts fresh.',
-    "Let them click — don't drive the whole demo from the keyboard.",
-    'Write down exact quotes when they lean in or push back.'
+    'Reset between sessions. Let them click.',
+    'Capture exact quotes when they lean in or push back.',
+    'Moat signal: they customize team policy or dismiss/fix receipts repeatedly.',
+    'Full spec: SPEC.md or 📄 Spec in header.'
   ]
 };
 
