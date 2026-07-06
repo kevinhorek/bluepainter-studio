@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react';
+import { getFileLabel } from '../data/workspaceFiles';
 
 export default function CodeEditor({ code, onChange, onFocus, activeFile, onCollapse }) {
   const textareaRef = useRef(null);
@@ -82,7 +83,7 @@ export default function CodeEditor({ code, onChange, onFocus, activeFile, onColl
   return (
     <div className="editor-pane" data-tour="code" onClick={handleFocus}>
       <div className="editor-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-        <span>{activeFile === 'pricing' ? 'PricingCard.tsx' : 'HeroSection.tsx'}</span>
+        <span>{getFileLabel(activeFile)}</span>
         {onCollapse && (
           <button
             onClick={(e) => {

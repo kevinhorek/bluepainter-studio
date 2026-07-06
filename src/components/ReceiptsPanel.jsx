@@ -1,11 +1,15 @@
+import { useState, useEffect, useRef } from 'react';
 import TeamPolicyPanel from './TeamPolicyPanel';
 import { evaluateReceipts, applyReceiptFix } from '../utils/receiptPolicy';
+import { isFacilitatorMode } from '../utils/facilitatorMode';
 
 export default function ReceiptsPanel({
   component,
   nodesMap,
   onUpdateNode,
   lightMode = false,
+  highlightRuleId = null,
+  embedded = false,
   policy,
   onPolicyChange,
   dismissedRules = new Set(),
@@ -13,20 +17,33 @@ export default function ReceiptsPanel({
   onFixApplied,
   learningSummary
 }) {
+  const [policyOpen, setPolicyOpen] = useState(false);
+  const facilitator = isFacilitatorMode();
+  const ruleRefs = useRef({});
+
+  const receiptResult = component
+    ? evaluateReceipts(nodesMap, component, policy, dismissedRules)
+    : { rules: [], scores: { total: 0, design: 0, buildability: 0, accessibility: 0 } };
+  const { rules, scores } = receiptResult;
+
+  useEffect(() => {
+    if (highlightRuleId && ruleRefs.current[highlightRuleId]) {
+      ruleRefs.current[highlightRuleId].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [highlightRuleId, rules.length]);
+
   if (!component) {
     return (
       <div className={`receipts-pane ${lightMode ? 'receipts-light' : ''}`}>
         <div className="receipts-header">
-          <div className="receipts-title">RECEIPTS</div>
+          <div className="receipts-title">Receipts</div>
         </div>
         <div style={{ padding: '24px', textAlign: 'center', fontSize: '0.8rem', color: '#64748b' }}>
-          Select a component to inspect team design policy
+          Select an element to view receipts
         </div>
       </div>
     );
   }
-
-  const { rules, scores } = evaluateReceipts(nodesMap, component, policy, dismissedRules);
 
   const handleFix = (rule) => {
     applyReceiptFix(rule.fixKey, rule.fixMeta, nodesMap, onUpdateNode);
@@ -38,23 +55,29 @@ export default function ReceiptsPanel({
   };
 
   return (
-    <div className={`receipts-pane ${lightMode ? 'receipts-light' : ''}`} data-tour="receipts">
+    <div className={`receipts-pane ${lightMode ? 'receipts-light' : ''} ${embedded ? 'receipts-pane-embedded' : ''}`} data-tour={embedded ? undefined : 'receipts'}>
       <div className="receipts-header">
         <div className="receipts-title">
-          <span>⚡ RECEIPTS</span>
-          <span className="receipts-subtitle">Team policy engine</span>
+          <span>Receipts</span>
         </div>
-        <div className={`score-badge ${scores.total < 90 ? 'warning' : ''}`}>
-          {scores.total}/100
+        <div className="receipts-header-actions">
+          {onPolicyChange && (
+            <button type="button" className="receipts-settings-btn" onClick={() => setPolicyOpen(!policyOpen)}>
+              Rules
+            </button>
+          )}
+          <div className={`score-badge ${scores.total < 90 ? 'warning' : ''}`}>
+            {scores.total}
+          </div>
         </div>
       </div>
 
       <div className="receipts-scroll">
-        {onPolicyChange && (
-          <TeamPolicyPanel policy={policy} onPolicyChange={onPolicyChange} />
+        {policyOpen && onPolicyChange && (
+          <TeamPolicyPanel policy={policy} onPolicyChange={onPolicyChange} compact={!facilitator} />
         )}
 
-        {learningSummary && learningSummary.totalEvents > 0 && (
+        {facilitator && learningSummary && learningSummary.totalEvents > 0 && (
           <div className="learning-loop-strip">
             <span>Learning loop</span>
             <span>{learningSummary.fixesApplied} fixes · {learningSummary.roundTripsCanvas + learningSummary.roundTripsCode} syncs</span>
@@ -89,9 +112,10 @@ export default function ReceiptsPanel({
           {rules.map((rule) => (
             <div
               key={rule.id}
-              className={`rule-card ${rule.valid ? 'success' : rule.severity === 'error' ? 'warning error-rule' : 'warning'}`}
+              ref={(el) => { ruleRefs.current[rule.id] = el; }}
+              className={`rule-card ${rule.valid ? 'success' : rule.severity === 'error' ? 'warning error-rule' : 'warning'} ${highlightRuleId === rule.id ? 'rule-card-highlight' : ''}`}
             >
-              <span className="rule-icon">{rule.valid ? '✓' : rule.severity === 'error' ? '🚨' : '⚠️'}</span>
+              <span className="rule-icon">{rule.valid ? '✓' : rule.severity === 'error' ? '!' : '·'}</span>
               <div className="rule-content">
                 <div className="rule-title">{rule.title}</div>
                 <div className="rule-desc">{rule.desc}</div>
@@ -121,8 +145,8 @@ export default function ReceiptsPanel({
       </div>
 
       <div className="receipts-footer">
-        <span>Team policy</span>
-        <span>{policy.minContrastRatio}:1 contrast · {policy.spacingGrid}px grid</span>
+        <span>Live checks</span>
+        <span>{policy.minContrastRatio}:1 · {policy.spacingGrid}px grid</span>
       </div>
     </div>
   );

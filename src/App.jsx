@@ -1,17 +1,20 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { generateTSX, parseTSX } from './utils/syncEngine';
-import { applyBrokenDesignScenario, applyFixedDesignScenario, getFreshHeroNodes, getFreshPricingNodes } from './utils/demoScenarios';
+import { applyBrokenDesignScenario, applyFixedDesignScenario, getFreshHeroNodes, getFreshPricingNodes, getFreshDashboardNodes } from './utils/demoScenarios';
+import { getWorkspaceFile } from './data/workspaceFiles';
 import { downloadValidationExport, getFeedbackSummary } from './utils/validationExport';
 import { loadReceiptPolicy, saveReceiptPolicy } from './data/defaultReceiptPolicy';
 import { logLearningEvent, getLearningSummary } from './utils/learningLoop';
 import { runPresenterSequence } from './utils/presenterMode';
+import { isFacilitatorMode } from './utils/facilitatorMode';
 import VSCodeShell from './components/Shells/VSCodeShell';
 import TauriShell from './components/Shells/TauriShell';
 import FigmaShell from './components/Shells/FigmaShell';
 import ResponsiveShell from './components/Shells/ResponsiveShell';
-import MarketingPage from './components/MarketingPage';
+import ValidationScriptModal from './components/ValidationScriptModal';
+import AboutPanel from './components/AboutPanel';
+import WorkspaceHeader from './components/WorkspaceHeader';
 import DemoTour from './components/DemoTour';
-import DemoControls from './components/DemoControls';
 import FeedbackModal from './components/FeedbackModal';
 import DemoScriptModal from './components/DemoScriptModal';
 import SpecModal from './components/SpecModal';
@@ -19,35 +22,44 @@ import PresenterToast from './components/PresenterToast';
 
 const VALID_PHASES = ['landing', 'phase1', 'phase2', 'phase3', 'phase4'];
 const TOUR_SEEN_KEY = 'bluepainter-tour-seen';
+const facilitator = isFacilitatorMode();
 
 function parseHash() {
   const hash = window.location.hash.replace(/^#\/?/, '');
-  if (!hash) return { phase: 'landing', startTour: false };
-  if (hash === 'demo') return { phase: 'phase1', startTour: true };
+  if (!hash || hash === 'studio') return { phase: 'phase1', startTour: false };
+  if (hash === 'about') return { phase: 'phase1', startTour: false, openAbout: true };
+  if (hash === 'demo') {
+    return { phase: 'phase1', startTour: facilitator };
+  }
   if (hash.startsWith('demo/')) {
     const phase = hash.replace('demo/', '');
-    return { phase: VALID_PHASES.includes(phase) ? phase : 'phase1', startTour: true };
+    return { phase: VALID_PHASES.includes(phase) ? phase : 'phase1', startTour: facilitator };
   }
   if (VALID_PHASES.includes(hash)) return { phase: hash, startTour: false };
-  return { phase: 'landing', startTour: false };
+  return { phase: 'phase1', startTour: false };
 }
 
 function phaseToHash(phase, tourActive) {
-  if (phase === 'landing') return '#/';
+  if (phase === 'landing') return '#/about';
   if (tourActive) return '#/demo';
-  return `#/${phase}`;
+  return '#/studio';
 }
 
 export default function App() {
   const initialRoute = parseHash();
-  const [phase, setPhase] = useState(initialRoute.phase);
-  const [activeFile, setActiveFile] = useState('pricing');
-  const [selectedNodeId, setSelectedNodeId] = useState('pricing-card-frame');
+  const [phase, setPhase] = useState(initialRoute.phase === 'landing' ? 'phase1' : initialRoute.phase);
+  const [aboutOpen, setAboutOpen] = useState(Boolean(initialRoute.openAbout));
+  const [validationScriptOpen, setValidationScriptOpen] = useState(false);
+  const [activeFile, setActiveFile] = useState('dashboard');
+  const [selectedNodeId, setSelectedNodeId] = useState('dashboard-page');
   const [activeCanvasTool, setActiveCanvasTool] = useState('select');
   const [focusedPanel, setFocusedPanel] = useState('canvas');
 
-  const [pricingNodes, setPricingNodes] = useState(() => getFreshPricingNodes());
-  const [heroNodes, setHeroNodes] = useState(() => getFreshHeroNodes());
+  const [nodesByFile, setNodesByFile] = useState(() => ({
+    pricing: getFreshPricingNodes(),
+    hero: getFreshHeroNodes(),
+    dashboard: getFreshDashboardNodes()
+  }));
   const [code, setCode] = useState('');
 
   const [tourActive, setTourActive] = useState(initialRoute.startTour);
@@ -66,13 +78,19 @@ export default function App() {
 
   const refreshLearningSummary = () => setLearningSummary(getLearningSummary());
 
-  const activeNodesMap = activeFile === 'pricing' ? pricingNodes : heroNodes;
-  const activeRootId = activeFile === 'pricing' ? 'pricing-card-frame' : 'hero-frame';
-  const setActiveNodesMap = activeFile === 'pricing' ? setPricingNodes : setHeroNodes;
+  const fileConfig = getWorkspaceFile(activeFile);
+  const activeNodesMap = nodesByFile[activeFile];
+  const activeRootId = fileConfig.rootId;
+  const setActiveNodesMap = useCallback((updater) => {
+    setNodesByFile((prev) => ({
+      ...prev,
+      [activeFile]: typeof updater === 'function' ? updater(prev[activeFile]) : updater
+    }));
+  }, [activeFile]);
 
   const handleSetActiveFile = useCallback((file) => {
     setActiveFile(file);
-    setSelectedNodeId(file === 'pricing' ? 'pricing-card-frame' : 'hero-frame');
+    setSelectedNodeId(getWorkspaceFile(file).defaultSelection);
   }, []);
 
   const setPhaseWithHash = useCallback((nextPhase, options = {}) => {
@@ -106,7 +124,7 @@ export default function App() {
   }, [activeFile, activeRootId, activeNodesMap]);
 
   useEffect(() => {
-    if (phase === 'landing') return;
+    if (!facilitator) return;
     const timer = setTimeout(() => {
       if (!feedbackPromptShown && !localStorage.getItem('bluepainter-feedback-given')) {
         setFeedbackOpen(true);
@@ -187,33 +205,74 @@ export default function App() {
     setSelectedNodeId(newId);
   };
 
-  const handleLaunchDemo = (targetPhase = 'phase1', withTour = false) => {
-    handleSetActiveFile('pricing');
-    setSelectedNodeId('cta-button');
-    if (withTour) {
-      setPhaseWithHash(targetPhase, { startTour: true });
-    } else {
-      setPhaseWithHash(targetPhase);
+  const handleAddComponentInstance = useCallback((refFile, parentId) => {
+    if (!fileConfig.isPage) {
+      alert('Open a page file (e.g. DashboardPage.tsx) to place components.');
+      return;
     }
-  };
+
+    const ref = getWorkspaceFile(refFile);
+    if (ref.isPage) return;
+
+    const dropParent = parentId
+      || (activeNodesMap['components-row'] ? 'components-row' : null)
+      || (activeNodesMap['page-content'] ? 'page-content' : null)
+      || activeRootId;
+
+    const parent = activeNodesMap[dropParent];
+    if (!parent) return;
+    if (['text', 'button', 'image', 'line', 'component-instance'].includes(parent.type)) {
+      alert('Drop components onto a frame or page section, not a leaf element.');
+      return;
+    }
+
+    const newId = `${refFile}-instance-${Date.now().toString().slice(-4)}`;
+    const defaultStyle = refFile === 'hero'
+      ? { flex: 1, minWidth: 420 }
+      : { flexShrink: 0 };
+
+    const newNode = {
+      id: newId,
+      type: 'component-instance',
+      name: ref.componentName,
+      refFile,
+      tag: 'div',
+      style: defaultStyle
+    };
+
+    setActiveNodesMap((prev) => ({
+      ...prev,
+      [dropParent]: { ...parent, children: [...(parent.children || []), newId] },
+      [newId]: newNode
+    }));
+    setSelectedNodeId(newId);
+    logLearningEvent('component_instance_added', { refFile, page: activeFile });
+    refreshLearningSummary();
+  }, [activeFile, activeNodesMap, activeRootId, fileConfig.isPage, setActiveNodesMap]);
 
   const handleBreakDesign = () => {
     handleSetActiveFile('pricing');
-    setPricingNodes((prev) => applyBrokenDesignScenario(prev));
+    setNodesByFile((prev) => ({
+      ...prev,
+      pricing: applyBrokenDesignScenario(prev.pricing)
+    }));
     setSelectedNodeId('cta-button');
   };
 
   const handleFixAll = () => {
     handleSetActiveFile('pricing');
-    setPricingNodes(applyFixedDesignScenario());
+    setNodesByFile((prev) => ({ ...prev, pricing: applyFixedDesignScenario() }));
     setSelectedNodeId('cta-button');
   };
 
   const handleResetDemo = () => {
-    setPricingNodes(getFreshPricingNodes());
-    setHeroNodes(getFreshHeroNodes());
-    handleSetActiveFile('pricing');
-    setSelectedNodeId('pricing-card-frame');
+    setNodesByFile({
+      pricing: getFreshPricingNodes(),
+      hero: getFreshHeroNodes(),
+      dashboard: getFreshDashboardNodes()
+    });
+    handleSetActiveFile('dashboard');
+    setSelectedNodeId('dashboard-page');
     setDismissedRules(new Set());
   };
 
@@ -274,9 +333,7 @@ export default function App() {
 
     presenterCancelRef.current = runPresenterSequence({
       ensureWorkspace: () => {
-        if (phase === 'landing') {
-          setPhaseWithHash('phase1');
-        }
+        setPhaseWithHash('phase1');
       },
       onReset: handleResetDemo,
       onBreak: handleBreakDesign,
@@ -318,126 +375,73 @@ export default function App() {
     code,
     onCodeChange: handleCodeChange,
     onAddNode: handleAddNode,
+    onAddComponentInstance: handleAddComponentInstance,
     activeCanvasTool,
     setActiveCanvasTool,
     focusedPanel,
     setFocusedPanel,
     activeFile,
+    fileConfig,
+    componentLibrary: {
+      pricing: nodesByFile.pricing,
+      hero: nodesByFile.hero
+    },
+    onOpenComponentFile: handleSetActiveFile,
     receiptsConfig
   };
 
+  const workspacePhase = facilitator ? phase : 'phase1';
+
   return (
-    <div className={`app-container ${phase === 'landing' ? 'app-landing' : ''}`}>
-      {phase !== 'landing' && (
-        <header className="global-header">
-          <div className="logo-section">
-            <div className="logo-icon"><div className="logo-dot"></div></div>
-            <span>BluePainter <span style={{ fontWeight: 400, opacity: 0.8 }}>Studio</span></span>
-            <span className="demo-badge">Interactive Demo</span>
-          </div>
-
-          <div className="phase-selector" data-tour="phases">
-            {[
-              { id: 'phase1', label: 'Phase 1', sub: 'VS Code / Cursor', v1: true },
-              { id: 'phase2', label: 'Phase 2', sub: 'Tauri desktop', vision: true },
-              { id: 'phase3', label: 'Phase 3', sub: 'Figma plugin', figma: true, vision: true },
-              { id: 'phase4', label: 'Phase 4', sub: 'Responsive Canvas', vision: true }
-            ].map((p) => (
-              <button
-                key={p.id}
-                className={`phase-tab ${phase === p.id ? (p.figma ? 'active-figma' : 'active') : ''}`}
-                onClick={() => setPhaseWithHash(p.id)}
-              >
-                {p.label}
-                {p.v1 && <span className="phase-badge-v1">v1</span>}
-                {p.vision && !p.v1 && <span className="phase-badge-vision">vision</span>}
-                <span>{p.sub}</span>
-              </button>
-            ))}
-          </div>
-
-          <div className="header-right">
-            <div className="component-switcher">
-              <button
-                className={`component-switch-btn ${activeFile === 'pricing' ? 'active' : ''}`}
-                onClick={() => handleSetActiveFile('pricing')}
-              >
-                PricingCard
-              </button>
-              <button
-                className={`component-switch-btn ${activeFile === 'hero' ? 'active' : ''}`}
-                onClick={() => handleSetActiveFile('hero')}
-              >
-                HeroSection
-              </button>
-            </div>
-
-            <span style={{ opacity: 0.3 }}>|</span>
-
-            <DemoControls
-              onBreakDesign={handleBreakDesign}
-              onFixAll={handleFixAll}
-              onReset={handleResetDemo}
-              onStartTour={() => { setTourActive(true); setTourStep(0); }}
-              onShowFeedback={() => setFeedbackOpen(true)}
-              onRunPresenter={handleRunPresenter}
-              onOpenScript={() => setScriptOpen(true)}
-              onOpenSpec={() => setSpecOpen(true)}
-              onExportFeedback={handleExportFeedback}
-              feedbackCount={feedbackCount}
-              presenterRunning={presenterRunning}
-            />
-
-            <span style={{ opacity: 0.3 }}>|</span>
-
-            <div style={{ display: 'flex', gap: 6, background: '#1e293b', padding: '2px 6px', borderRadius: 6 }}>
-              <button onClick={() => handleAddNode('frame')} draggable="true" onDragStart={(e) => e.dataTransfer.setData('layerType', 'frame')} style={{ background: 'transparent', border: 'none', color: '#cbd5e1', fontSize: '0.75rem', cursor: 'grab', padding: '4px' }} title="Drag Frame Group onto Canvas">📁 +Frame</button>
-              <button onClick={() => handleAddNode('text')} draggable="true" onDragStart={(e) => e.dataTransfer.setData('layerType', 'text')} style={{ background: 'transparent', border: 'none', color: '#cbd5e1', fontSize: '0.75rem', cursor: 'grab', padding: '4px' }} title="Drag Text Layer onto Canvas">📝 +Text</button>
-              <button onClick={() => handleAddNode('button')} draggable="true" onDragStart={(e) => e.dataTransfer.setData('layerType', 'button')} style={{ background: 'transparent', border: 'none', color: '#cbd5e1', fontSize: '0.75rem', cursor: 'grab', padding: '4px' }} title="Drag Button Layer onto Canvas">🔘 +Button</button>
-            </div>
-
-            <span style={{ opacity: 0.3 }}>|</span>
-
-            <button className="header-btn" onClick={() => setPhaseWithHash('landing')}>🏠 Landing</button>
-            <span style={{ opacity: 0.3 }}>|</span>
-            <span>⚡ Live Sync: Active</span>
-          </div>
-        </header>
-      )}
-
-      <main className="shell-viewport">
-        {phase === 'landing' ? (
-          <MarketingPage
-            onLaunchDemo={handleLaunchDemo}
-            onOpenScript={() => setScriptOpen(true)}
-            onOpenSpec={() => setSpecOpen(true)}
-            onRunPresenter={handleRunPresenter}
-            onExportFeedback={handleExportFeedback}
-            feedbackCount={feedbackCount}
-            presenterRunning={presenterRunning}
-          />
-        ) : (
-          <>
-            {phase === 'phase1' && <VSCodeShell {...shellProps} />}
-            {phase === 'phase2' && <TauriShell {...shellProps} onLoadComponent={handleSetActiveFile} />}
-            {phase === 'phase3' && <FigmaShell {...shellProps} />}
-            {phase === 'phase4' && <ResponsiveShell {...shellProps} />}
-          </>
-        )}
-      </main>
-
-      <DemoTour
-        isActive={tourActive && phase !== 'landing'}
-        currentStep={tourStep}
-        setCurrentStep={setTourStep}
-        onComplete={handleTourComplete}
-        onSkip={handleTourSkip}
+    <div className="app-container">
+      <WorkspaceHeader
+        activeFile={activeFile}
+        onFileChange={handleSetActiveFile}
+        onFeedback={() => setFeedbackOpen(true)}
+        onShowAbout={() => setAboutOpen(true)}
+        onOpenInterviewGuide={() => setValidationScriptOpen(true)}
+        facilitatorActions={facilitator ? {
+          onBreakDesign: handleBreakDesign,
+          onFixAll: handleFixAll,
+          onReset: handleResetDemo,
+          onStartTour: () => { setTourActive(true); setTourStep(0); },
+          onRunPresenter: handleRunPresenter,
+          onOpenScript: () => setScriptOpen(true),
+          onOpenSpec: () => setSpecOpen(true),
+          onExportFeedback: handleExportFeedback,
+          feedbackCount,
+          presenterRunning
+        } : null}
       />
 
+      <main className="shell-viewport">
+        {workspacePhase === 'phase1' && <VSCodeShell {...shellProps} />}
+        {facilitator && workspacePhase === 'phase2' && <TauriShell {...shellProps} onLoadComponent={handleSetActiveFile} />}
+        {facilitator && workspacePhase === 'phase3' && <FigmaShell {...shellProps} />}
+        {facilitator && workspacePhase === 'phase4' && <ResponsiveShell {...shellProps} />}
+      </main>
+
+      <AboutPanel
+        open={aboutOpen}
+        onClose={() => setAboutOpen(false)}
+        onFeedback={() => setFeedbackOpen(true)}
+      />
+
+      {facilitator && (
+        <DemoTour
+          isActive={tourActive}
+          currentStep={tourStep}
+          setCurrentStep={setTourStep}
+          onComplete={handleTourComplete}
+          onSkip={handleTourSkip}
+        />
+      )}
+
       <FeedbackModal isOpen={feedbackOpen} onClose={handleFeedbackClose} />
-      <DemoScriptModal isOpen={scriptOpen} onClose={() => setScriptOpen(false)} />
-      <SpecModal isOpen={specOpen} onClose={() => setSpecOpen(false)} />
-      <PresenterToast message={presenterMessage} />
+      <ValidationScriptModal isOpen={validationScriptOpen} onClose={() => setValidationScriptOpen(false)} />
+      {facilitator && <DemoScriptModal isOpen={scriptOpen} onClose={() => setScriptOpen(false)} />}
+      {facilitator && <SpecModal isOpen={specOpen} onClose={() => setSpecOpen(false)} />}
+      {facilitator && <PresenterToast message={presenterMessage} />}
     </div>
   );
 }

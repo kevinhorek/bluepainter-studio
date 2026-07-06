@@ -1,4 +1,5 @@
 import { cloneNodes, initialHeroNodes, initialPricingNodes } from '../data/mockComponents';
+import { getFreshDashboardNodes } from '../data/dashboardPage';
 
 export function getFreshPricingNodes() {
   return cloneNodes(initialPricingNodes);
@@ -7,6 +8,8 @@ export function getFreshPricingNodes() {
 export function getFreshHeroNodes() {
   return cloneNodes(initialHeroNodes);
 }
+
+export { getFreshDashboardNodes };
 
 export function applyBrokenDesignScenario(nodes) {
   const updated = cloneNodes(nodes);

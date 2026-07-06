@@ -1,7 +1,10 @@
+import { getWorkspaceFile } from '../data/workspaceFiles';
+
 export default function InspectorPanel({
   selectedNodeId,
   nodesMap,
-  onUpdateNode
+  onUpdateNode,
+  onOpenComponentFile
 }) {
   const node = nodesMap[selectedNodeId];
 
@@ -9,6 +12,71 @@ export default function InspectorPanel({
     return (
       <div style={{ padding: 24, textAlign: 'center', color: '#64748b', fontSize: '0.8rem' }}>
         Select a layer on the canvas or layers panel to inspect properties
+      </div>
+    );
+  }
+
+  if (node.type === 'component-instance') {
+    const ref = getWorkspaceFile(node.refFile);
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', color: '#cbd5e1' }}>
+        <div style={{
+          padding: '12px 16px',
+          borderBottom: '1px solid #444',
+          fontSize: '0.7rem',
+          fontWeight: 700,
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+          color: '#94a3b8'
+        }}>
+          Component instance
+        </div>
+        <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="inspector-instance-card">
+            <span className="inspector-instance-label">References</span>
+            <span className="inspector-instance-file">{ref.label}</span>
+            <p className="inspector-instance-desc">
+              Live preview from {ref.label}. Edits to layout props apply here; edit the component&apos;s content in its own file.
+            </p>
+            <button
+              type="button"
+              className="inspector-instance-open"
+              onClick={() => onOpenComponentFile?.(node.refFile)}
+            >
+              Open {ref.label}
+            </button>
+          </div>
+          <div>
+            <div style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', color: '#64748b', marginBottom: 8 }}>Placement</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div>
+                <label style={{ fontSize: '0.6rem', color: '#64748b', display: 'block', marginBottom: 2 }}>Min width</label>
+                <input
+                  type="text"
+                  value={node.style?.minWidth ?? ''}
+                  onChange={(e) => onUpdateNode(selectedNodeId, { style: { ...node.style, minWidth: e.target.value || undefined } })}
+                  style={{ width: '100%', background: '#1e1e24', border: '1px solid #444', color: '#fff', padding: '6px 8px', borderRadius: 4, fontSize: '0.75rem' }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.6rem', color: '#64748b', display: 'block', marginBottom: 2 }}>Flex</label>
+                <input
+                  type="text"
+                  value={node.style?.flex ?? ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const flex = val === '' ? undefined : (/^\d+$/.test(val) ? Number(val) : val);
+                    onUpdateNode(selectedNodeId, { style: { ...node.style, flex } });
+                  }}
+                  style={{ width: '100%', background: '#1e1e24', border: '1px solid #444', color: '#fff', padding: '6px 8px', borderRadius: 4, fontSize: '0.75rem' }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="inspector-footer">
+          Double-click instance on canvas to open source file.
+        </div>
       </div>
     );
   }
@@ -346,14 +414,8 @@ export default function InspectorPanel({
       </div>
 
       {/* 3. Footer info */}
-      <div style={{
-        padding: 12,
-        borderTop: '1px solid #444',
-        fontSize: '0.65rem',
-        color: '#64748b',
-        lineHeight: 1.3
-      }}>
-        ⚡ All property edits patch the virtual JSX AST. Watch the editor code update in real-time.
+      <div className="inspector-footer">
+        Edits sync to code in real time.
       </div>
 
     </div>

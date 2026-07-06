@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
+import { getWorkspaceFile } from '../data/workspaceFiles';
 
 export default function CanvasView({
   rootNodeId,
@@ -7,12 +8,16 @@ export default function CanvasView({
   onSelectNode,
   onUpdateNode,
   onAddNode,
+  onAddComponentInstance = null,
   theme = 'dark',
   isFigma = false,
   activeCanvasTool = 'select',
   setActiveCanvasTool,
   hideToolbar = false,
-  onFocus
+  onFocus,
+  pageViewport = null,
+  componentLibrary = null,
+  onOpenComponentFile = null
 }) {
   const canvasRef = useRef(null);
   
@@ -207,8 +212,17 @@ export default function CanvasView({
   };
 
   // Handle Drag-and-Drop item creation dropping onto the Canvas coordinates
+  const tryComponentDrop = (e, parentId) => {
+    const componentRef = e.dataTransfer.getData('componentRef');
+    if (!componentRef || !onAddComponentInstance) return false;
+    onAddComponentInstance(componentRef, parentId);
+    return true;
+  };
+
   const handleCanvasDrop = (e) => {
     e.preventDefault();
+    if (tryComponentDrop(e, rootNodeId)) return;
+
     const type = e.dataTransfer.getData('layerType');
     if (!type) return;
 
@@ -226,26 +240,100 @@ export default function CanvasView({
   };
 
   // Recursive Renderer of tree-node JSX items
-  const renderASTNode = (nodeId) => {
-    const node = nodesMap[nodeId];
+  const renderASTNode = (nodeId, sourceMap = nodesMap, embedRootId = null) => {
+    const node = sourceMap[nodeId];
     if (!node) return null;
 
-    const Tag = node.tag || 'div';
-    const isSelected = selectedNodeId === nodeId;
+    const isEmbeddedRoot = embedRootId === nodeId;
+    const isSelected = selectedNodeId === nodeId && sourceMap === nodesMap;
     const selectionColor = isFigma ? 'var(--purple-figma)' : 'var(--blue-primary)';
 
+    if (node.type === 'component-instance') {
+      const refConfig = getWorkspaceFile(node.refFile);
+      const refNodes = componentLibrary?.[node.refFile];
+      const wrapperStyle = {
+        ...(node.style || {}),
+        position: 'relative',
+        outline: 'none',
+        userSelect: 'none'
+      };
+
+      const clickHandler = (e) => {
+        e.stopPropagation();
+        if (onFocus) onFocus();
+        onSelectNode(nodeId);
+      };
+
+      const selectionBorderMarkup = isSelected && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: -1.5,
+            border: `1.5px solid ${selectionColor}`,
+            pointerEvents: 'none',
+            zIndex: 30,
+            boxShadow: `0 0 8px ${selectionColor}40`,
+            borderRadius: 4
+          }}
+        >
+          <span
+            style={{
+              position: 'absolute',
+              top: -18,
+              left: -1.5,
+              background: selectionColor,
+              color: 'white',
+              fontSize: '0.55rem',
+              fontWeight: 700,
+              padding: '1px 4px',
+              borderRadius: 2,
+              whiteSpace: 'nowrap',
+              lineHeight: 1
+            }}
+          >
+            {refConfig.label}
+          </span>
+        </div>
+      );
+
+      return (
+        <div
+          key={nodeId}
+          id={nodeId}
+          onClick={clickHandler}
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            onOpenComponentFile?.(node.refFile);
+          }}
+          style={wrapperStyle}
+          className="component-instance-wrap"
+          title={`Double-click to edit ${refConfig.label}`}
+        >
+          {selectionBorderMarkup}
+          {refNodes ? (
+            <div className="component-instance-preview" style={{ pointerEvents: 'none' }}>
+              {renderASTNode(refConfig.rootId, refNodes, refConfig.rootId)}
+            </div>
+          ) : (
+            <div className="component-instance-missing">Missing {refConfig.label}</div>
+          )}
+        </div>
+      );
+    }
+
+    const Tag = node.tag || 'div';
     // Compile node style
     const baseStyle = {
       ...(node.style || {}),
-      position: node.style.position || 'relative',
+      position: isEmbeddedRoot ? 'relative' : (node.style?.position || 'relative'),
+      left: isEmbeddedRoot ? 0 : node.style?.left,
+      top: isEmbeddedRoot ? 0 : node.style?.top,
       outline: 'none',
       userSelect: 'none'
     };
 
     const isEditable = node.type === 'text' || node.type === 'button';
     const isLeaf = isEditable || node.type === 'image' || node.type === 'line';
-
-    // Drag-over and drop handlers for containers (nested dropping support)
     const dragOverProps = !isLeaf ? {
       onDragOver: (e) => {
         e.preventDefault();
@@ -254,6 +342,8 @@ export default function CanvasView({
       onDrop: (e) => {
         e.preventDefault();
         e.stopPropagation();
+        if (tryComponentDrop(e, nodeId)) return;
+
         const type = e.dataTransfer.getData('layerType');
         if (!type) return;
 
@@ -385,7 +475,7 @@ export default function CanvasView({
         {isLeaf ? (
           node.text
         ) : (
-          (node.children || []).map(childId => renderASTNode(childId))
+          (node.children || []).map((childId) => renderASTNode(childId, sourceMap, embedRootId))
         )}
       </Tag>
     );
@@ -458,9 +548,11 @@ export default function CanvasView({
     return 'crosshair';
   };
 
+  const isPageView = Boolean(pageViewport);
+
   return (
     <div 
-      className={`canvas-container ${gridClass}`}
+      className={`canvas-container ${gridClass} ${isPageView ? 'canvas-page-view' : ''}`}
       data-tour="canvas"
       ref={canvasRef}
       onDragOver={(e) => e.preventDefault()}
@@ -468,48 +560,41 @@ export default function CanvasView({
       onClick={handleOuterCanvasClick}
       style={{
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 40,
+        alignItems: isPageView ? 'flex-start' : 'center',
+        justifyContent: isPageView ? 'flex-start' : 'center',
+        padding: isPageView ? 24 : 40,
         height: '100%',
         cursor: getCursorStyle()
       }}
     >
       {/* Root board coordinate space */}
-      <div style={{ position: 'relative', width: '100%', height: '100%', minWidth: 800, minHeight: 600 }}>
+      <div style={{
+        position: 'relative',
+        width: isPageView ? pageViewport.width : '100%',
+        height: isPageView ? pageViewport.height : '100%',
+        minWidth: isPageView ? pageViewport.width : 800,
+        minHeight: isPageView ? pageViewport.height : 600,
+        flexShrink: 0
+      }}>
         {renderASTNode(rootNodeId)}
       </div>
 
-      {/* Workspace top status indicator */}
+      {/* Canvas status */}
       {!hideToolbar && (
-        <div 
-          style={{
-            position: 'absolute',
-            top: 16,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: 'rgba(15, 23, 42, 0.85)',
-            backdropFilter: 'blur(12px)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: 8,
-            padding: '6px 12px',
-            display: 'flex',
-            gap: 12,
-            alignItems: 'center',
-            zIndex: 40,
-            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)'
-          }}
-        >
-          <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.05em' }}>WORKSPACE MODE:</span>
-          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: activeCanvasTool !== 'select' ? '#a78bfa' : '#cbd5e1' }}>
-            {activeCanvasTool !== 'select' ? `✏️ Placing ${activeCanvasTool}` : '🖱️ Pointer / Select'}
-          </span>
-          <span style={{ color: 'rgba(255,255,255,0.1)' }}>|</span>
-          <span style={{ fontSize: '0.65rem', color: '#64748b' }}>
-            {activeCanvasTool !== 'select' 
-              ? 'Click inside a container to insert layer' 
-              : 'Move elements, resize, or double-click to edit text'}
-          </span>
+        <div className="canvas-status-bar">
+          {isPageView ? (
+            <>
+              <span className="canvas-status-label">Page</span>
+              <span className="canvas-status-value">{pageViewport.width} × {pageViewport.height}</span>
+            </>
+          ) : (
+            <>
+              <span className="canvas-status-label">Component</span>
+              <span className="canvas-status-value">
+                {activeCanvasTool !== 'select' ? `Placing ${activeCanvasTool}` : 'Select'}
+              </span>
+            </>
+          )}
         </div>
       )}
 

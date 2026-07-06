@@ -1,17 +1,18 @@
-export default function TeamPolicyPanel({ policy, onPolicyChange }) {
+export default function TeamPolicyPanel({ policy, onPolicyChange, compact = false }) {
   const update = (key, value) => {
     onPolicyChange({ ...policy, [key]: value });
   };
 
   return (
     <div className="team-policy-panel">
-      <div className="team-policy-header">
-        <span>Team Policy</span>
-        <span className="team-policy-badge">Configurable</span>
-      </div>
+      {!compact && (
+        <div className="team-policy-header">
+          <span>Team rules</span>
+        </div>
+      )}
       <div className="team-policy-grid">
         <label>
-          Spacing grid
+          Grid
           <select value={policy.spacingGrid} onChange={(e) => update('spacingGrid', Number(e.target.value))}>
             <option value={4}>4px</option>
             <option value={8}>8px</option>
@@ -19,15 +20,14 @@ export default function TeamPolicyPanel({ policy, onPolicyChange }) {
           </select>
         </label>
         <label>
-          Min contrast
+          Contrast
           <select value={policy.minContrastRatio} onChange={(e) => update('minContrastRatio', Number(e.target.value))}>
-            <option value={3}>3:1 AA Large</option>
-            <option value={4.5}>4.5:1 AA</option>
-            <option value={7}>7:1 AAA</option>
+            <option value={4.5}>AA 4.5:1</option>
+            <option value={7}>AAA 7:1</option>
           </select>
         </label>
         <label>
-          Max features
+          Max items
           <input
             type="number"
             min={3}
@@ -37,7 +37,6 @@ export default function TeamPolicyPanel({ policy, onPolicyChange }) {
           />
         </label>
       </div>
-      <p className="team-policy-note">Policy changes log to the learning loop and persist for this browser.</p>
     </div>
   );
 }

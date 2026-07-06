@@ -18,7 +18,7 @@ const TOUR_STEPS = [
   {
     id: 'receipts',
     title: 'Designer\'s Receipts',
-    body: 'Live design audits score contrast, spacing grids, CTA copy, and more. When something fails, click a fix button — canvas and code both update.',
+    body: 'Click a receipt message at the bottom, or the checkmark in the rail, to open the sidebar with full audit details and one-click fixes.',
     target: '[data-tour="receipts"]',
     position: 'left'
   },
@@ -30,23 +30,23 @@ const TOUR_STEPS = [
     position: 'left'
   },
   {
-    id: 'phases',
-    title: 'Four Deployment Surfaces',
-    body: 'Switch between VS Code, Tauri desktop, Figma plugin, and responsive canvas views. Same component, different contexts.',
-    target: '[data-tour="phases"]',
-    position: 'bottom'
+    id: 'library',
+    title: 'Component library',
+    body: 'Open Library in the sidebar to drag PricingCard or HeroSection onto a page — they stay linked to the source files.',
+    target: '[data-tour="library"]',
+    position: 'left'
   },
   {
     id: 'scenarios',
-    title: 'Try a Demo Scenario',
-    body: 'Use "Break Design" to trigger receipt warnings, then "Fix All" to watch one-click remediation. Great for showing the value prop quickly.',
-    target: '[data-tour="demo-controls"]',
+    title: 'Facilitator tools',
+    body: 'Open the ··· menu to break the design (trigger receipt warnings) or fix everything in one click — useful when demoing to a group.',
+    target: '[data-tour="facilitator-menu"]',
     position: 'bottom'
   },
   {
     id: 'explore',
-    title: 'You\'re Ready to Explore',
-    body: 'Click around freely — add layers, switch components, and try all four phases. When you\'re done, share your feedback so we know if this is worth building.',
+    title: 'You\'re ready',
+    body: 'Click around freely — edit the canvas, edit code, switch components. When you\'re done, share feedback so we know if this is worth building.',
     target: null,
     position: 'center',
     isLast: true

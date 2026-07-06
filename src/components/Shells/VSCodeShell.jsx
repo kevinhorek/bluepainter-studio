@@ -4,6 +4,11 @@ import CodeEditor from '../CodeEditor';
 import ReceiptsPanel from '../ReceiptsPanel';
 import LayersPanel from '../LayersPanel';
 import InspectorPanel from '../InspectorPanel';
+import DetailDrawer from '../DetailDrawer';
+import ReceiptMessageBar from '../ReceiptMessageBar';
+import { evaluateReceipts } from '../../utils/receiptPolicy';
+
+import ComponentLibrary from '../ComponentLibrary';
 
 export default function VSCodeShell({
   rootNodeId,
@@ -15,229 +20,185 @@ export default function VSCodeShell({
   code,
   onCodeChange,
   onAddNode,
+  onAddComponentInstance,
   activeCanvasTool,
   setActiveCanvasTool,
-  focusedPanel,
   setFocusedPanel,
   activeFile,
+  fileConfig,
+  componentLibrary,
+  onOpenComponentFile,
   receiptsConfig
 }) {
   const node = nodesMap[selectedNodeId];
+  const [codeOpen, setCodeOpen] = useState(true);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerTab, setDrawerTab] = useState('inspect');
+  const [highlightRuleId, setHighlightRuleId] = useState(null);
 
-  // Collapse states
-  const [leftCollapsed, setLeftCollapsed] = useState(false);
-  const [codeCollapsed, setCodeCollapsed] = useState(false);
-  const [rightCollapsed, setRightCollapsed] = useState(false);
+  const { policy, dismissedRules } = receiptsConfig;
+  const { rules } = node
+    ? evaluateReceipts(nodesMap, node, policy, dismissedRules)
+    : { rules: [] };
 
-  // Dynamic layout grid: code takes up more space if focused, otherwise canvas does.
-  // Shrinks collapsed panels to 40px.
-  const getGridColumns = () => {
-    let col1 = focusedPanel === 'canvas' ? '1.4fr' : '0.8fr';
-    let col2 = focusedPanel === 'canvas' ? '0.8fr' : '1.4fr';
-    let col3 = rightCollapsed ? '40px' : '320px';
+  const openDrawer = (tab) => {
+    setDrawerTab(tab);
+    setDrawerOpen(true);
+  };
 
-    if (codeCollapsed) {
-      col2 = '40px';
-      col1 = '1fr';
-    }
-    return `${col1} ${col2} ${col3}`;
+  const handleSelectNode = (id) => {
+    onSelectNode(id);
+    openDrawer('inspect');
   };
 
   return (
-    <div className="vscode-workspace">
-      
-      {/* 1. Left Activity Bar */}
-      <div className="vscode-activitybar">
-        <div className="activity-icon active">
-          <svg style={{ width: 20, height: 20 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6z" />
-          </svg>
-        </div>
-        <div className="activity-icon">
-          <svg style={{ width: 20, height: 20 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        </div>
-        <div className="activity-icon" style={{ marginTop: 'auto', marginBottom: '16px' }}>
-          <div style={{ width: 20, height: 20, background: 'var(--purple-figma)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontSize: '0.65rem', fontWeight: 'bold' }}>BP</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. VS Code Left Sidebar (Renders Left Layers Panel Tree) */}
-      <div 
-        className="vscode-sidebar" 
-        style={{ 
-          width: leftCollapsed ? 40 : 230,
-          transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-          flexShrink: 0
-        }}
-      >
-        {leftCollapsed ? (
-          <div 
-            className="collapsed-vertical-bar" 
-            onClick={() => setLeftCollapsed(false)}
-            title="Expand Layers Panel"
-            style={{ background: 'var(--vscode-sidebar)' }}
-          >
-            <div className="vertical-label" style={{ color: '#94a3b8' }}>
-              📁 LAYERS
-            </div>
-            <div className="expand-arrow" style={{ color: '#94a3b8', fontSize: '0.85rem' }}>▶</div>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: 230, flexShrink: 0 }}>
-            <div style={{ flex: 1, overflowY: 'auto' }}>
-              <LayersPanel
-                rootNodeId={rootNodeId}
-                nodesMap={nodesMap}
-                selectedNodeId={selectedNodeId}
-                onSelectNode={onSelectNode}
-                onUpdateNode={onUpdateNode}
-                onDeleteNode={onDeleteNode}
-              />
-            </div>
-            <div 
-              className="panel-collapse-footer" 
-              onClick={() => setLeftCollapsed(true)}
-            >
-              <span>◀ Collapse Panel</span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* 3. Main Split Viewport: Canvas | Code | Receipts & Inspector split */}
-      <div 
-        className="vscode-editor-area" 
-        style={{ 
-          gridTemplateColumns: getGridColumns(),
-          transition: 'grid-template-columns 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          width: '100%',
-          overflow: 'hidden'
-        }}
-      >
-        
-        {/* Left Canvas (Dark) */}
-        <CanvasView
-          rootNodeId={rootNodeId}
-          nodesMap={nodesMap}
-          selectedNodeId={selectedNodeId}
-          onSelectNode={onSelectNode}
-          onUpdateNode={onUpdateNode}
-          onAddNode={onAddNode}
-          activeCanvasTool={activeCanvasTool}
-          setActiveCanvasTool={setActiveCanvasTool}
-          onFocus={() => setFocusedPanel('canvas')}
-          theme="dark"
-        />
-
-        {/* Middle Code Editor */}
-        {codeCollapsed ? (
-          <div 
-            className="collapsed-vertical-bar" 
-            onClick={() => setCodeCollapsed(false)}
-            title="Expand Code Editor"
-            style={{
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '16px 0',
-              cursor: 'pointer',
-              background: 'var(--vscode-bg-editor)',
-              borderRight: '1px solid rgba(255,255,255,0.08)',
-              borderLeft: '1px solid rgba(255,255,255,0.08)',
-              boxSizing: 'border-box'
-            }}
-          >
-            <div className="vertical-label" style={{ color: '#94a3b8' }}>
-              📝 {activeFile === 'pricing' ? 'PricingCard.tsx' : 'HeroSection.tsx'}
-            </div>
-            <div className="expand-arrow" style={{ color: '#94a3b8', fontSize: '0.85rem' }}>◀</div>
-          </div>
-        ) : (
-          <CodeEditor
-            code={code}
-            onChange={onCodeChange}
-            onFocus={() => setFocusedPanel('code')}
-            activeFile={activeFile}
-            onCollapse={() => setCodeCollapsed(true)}
+    <div className="studio-shell">
+      <div className="studio-main">
+        <div className="studio-canvas-pane" data-tour="layers">
+          <CanvasView
+            rootNodeId={rootNodeId}
+            nodesMap={nodesMap}
+            selectedNodeId={selectedNodeId}
+            onSelectNode={handleSelectNode}
+            onUpdateNode={onUpdateNode}
+            onAddNode={onAddNode}
+            onAddComponentInstance={onAddComponentInstance}
+            activeCanvasTool={activeCanvasTool}
+            setActiveCanvasTool={setActiveCanvasTool}
+            onFocus={() => setFocusedPanel('canvas')}
+            theme="dark"
+            pageViewport={fileConfig?.isPage ? fileConfig.viewport : null}
+            componentLibrary={componentLibrary}
+            onOpenComponentFile={onOpenComponentFile}
           />
-        )}
 
-        {/* Right Pane: Split vertically between Receipts (Audits) and Figma Inspector */}
-        {rightCollapsed ? (
-          <div 
-            className="collapsed-vertical-bar" 
-            onClick={() => setRightCollapsed(false)}
-            title="Expand Inspector & Audits"
-            style={{
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '16px 0',
-              cursor: 'pointer',
-              background: '#111827',
-              borderLeft: '1px solid rgba(255,255,255,0.08)',
-              boxSizing: 'border-box'
+          <ReceiptMessageBar
+            rules={rules}
+            onOpenReceipt={() => openDrawer('receipts')}
+            onOpenRule={(ruleId) => {
+              setHighlightRuleId(ruleId);
+              openDrawer('receipts');
             }}
-          >
-            <div className="vertical-label" style={{ color: '#94a3b8' }}>
-              📊 INSPECTOR & AUDITS
-            </div>
-            <div className="expand-arrow" style={{ color: '#94a3b8', fontSize: '0.85rem' }}>◀</div>
-          </div>
-        ) : (
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            height: '100%',
-            background: '#111827',
-            borderLeft: '1px solid rgba(255,255,255,0.08)',
-            position: 'relative',
-            overflow: 'hidden'
-          }}>
-            <div style={{ flex: 1, display: 'grid', gridTemplateRows: '1fr 1fr', overflow: 'hidden', width: 320 }}>
-              {/* Top: Designer Receipts */}
-              <div style={{ overflowY: 'auto', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                <ReceiptsPanel
-                  component={node}
-                  nodesMap={nodesMap}
-                  onUpdateNode={onUpdateNode}
-                  {...receiptsConfig}
-                />
-              </div>
+          />
 
-              {/* Bottom: Figma Inspector */}
-              <div style={{ overflowY: 'auto' }}>
-                <InspectorPanel
-                  selectedNodeId={selectedNodeId}
-                  nodesMap={nodesMap}
-                  onUpdateNode={onUpdateNode}
-                />
-              </div>
-            </div>
-
-            {/* Collapse Footer */}
-            <div 
-              className="panel-collapse-footer" 
-              onClick={() => setRightCollapsed(true)}
+          <div className="studio-rail">
+            <button
+              type="button"
+              className={`studio-rail-btn ${drawerOpen && drawerTab === 'layers' ? 'active' : ''}`}
+              onClick={() => openDrawer('layers')}
+              title="Layers"
             >
-              <span>Collapse Panel ▶</span>
-            </div>
+              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className={`studio-rail-btn ${drawerOpen && drawerTab === 'receipts' ? 'active' : ''}`}
+              onClick={() => openDrawer('receipts')}
+              title="Receipts"
+              data-tour="receipts"
+            >
+              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {rules.some((r) => !r.valid) && <span className="studio-rail-badge" />}
+            </button>
+            <button
+              type="button"
+              className={`studio-rail-btn ${drawerOpen && drawerTab === 'inspect' ? 'active' : ''}`}
+              onClick={() => openDrawer('inspect')}
+              title="Inspect"
+            >
+              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className={`studio-rail-btn ${drawerOpen && drawerTab === 'library' ? 'active' : ''}`}
+              onClick={() => openDrawer('library')}
+              title="Component library"
+              data-tour="library"
+            >
+              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 7h16M4 12h16M4 17h10" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className={`studio-rail-btn ${codeOpen ? 'active' : ''}`}
+              onClick={() => setCodeOpen(!codeOpen)}
+              title="Code"
+              data-tour="code"
+            >
+              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {codeOpen && (
+          <div className="studio-code-pane">
+            <CodeEditor
+              code={code}
+              onChange={onCodeChange}
+              onFocus={() => setFocusedPanel('code')}
+              activeFile={activeFile}
+              onCollapse={() => setCodeOpen(false)}
+            />
           </div>
         )}
-
       </div>
 
+      <DetailDrawer
+        open={drawerOpen}
+        tab={drawerTab}
+        onTabChange={setDrawerTab}
+        onClose={() => setDrawerOpen(false)}
+        layers={
+          <LayersPanel
+            rootNodeId={rootNodeId}
+            nodesMap={nodesMap}
+            selectedNodeId={selectedNodeId}
+            onSelectNode={(id) => {
+              handleSelectNode(id);
+            }}
+            onUpdateNode={onUpdateNode}
+            onDeleteNode={onDeleteNode}
+          />
+        }
+        inspect={
+          <InspectorPanel
+            selectedNodeId={selectedNodeId}
+            nodesMap={nodesMap}
+            onUpdateNode={onUpdateNode}
+            onOpenComponentFile={onOpenComponentFile}
+          />
+        }
+        receipts={
+          <ReceiptsPanel
+            component={node}
+            nodesMap={nodesMap}
+            onUpdateNode={onUpdateNode}
+            highlightRuleId={highlightRuleId}
+            embedded
+            {...receiptsConfig}
+          />
+        }
+        library={
+          <ComponentLibrary
+            isPageFile={Boolean(fileConfig?.isPage)}
+            componentLibrary={componentLibrary}
+            onInsertComponent={(refFile) => {
+              onAddComponentInstance?.(refFile);
+              openDrawer('inspect');
+            }}
+            onOpenComponentFile={onOpenComponentFile}
+          />
+        }
+      />
     </div>
   );
 }

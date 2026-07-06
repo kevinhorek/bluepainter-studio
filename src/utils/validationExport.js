@@ -18,10 +18,17 @@ export function downloadValidationExport() {
     },
     teamPolicy: loadReceiptPolicy(),
     decisionGate: {
+      sessionsTarget: 8,
       targetVeryInterested: 3,
       currentVeryInterested: getFeedbackSummary().very,
+      totalResponses: getFeedbackSummary().total,
       pilotReady: getFeedbackSummary().very >= 3,
-      note: 'See SPEC.md §8 for full validation criteria'
+      recommendation: getFeedbackSummary().very >= 3
+        ? 'GO — schedule v1 extension planning'
+        : getFeedbackSummary().total >= 8
+          ? 'NO-GO or pivot — review responses and kill criteria in VALIDATION.md'
+          : 'CONTINUE — run more sessions (target 8)',
+      note: 'See VALIDATION.md and SPEC.md §8 for full criteria'
     }
   };
 

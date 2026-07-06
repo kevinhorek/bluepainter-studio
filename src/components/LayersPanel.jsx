@@ -1,4 +1,5 @@
 import { useState, Fragment } from 'react';
+import { getWorkspaceFile } from '../data/workspaceFiles';
 
 export default function LayersPanel({
   rootNodeId,
@@ -50,6 +51,10 @@ export default function LayersPanel({
         return (
           <span style={{ color: '#10b981', fontSize: '0.8rem' }}>•</span>
         );
+      case 'component-instance':
+        return (
+          <span style={{ color: '#a78bfa', fontSize: '0.7rem', fontWeight: 700 }}>◆</span>
+        );
       default:
         return <span>▪</span>;
     }
@@ -60,6 +65,8 @@ export default function LayersPanel({
     const node = nodesMap[nodeId];
     if (!node) return null;
 
+    const isInstance = node.type === 'component-instance';
+    const displayName = isInstance ? `${node.name} → ${getWorkspaceFile(node.refFile)?.label || node.refFile}` : node.name;
     const isSelected = selectedNodeId === nodeId;
     const isEditing = editingId === nodeId;
 
@@ -120,7 +127,7 @@ export default function LayersPanel({
                 }}
                 style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}
               >
-                {node.name}
+                {displayName}
               </span>
             )}
           </div>
@@ -150,8 +157,8 @@ export default function LayersPanel({
           )}
         </div>
 
-        {/* Render children recursively */}
-        {node.children && node.children.map(childId => renderLayerTree(childId, depth + 1))}
+        {/* Render children recursively — component instances pull from source files */}
+        {!isInstance && node.children && node.children.map((childId) => renderLayerTree(childId, depth + 1))}
       </Fragment>
     );
   };
