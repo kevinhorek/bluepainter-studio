@@ -13,10 +13,14 @@
     "deploy:netlify": "npm run build && npx netlify deploy --prod --dir=dist"
   },
   "dependencies": {
+    "@babel/parser": "^8.0.0",
+    "@babel/traverse": "^8.0.0",
+    "@babel/types": "^8.0.0",
     "html2canvas": "^1.4.1",
     "jszip": "^3.10.1",
     "react": "^19.2.6",
-    "react-dom": "^19.2.6"
+    "react-dom": "^19.2.6",
+    "recast": "^0.23.12"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -1,5 +1,6 @@
-// syncEngine.js - Hierarchical AST Sync Engine for Figma Canvas
+// syncEngine.js - Canvas ↔ TSX sync (AST-first with regex fallback)
 import { getComponentName, getWorkspaceFile, getImportPath, collectComponentRefs } from '../data/workspaceFiles';
+import { parseTSXWithAST, patchTSXWithAST } from './astSyncEngine';
 
 function formatStyleAttr(styleObj) {
   const styleEntries = Object.entries(styleObj || {})
@@ -13,7 +14,15 @@ function formatStyleAttr(styleObj) {
 }
 
 // 1. GENERATE TSX CODE FROM NODE TREE STATE
-export function generateTSX(rootNodeId, nodesMap) {
+export function generateTSX(rootNodeId, nodesMap, existingCode = null) {
+  if (existingCode?.trim()) {
+    const patched = patchTSXWithAST(existingCode, nodesMap);
+    if (patched) return patched;
+  }
+  return generateTSXFromTemplate(rootNodeId, nodesMap);
+}
+
+function generateTSXFromTemplate(rootNodeId, nodesMap) {
   if (!rootNodeId || !nodesMap) return '';
 
   function renderNode(nodeId, indent = '  ') {
@@ -92,6 +101,14 @@ ${renderedContent}
 // 2. PARSE TSX CODE BACK TO NODE TREE STATE
 export function parseTSX(code, nodesMap) {
   if (!code || !nodesMap) return nodesMap;
+
+  const astResult = parseTSXWithAST(code, nodesMap);
+  if (astResult) return astResult;
+
+  return parseTSXWithRegex(code, nodesMap);
+}
+
+function parseTSXWithRegex(code, nodesMap) {
 
   const updatedNodes = JSON.parse(JSON.stringify(nodesMap));
 

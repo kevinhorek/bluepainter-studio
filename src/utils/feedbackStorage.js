@@ -16,11 +16,23 @@ export function saveFeedback(entry) {
 
 export function getFeedbackSummary() {
   const responses = getStoredFeedback();
-  const summary = { total: responses.length, very: 0, somewhat: 0, not: 0, byRole: {} };
+  const summary = {
+    total: responses.length,
+    very: 0,
+    somewhat: 0,
+    not: 0,
+    pilotYes: 0,
+    pilotMaybe: 0,
+    pilotNo: 0,
+    byRole: {}
+  };
   responses.forEach((r) => {
     if (r.interest === 'very') summary.very += 1;
     else if (r.interest === 'somewhat') summary.somewhat += 1;
     else if (r.interest === 'not') summary.not += 1;
+    if (r.pilot === 'yes') summary.pilotYes += 1;
+    else if (r.pilot === 'maybe') summary.pilotMaybe += 1;
+    else if (r.pilot === 'no') summary.pilotNo += 1;
     if (r.role) summary.byRole[r.role] = (summary.byRole[r.role] || 0) + 1;
   });
   return summary;

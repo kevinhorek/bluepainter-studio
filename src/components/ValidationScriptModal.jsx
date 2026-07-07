@@ -10,8 +10,9 @@ const SECTIONS = [
   {
     title: 'Explore (5 min) — watch silently',
     items: [
-      'Canvas edit → code updates?',
+      'Canvas edit → code updates (AST preserves formatting)?',
       'Code edit → canvas updates?',
+      '⊞ Expand design or code to ~90% — restore split with second click',
       'Sidebar opens on select?',
       'Library tab → drag component onto page?',
       'Receipt pills at bottom when design fails?'
@@ -28,10 +29,10 @@ const SECTIONS = [
   {
     title: 'Close (5 min)',
     items: [
-      '··· → Share feedback (very / somewhat / not)',
+      '··· → Share feedback (very / somewhat / not + pilot willingness)',
       'Ask: "Would you use this instead of Figma + IDE?"',
       'Ask: "What one thing would make you switch?"',
-      'Facilitator: Export JSON after session'
+      'Facilitator: ··· → Session scorecard → Export session JSON'
     ]
   },
   {

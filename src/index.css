@@ -3952,6 +3952,136 @@ input:checked + .slider-round:before {
   max-width: 520px;
 }
 
+.validation-script-modal {
+  max-width: 520px;
+}
+
+.validation-scorecard-modal {
+  max-width: 560px;
+}
+
+.validation-scorecard-rec {
+  padding: 12px 14px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.validation-scorecard-rec-label {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+}
+
+.validation-scorecard-rec p {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: #cbd5e1;
+}
+
+.scorecard-rec-go {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.scorecard-rec-go .validation-scorecard-rec-label {
+  color: #34d399;
+}
+
+.scorecard-rec-continue {
+  background: rgba(37, 99, 235, 0.1);
+  border-color: rgba(37, 99, 235, 0.3);
+}
+
+.scorecard-rec-continue .validation-scorecard-rec-label {
+  color: #93c5fd;
+}
+
+.scorecard-rec-nogo {
+  background: rgba(244, 63, 94, 0.1);
+  border-color: rgba(244, 63, 94, 0.3);
+}
+
+.scorecard-rec-nogo .validation-scorecard-rec-label {
+  color: #fb7185;
+}
+
+.validation-scorecard-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.validation-scorecard-stat {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  padding: 10px 8px;
+  text-align: center;
+}
+
+.validation-scorecard-stat-value {
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.validation-scorecard-stat-label {
+  font-size: 0.6rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.validation-scorecard-heading {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+  margin: 0 0 10px;
+}
+
+.validation-scorecard-checks {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+}
+
+.validation-scorecard-checks li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.validation-scorecard-checks li.done {
+  color: #cbd5e1;
+}
+
+.validation-scorecard-check-icon {
+  width: 18px;
+  flex-shrink: 0;
+  color: #64748b;
+}
+
+.validation-scorecard-checks li.done .validation-scorecard-check-icon {
+  color: #34d399;
+}
+
+.validation-scorecard-check-detail {
+  margin-left: auto;
+  font-size: 0.7rem;
+  color: #64748b;
+  font-family: var(--font-mono);
+}
+
 /* Mobile */
 @media (max-width: 900px) {
   .studio-main {

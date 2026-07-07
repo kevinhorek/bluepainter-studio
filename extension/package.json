@@ -1,0 +1,51 @@
+{
+  "name": "bluepainter-studio",
+  "displayName": "BluePainter Studio",
+  "description": "Repo-native canvas ↔ TSX sync with Designer's Receipts (v1 scaffold)",
+  "version": "0.1.0",
+  "publisher": "bluepainter",
+  "private": true,
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": [
+    "onCommand:bluepainter.openPanel",
+    "onLanguage:typescriptreact",
+    "onLanguage:javascriptreact"
+  ],
+  "main": "./extension.js",
+  "dependencies": {
+    "@babel/parser": "^7.28.0",
+    "@babel/traverse": "^7.28.0"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "bluepainter.openPanel",
+        "title": "BluePainter: Open Component Panel"
+      },
+      {
+        "command": "bluepainter.syncFromFile",
+        "title": "BluePainter: Analyze TSX for Canvas IDs"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "bluepainter",
+          "title": "BluePainter",
+          "icon": "$(paintcan)"
+        }
+      ]
+    },
+    "views": {
+      "bluepainter": [
+        {
+          "id": "bluepainter.panel",
+          "name": "Studio"
+        }
+      ]
+    }
+  }
+}

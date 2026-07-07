@@ -25,9 +25,16 @@ const TOUR_STEPS = [
   {
     id: 'code',
     title: 'Bidirectional Code Sync',
-    body: 'Edit the generated React TSX directly. Change padding, colors, or text — the canvas reflects your code edits in real time.',
+    body: 'Edit the generated React TSX directly. Change padding, colors, or text — the canvas reflects your code edits. AST sync preserves your formatting when you edit the canvas.',
     target: '[data-tour="code"]',
     position: 'left'
+  },
+  {
+    id: 'panes',
+    title: 'Focus design or code',
+    body: 'Use ⊞ on the Design or Code header to expand either panel to ~90%. Click again to restore split view.',
+    target: '.studio-pane-bar',
+    position: 'bottom'
   },
   {
     id: 'library',

@@ -1,13 +1,16 @@
 import { getStoredFeedback, getFeedbackSummary } from './feedbackStorage';
 import { getLearningEvents, getLearningSummary } from './learningLoop';
 import { loadReceiptPolicy } from '../data/defaultReceiptPolicy';
+import { buildSessionScorecard } from './sessionScorecard';
 
 export { getFeedbackSummary };
 
 export function downloadValidationExport() {
+  const scorecard = buildSessionScorecard();
   const payload = {
     exportedAt: new Date().toISOString(),
     specVersion: '2026-07',
+    scorecard,
     feedback: {
       summary: getFeedbackSummary(),
       responses: getStoredFeedback()
@@ -17,17 +20,20 @@ export function downloadValidationExport() {
       events: getLearningEvents()
     },
     teamPolicy: loadReceiptPolicy(),
+    syncEngine: {
+      mode: 'ast-first',
+      scopeDoc: 'AST_SCOPE.md'
+    },
     decisionGate: {
-      sessionsTarget: 8,
-      targetVeryInterested: 3,
-      currentVeryInterested: getFeedbackSummary().very,
-      totalResponses: getFeedbackSummary().total,
-      pilotReady: getFeedbackSummary().very >= 3,
-      recommendation: getFeedbackSummary().very >= 3
-        ? 'GO — schedule v1 extension planning'
-        : getFeedbackSummary().total >= 8
-          ? 'NO-GO or pivot — review responses and kill criteria in VALIDATION.md'
-          : 'CONTINUE — run more sessions (target 8)',
+      sessionsTarget: scorecard.sessions.target,
+      targetVeryInterested: scorecard.interest.veryTarget,
+      currentVeryInterested: scorecard.interest.very,
+      pilotYes: scorecard.pilot.yes,
+      totalResponses: scorecard.sessions.completed,
+      activationComplete: scorecard.activation.complete,
+      pilotReady: scorecard.pilotReady,
+      recommendation: scorecard.recommendation,
+      recommendationDetail: scorecard.recommendationDetail,
       note: 'See VALIDATION.md and SPEC.md §8 for full criteria'
     }
   };
@@ -41,5 +47,4 @@ export function downloadValidationExport() {
   URL.revokeObjectURL(url);
 }
 
-// Re-export for backward compatibility
 export { downloadValidationExport as downloadFeedbackJSON };

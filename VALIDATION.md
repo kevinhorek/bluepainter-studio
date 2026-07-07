@@ -67,7 +67,8 @@ Thank them. Don't sell.
 
 ## After the session
 
-- Facilitator: **··· → Export** — saves JSON with feedback + learning events
+- Facilitator: **··· → Session scorecard** — live GO/CONTINUE/NO-GO + activation checklist
+- **Export session JSON** from scorecard or **··· → Export**
 - Log notes: name, role, quotes, blockers
 - Target: **8 sessions** before go/no-go
 

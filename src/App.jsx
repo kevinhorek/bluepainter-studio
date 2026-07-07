@@ -14,6 +14,7 @@ import TauriShell from './components/Shells/TauriShell';
 import FigmaShell from './components/Shells/FigmaShell';
 import ResponsiveShell from './components/Shells/ResponsiveShell';
 import ValidationScriptModal from './components/ValidationScriptModal';
+import ValidationScorecardModal from './components/ValidationScorecardModal';
 import WelcomeModal from './components/WelcomeModal';
 import { hasSeenWelcome, markWelcomeSeen } from './utils/welcomeStorage';
 import AppToast from './components/AppToast';
@@ -62,6 +63,7 @@ export default function App() {
   const [phase, setPhase] = useState(initialRoute.phase === 'landing' ? 'phase1' : initialRoute.phase);
   const [aboutOpen, setAboutOpen] = useState(Boolean(initialRoute.openAbout));
   const [validationScriptOpen, setValidationScriptOpen] = useState(false);
+  const [scorecardOpen, setScorecardOpen] = useState(false);
   const [exportDeployOpen, setExportDeployOpen] = useState(false);
   const [marketingKitOpen, setMarketingKitOpen] = useState(false);
   const [marketingActiveFieldId, setMarketingActiveFieldId] = useState(null);
@@ -101,6 +103,8 @@ export default function App() {
   const [learningSummary, setLearningSummary] = useState(() => getLearningSummary());
   const presenterCancelRef = useRef(null);
   const toolBeforeSpaceRef = useRef('select');
+  const skipCodegenRef = useRef(false);
+  const codeRef = useRef('');
 
   const refreshLearningSummary = () => setLearningSummary(getLearningSummary());
 
@@ -314,13 +318,21 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
-  // Regenerate TSX when the canvas node tree changes (not from direct code edits).
+  // Regenerate TSX when canvas changes — patch existing code via AST to preserve formatting.
   useEffect(() => {
+    if (skipCodegenRef.current) {
+      skipCodegenRef.current = false;
+      return;
+    }
     if (activeRootId && activeNodesMap) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- sync generated code from canvas state
-      setCode(generateTSX(activeRootId, activeNodesMap));
+      setCode(generateTSX(activeRootId, activeNodesMap, codeRef.current));
     }
   }, [activeFile, activeRootId, activeNodesMap]);
+
+  useEffect(() => {
+    codeRef.current = code;
+  }, [code]);
 
   useEffect(() => {
     if (!facilitator) return;
@@ -334,6 +346,7 @@ export default function App() {
   }, [phase, feedbackPromptShown]);
 
   const handleCodeChange = (newCode) => {
+    skipCodegenRef.current = true;
     setCode(newCode);
     setActiveNodesMap(parseTSX(newCode, activeNodesMap));
     logLearningEvent('round_trip_code', { source: 'editor' });
@@ -529,6 +542,10 @@ export default function App() {
         setPhaseWithHash('phase1');
       },
       onReset: handleResetDemo,
+      onPricing: () => {
+        handleSetActiveFile('pricing');
+        setSelectedNodeId('pricing-card-frame');
+      },
       onBreak: handleBreakDesign,
       onFix: handleFixAll,
       onStep: (message) => {
@@ -606,6 +623,7 @@ export default function App() {
           onRunPresenter: handleRunPresenter,
           onOpenScript: () => setScriptOpen(true),
           onOpenSpec: () => setSpecOpen(true),
+          onOpenScorecard: () => setScorecardOpen(true),
           onExportFeedback: handleExportFeedback,
           feedbackCount,
           presenterRunning
@@ -646,6 +664,7 @@ export default function App() {
 
       <FeedbackModal isOpen={feedbackOpen} onClose={handleFeedbackClose} />
       <ValidationScriptModal isOpen={validationScriptOpen} onClose={() => setValidationScriptOpen(false)} />
+      <ValidationScorecardModal isOpen={scorecardOpen} onClose={() => setScorecardOpen(false)} />
       <ExportDeployModal
         isOpen={exportDeployOpen}
         onClose={() => setExportDeployOpen(false)}

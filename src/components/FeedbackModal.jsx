@@ -3,6 +3,7 @@ import { saveFeedback } from '../utils/feedbackStorage';
 
 export default function FeedbackModal({ isOpen, onClose }) {
   const [interest, setInterest] = useState('');
+  const [pilot, setPilot] = useState('');
   const [role, setRole] = useState('');
   const [comment, setComment] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -15,6 +16,7 @@ export default function FeedbackModal({ isOpen, onClose }) {
 
     const entry = {
       interest,
+      pilot,
       role,
       comment,
       timestamp: new Date().toISOString()
@@ -27,6 +29,7 @@ export default function FeedbackModal({ isOpen, onClose }) {
   const handleClose = () => {
     setSubmitted(false);
     setInterest('');
+    setPilot('');
     setRole('');
     setComment('');
     onClose();
@@ -67,6 +70,28 @@ export default function FeedbackModal({ isOpen, onClose }) {
                         value={opt.value}
                         checked={interest === opt.value}
                         onChange={() => setInterest(opt.value)}
+                      />
+                      {opt.label}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              <fieldset className="feedback-fieldset">
+                <legend>Would you pilot this in your real repo?</legend>
+                <div className="feedback-options">
+                  {[
+                    { value: 'yes', label: 'Yes — I would try it on our codebase' },
+                    { value: 'maybe', label: 'Maybe — depends on setup' },
+                    { value: 'no', label: 'No — not for our team' }
+                  ].map((opt) => (
+                    <label key={opt.value} className={`feedback-option ${pilot === opt.value ? 'selected' : ''}`}>
+                      <input
+                        type="radio"
+                        name="pilot"
+                        value={opt.value}
+                        checked={pilot === opt.value}
+                        onChange={() => setPilot(opt.value)}
                       />
                       {opt.label}
                     </label>
