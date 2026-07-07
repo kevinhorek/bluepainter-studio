@@ -24,6 +24,7 @@ import WorkspaceHeader from './components/WorkspaceHeader';
 import DemoTour from './components/DemoTour';
 import FeedbackModal from './components/FeedbackModal';
 import DemoScriptModal from './components/DemoScriptModal';
+import PresenterToast from './components/PresenterToast';
 import SpecModal from './components/SpecModal';
 import ExportDeployModal from './components/ExportDeployModal';
 import MarketingKitModal from './components/MarketingKitModal';
