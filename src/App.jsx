@@ -20,6 +20,7 @@ import { hasSeenWelcome, markWelcomeSeen } from './utils/welcomeStorage';
 import AppToast from './components/AppToast';
 import { copyDemoLink, DEMO_URL } from './utils/shareDemo';
 import AboutPanel from './components/AboutPanel';
+import MarketingSite from './components/MarketingPage';
 import WorkspaceHeader from './components/WorkspaceHeader';
 import DemoTour from './components/DemoTour';
 import FeedbackModal from './components/FeedbackModal';
@@ -41,6 +42,7 @@ const facilitator = isFacilitatorMode();
 function parseHash() {
   const hash = window.location.hash.replace(/^#\/?/, '');
   if (!hash || hash === 'studio') return { phase: 'phase1', startTour: false };
+  if (hash === 'home' || hash === 'landing') return { phase: 'landing', startTour: false };
   if (hash === 'about') return { phase: 'phase1', startTour: false, openAbout: true };
   if (hash === 'demo') {
     return { phase: 'phase1', startTour: facilitator };
@@ -54,14 +56,17 @@ function parseHash() {
 }
 
 function phaseToHash(phase, tourActive) {
-  if (phase === 'landing') return '#/about';
+  if (phase === 'landing') return '#/home';
   if (tourActive) return '#/demo';
   return '#/studio';
 }
 
 export default function App() {
   const initialRoute = parseHash();
-  const [phase, setPhase] = useState(initialRoute.phase === 'landing' ? 'phase1' : initialRoute.phase);
+  const [phase, setPhase] = useState(() => {
+    const route = initialRoute.phase === 'landing' ? 'landing' : initialRoute.phase;
+    return route;
+  });
   const [aboutOpen, setAboutOpen] = useState(Boolean(initialRoute.openAbout));
   const [validationScriptOpen, setValidationScriptOpen] = useState(false);
   const [scorecardOpen, setScorecardOpen] = useState(false);
@@ -284,9 +289,23 @@ export default function App() {
     };
   }, [activeCanvasTool]);
 
-  const handleWelcomeStart = () => {
+  const handleGoHome = useCallback(() => {
+    setMarketingKitOpen(false);
+    setAiPanelOpen(false);
+    setAboutOpen(false);
+    setPhase('landing');
+    window.location.hash = '#/home';
+  }, []);
+
+  const handleLaunchStudio = useCallback((nextPhase = 'phase1') => {
+    setPhase(nextPhase);
+    window.location.hash = '#/studio';
     markWelcomeSeen();
     setWelcomeOpen(false);
+  }, []);
+
+  const handleWelcomeStart = () => {
+    handleLaunchStudio('phase1');
   };
 
   const handleWelcomeShowReceipts = () => {
@@ -310,6 +329,12 @@ export default function App() {
     const onHashChange = () => {
       const route = parseHash();
       setPhase(route.phase);
+      if (route.openAbout) setAboutOpen(true);
+      if (route.phase === 'landing') {
+        setAboutOpen(false);
+        setMarketingKitOpen(false);
+        setAiPanelOpen(false);
+      }
       if (route.startTour) {
         setTourActive(true);
         setTourStep(0);
@@ -602,12 +627,27 @@ export default function App() {
   };
 
   const workspacePhase = facilitator ? phase : 'phase1';
+  const showLanding = phase === 'landing';
+
+  if (showLanding) {
+    return (
+      <div className="app-container app-landing">
+        <MarketingSite
+          onLaunchDemo={handleLaunchStudio}
+          onShowFeedback={() => setFeedbackOpen(true)}
+        />
+        <FeedbackModal isOpen={feedbackOpen} onClose={handleFeedbackClose} />
+        <AppToast message={toast} onDismiss={() => setToast(null)} />
+      </div>
+    );
+  }
 
   return (
     <div className={`app-container ${marketingKitOpen ? 'marketing-kit-open' : ''} ${aiPanelOpen ? 'ai-panel-open' : ''}`}>
       <WorkspaceHeader
         activeFile={activeFile}
         onFileChange={handleSetActiveFile}
+        onGoHome={handleGoHome}
         onFeedback={() => setFeedbackOpen(true)}
         onShowAbout={() => setAboutOpen(true)}
         onOpenInterviewGuide={() => setValidationScriptOpen(true)}

@@ -3484,6 +3484,22 @@ input:checked + .slider-round:before {
   margin-right: 4px;
 }
 
+.workspace-brand-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+  border-radius: 6px;
+}
+
+.workspace-brand-btn:hover .workspace-brand-name {
+  color: #93c5fd;
+}
+
 .workspace-brand-name {
   font-family: var(--font-title);
   font-weight: 700;

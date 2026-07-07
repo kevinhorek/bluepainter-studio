@@ -5,6 +5,7 @@ import { FILE_ORDER, WORKSPACE_FILES } from '../data/workspaceFiles';
 export default function WorkspaceHeader({
   activeFile,
   onFileChange,
+  onGoHome,
   onFeedback,
   onShowAbout,
   onOpenInterviewGuide,
@@ -37,8 +38,10 @@ export default function WorkspaceHeader({
     <header className="workspace-header workspace-header-minimal">
       <div className="workspace-header-left">
         <div className="workspace-brand">
-          <div className="logo-icon"><div className="logo-dot" /></div>
-          <span className="workspace-brand-name">BluePainter</span>
+          <button type="button" className="workspace-brand-btn" onClick={onGoHome} title="Back to marketing site">
+            <div className="logo-icon"><div className="logo-dot" /></div>
+            <span className="workspace-brand-name">BluePainter</span>
+          </button>
         <span className="workspace-prototype-badge">Prototype</span>
         </div>
 
@@ -127,6 +130,9 @@ export default function WorkspaceHeader({
                 Import from Figma
               </button>
               <div className="workspace-dropdown-divider" />
+              <button type="button" className="workspace-dropdown-item" onClick={() => { onGoHome?.(); setMenuOpen(false); }}>
+                Marketing site
+              </button>
               <button type="button" className="workspace-dropdown-item" onClick={() => { onCopyLink?.(); setMenuOpen(false); }}>
                 Copy demo link
               </button>
