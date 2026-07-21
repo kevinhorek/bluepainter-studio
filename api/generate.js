@@ -4,7 +4,7 @@ const DEFAULT_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 
 function buildSystemPrompt(type) {
   const schema = GENERATION_SCHEMAS[type] || GENERATION_SCHEMAS.custom;
-  return `You are a product designer and copywriter for BluePainter Studio, a visual React design tool.
+  return `You are a product designer and copywriter for BluePainter, a visual React design tool.
 
 Return ONLY valid JSON matching this shape:
 {

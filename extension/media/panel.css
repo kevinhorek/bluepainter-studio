@@ -1,0 +1,231 @@
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--vscode-font-family);
+  font-size: 12px;
+  color: var(--vscode-foreground);
+  background: var(--vscode-sideBar-background);
+}
+
+.bp-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.bp-header {
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.bp-header h1 {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.bp-header p {
+  margin: 0;
+  opacity: 0.75;
+  line-height: 1.4;
+}
+
+.bp-stats {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.bp-stat {
+  background: var(--vscode-editor-inactiveSelectionBackground);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.bp-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.bp-tab {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--vscode-foreground);
+  padding: 8px;
+  cursor: pointer;
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.bp-tab.active {
+  opacity: 1;
+  border-bottom: 2px solid var(--vscode-focusBorder);
+  font-weight: 600;
+}
+
+.bp-body {
+  flex: 1;
+  overflow: auto;
+}
+
+.bp-pane { display: none; padding: 10px 12px; }
+.bp-pane.active { display: block; }
+
+.bp-canvas-wrap {
+  position: relative;
+  min-height: 220px;
+  background: #0f172a;
+  border-radius: 8px;
+  overflow: auto;
+  border: 1px solid var(--vscode-panel-border);
+}
+
+.bp-canvas {
+  position: relative;
+  min-width: 480px;
+  min-height: 220px;
+  padding: 12px;
+}
+
+.bp-node {
+  cursor: pointer;
+  outline: 1px solid transparent;
+  transition: outline-color 0.12s ease;
+}
+
+.bp-node.selected {
+  outline: 2px solid #60a5fa;
+  outline-offset: 1px;
+}
+
+.bp-empty {
+  padding: 24px 12px;
+  text-align: center;
+  opacity: 0.75;
+  line-height: 1.5;
+}
+
+.bp-inspector label {
+  display: block;
+  margin: 10px 0 4px;
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.bp-inspector input,
+.bp-inspector textarea,
+.bp-inspector select {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--vscode-input-border);
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  font: inherit;
+}
+
+.bp-inspector textarea { min-height: 56px; resize: vertical; }
+
+.bp-receipt {
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  background: var(--vscode-editor-background);
+}
+
+.bp-receipt.invalid { border-color: rgba(248, 113, 113, 0.45); }
+.bp-receipt.valid { opacity: 0.85; }
+
+.bp-receipt-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.bp-receipt-title { font-weight: 600; font-size: 11px; }
+.bp-receipt-tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+}
+
+.bp-receipt-desc {
+  margin: 0 0 8px;
+  opacity: 0.8;
+  line-height: 1.4;
+}
+
+.bp-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+
+.bp-btn.secondary {
+  background: var(--vscode-input-background);
+  color: var(--vscode-foreground);
+  border: 1px solid var(--vscode-input-border);
+}
+
+.bp-btn.small {
+  width: auto;
+  margin-top: 0;
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.bp-score-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.bp-score {
+  background: var(--vscode-editor-inactiveSelectionBackground);
+  border-radius: 6px;
+  padding: 8px;
+  text-align: center;
+}
+
+.bp-score strong { display: block; font-size: 16px; }
+.bp-score span { font-size: 10px; opacity: 0.75; }
+
+.bp-footer {
+  padding: 8px 12px;
+  border-top: 1px solid var(--vscode-panel-border);
+  display: flex;
+  gap: 8px;
+}
+
+.bp-footer .bp-btn { flex: 1; margin-top: 0; }
+
+.bp-status {
+  font-size: 10px;
+  opacity: 0.65;
+  margin-top: 6px;
+}
+
+.bp-editor .bp-canvas-wrap {
+  min-height: 360px;
+}
+
+.bp-editor .bp-canvas {
+  min-height: 360px;
+}

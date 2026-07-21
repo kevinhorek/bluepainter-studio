@@ -1,0 +1,16 @@
+{
+  "name": "bluepainter-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "bluepainter-mcp": "./src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "inspect": "npx @modelcontextprotocol/inspector node src/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0"
+  }
+}

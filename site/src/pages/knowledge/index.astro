@@ -1,0 +1,60 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { knowledgeCatalog } from '../../lib/knowledge';
+import { DEMO_APP } from '../../lib/constants';
+---
+
+<BaseLayout
+  title="BluePainter Knowledge Catalog"
+  description="Structured knowledge catalog for BluePainter: services, pricing, processes, credentials, and agent-readable endpoints."
+>
+  <section class="section">
+    <p class="eyebrow">Knowledge catalog</p>
+    <h1>Agent-readable product facts</h1>
+    <p class="lead">
+      Verified status, services, pricing ranges, and processes for AI assistants and answer engines. Machine copies: <a href="/knowledge.json">knowledge.json</a> · <a href="/llms.txt">llms.txt</a> · <a href="/knowledge/mcp">MCP</a>.
+    </p>
+
+    <div class="grid-2" style="margin-top:32px">
+      <article class="card">
+        <h2>Status</h2>
+        <p><strong>{knowledgeCatalog.status}</strong></p>
+        <p class="muted">{knowledgeCatalog.credentials.stage}</p>
+        <p class="muted">Updated {knowledgeCatalog.updated}</p>
+        <a class="btn btn-primary" href={DEMO_APP}>Open demo</a>
+      </article>
+      <article class="card">
+        <h2>Pricing (validation)</h2>
+        <ul>
+          {knowledgeCatalog.pricing.plans.map((p) => (
+            <li>
+              <strong>{p.name}</strong> — ${p.price} {p.currency} ({p.access})
+            </li>
+          ))}
+        </ul>
+        <p class="muted">Paid SKUs: {knowledgeCatalog.pricing.paidSkus ? 'yes' : 'not yet'}</p>
+        <a href="/pricing">Full pricing page →</a>
+      </article>
+    </div>
+
+    <h2 style="margin-top:48px">Services</h2>
+    <div class="grid-3">
+      {knowledgeCatalog.services.map((s) => (
+        <article class="card">
+          <h3>{s.name}</h3>
+          <p class="muted">{s.description}</p>
+        </article>
+      ))}
+    </div>
+
+    <h2 style="margin-top:48px">Processes</h2>
+    <div class="card prose">
+      <h3>Sync contract</h3>
+      <p>{knowledgeCatalog.processes.syncContract}</p>
+      <h3>Pilot process</h3>
+      <p>{knowledgeCatalog.processes.pilotProcess}</p>
+      <h3>Validation goal</h3>
+      <p>{knowledgeCatalog.processes.validationGoal}</p>
+    </div>
+  </section>
+</BaseLayout>

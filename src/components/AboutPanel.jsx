@@ -6,7 +6,7 @@ export default function AboutPanel({ open, onClose, onFeedback }) {
       <button type="button" className="drawer-backdrop" onClick={onClose} aria-label="Close" />
       <aside className="about-panel">
         <div className="about-panel-header">
-          <h2>BluePainter Studio</h2>
+          <h2>BluePainter</h2>
           <button type="button" className="detail-drawer-close" onClick={onClose}>×</button>
         </div>
         <div className="about-panel-body">

@@ -24,7 +24,7 @@ export async function pushProjectToGithub({ nodesByFile, projectName, githubToke
       repoName: repoName || safeName,
       files,
       isPrivate,
-      message: `Deploy ${safeName} from BluePainter Studio`
+      message: `Deploy ${safeName} from BluePainter`
     })
   });
 
@@ -79,7 +79,7 @@ export async function pushMarketingToGithub({ nodesByFile, githubToken, repoName
       repoName: repoName || projectName,
       files,
       isPrivate,
-      message: 'Deploy marketing landing from BluePainter Studio'
+      message: 'Deploy marketing landing from BluePainter'
     })
   });
 

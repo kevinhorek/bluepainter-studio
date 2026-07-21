@@ -42,7 +42,7 @@ export default function FeedbackModal({ isOpen, onClose }) {
           <>
             <div className="feedback-modal-icon">✓</div>
             <h2>Thanks for your feedback!</h2>
-            <p>Your response helps us decide whether to build BluePainter Studio fully.</p>
+            <p>Your response helps us decide whether to build out BluePainter fully.</p>
             <button type="button" className="feedback-submit-btn" onClick={handleClose}>
               Close
             </button>

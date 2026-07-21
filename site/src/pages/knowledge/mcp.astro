@@ -1,0 +1,30 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="BluePainter MCP Server"
+  description="Install the BluePainter MCP server so AI assistants can open the demo, analyze TSX, evaluate receipts, and request pilots."
+>
+  <section class="section prose">
+    <p class="eyebrow">MCP</p>
+    <h1>MCP server — sales team for agents</h1>
+    <p>
+      BluePainter exposes an MCP server so Claude, Cursor, and other assistants can discover the product with zero CAC. Public read tools are open; write tools need API keys where noted.
+    </p>
+    <h2>Install</h2>
+    <pre style="background:#0f1623;padding:16px;border-radius:8px;overflow:auto"><code>cd mcp && npm install
+npx @modelcontextprotocol/inspector node src/index.js</code></pre>
+    <h2>Tools</h2>
+    <ul>
+      <li><code>bluepainter_open_demo</code> — demo deep links</li>
+      <li><code>bluepainter_analyze_tsx</code> — count syncable JSX ids</li>
+      <li><code>bluepainter_receipts_evaluate</code> — run receipt policy on a node map</li>
+      <li><code>bluepainter_get_knowledge</code> — knowledge catalog / FAQ snippets</li>
+      <li><code>bluepainter_request_pilot</code> — submit pilot waitlist entry</li>
+      <li><code>bluepainter_figma_import</code> — Figma fetch (requires FIGMA_TOKEN)</li>
+    </ul>
+    <h2>Registries</h2>
+    <p>Submit the package on Smithery / Open Tools using <code>mcp/README.md</code>. Point the server command at <code>node mcp/src/index.js</code> from the repo root.</p>
+  </section>
+</BaseLayout>

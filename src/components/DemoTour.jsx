@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 const TOUR_STEPS = [
   {
     id: 'welcome',
-    title: 'Welcome to BluePainter Studio',
+    title: 'Welcome to BluePainter',
     body: 'This is a clickable prototype of a visual canvas ↔ code workspace. You can edit the design, watch the code update, and let Designer\'s Receipts catch issues automatically.',
     target: null,
     position: 'center'

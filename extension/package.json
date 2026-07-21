@@ -1,35 +1,111 @@
 {
-  "name": "bluepainter-studio",
-  "displayName": "BluePainter Studio",
-  "description": "Repo-native canvas ↔ TSX sync with Designer's Receipts (v1 scaffold)",
-  "version": "0.1.0",
+  "name": "bluepainter",
+  "displayName": "BluePainter",
+  "description": "Repo-native canvas ↔ TSX sync with Designer's Receipts",
+  "version": "0.2.0",
   "publisher": "bluepainter",
-  "private": true,
+  "private": false,
+  "license": "MIT",
+  "icon": "media/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kevinhorek/bluepainter-studio.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kevinhorek/bluepainter-studio/issues"
+  },
+  "homepage": "https://bluepainter-launch.vercel.app",
   "engines": {
     "vscode": "^1.85.0"
   },
-  "categories": ["Other"],
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "react",
+    "tsx",
+    "design",
+    "figma",
+    "canvas",
+    "ast",
+    "design-system",
+    "accessibility"
+  ],
   "activationEvents": [
-    "onCommand:bluepainter.openPanel",
     "onLanguage:typescriptreact",
-    "onLanguage:javascriptreact"
+    "onLanguage:javascriptreact",
+    "onCommand:bluepainter.openPanel",
+    "onCommand:bluepainter.openCanvas",
+    "onCommand:bluepainter.syncFromFile",
+    "onCommand:bluepainter.writeToFile"
   ],
   "main": "./extension.js",
   "dependencies": {
+    "@babel/generator": "^7.29.7",
     "@babel/parser": "^7.28.0",
-    "@babel/traverse": "^7.28.0"
+    "@babel/traverse": "^7.28.0",
+    "@babel/types": "^7.28.0",
+    "recast": "^0.23.12"
   },
   "contributes": {
     "commands": [
       {
         "command": "bluepainter.openPanel",
-        "title": "BluePainter: Open Component Panel"
+        "title": "BluePainter: Open Sidebar Panel"
+      },
+      {
+        "command": "bluepainter.openCanvas",
+        "title": "BluePainter: Open Canvas Editor"
       },
       {
         "command": "bluepainter.syncFromFile",
-        "title": "BluePainter: Analyze TSX for Canvas IDs"
+        "title": "BluePainter: Sync Canvas from File"
+      },
+      {
+        "command": "bluepainter.writeToFile",
+        "title": "BluePainter: Write Canvas to File"
       }
     ],
+    "configuration": {
+      "title": "BluePainter",
+      "properties": {
+        "bluepainter.demoUrl": {
+          "type": "string",
+          "default": "https://bluepainter-studio.vercel.app/#/app",
+          "description": "URL for the BluePainter web validation demo."
+        },
+        "bluepainter.spacingGrid": {
+          "type": "number",
+          "default": 8,
+          "description": "Designer Receipts spacing grid (px)."
+        },
+        "bluepainter.radiusGrid": {
+          "type": "number",
+          "default": 4,
+          "description": "Designer Receipts border-radius grid (px)."
+        },
+        "bluepainter.minContrastRatio": {
+          "type": "number",
+          "default": 4.5,
+          "description": "Minimum WCAG contrast ratio for button receipts."
+        },
+        "bluepainter.maxFeatureCount": {
+          "type": "number",
+          "default": 5,
+          "description": "Maximum feature list items before clutter receipt fires."
+        },
+        "bluepainter.suggestedCta": {
+          "type": "string",
+          "default": "Start free trial",
+          "description": "Suggested CTA copy for receipt fixes."
+        },
+        "bluepainter.contrastFixColor": {
+          "type": "string",
+          "default": "#1e40af",
+          "description": "Button background color applied by contrast fix."
+        }
+      }
+    },
     "viewsContainers": {
       "activitybar": [
         {
@@ -43,9 +119,16 @@
       "bluepainter": [
         {
           "id": "bluepainter.panel",
-          "name": "Studio"
+          "name": "BluePainter"
         }
       ]
     }
+  },
+  "scripts": {
+    "package": "vsce package --no-dependencies",
+    "publish:marketplace": "vsce publish --no-dependencies"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^3.9.2"
   }
 }

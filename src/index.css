@@ -1913,6 +1913,24 @@ input:checked + .slider-round:before {
   padding-right: 24px;
 }
 
+.landing-header-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  background: rgba(9, 13, 22, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.landing-page-v2 .landing-header {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 20px 24px;
+}
+
 .landing-nav {
   display: flex;
   gap: 4px;

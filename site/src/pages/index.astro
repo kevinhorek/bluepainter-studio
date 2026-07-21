@@ -1,0 +1,53 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { BRAND, DEMO_APP, DEMO_HOME } from '../lib/constants';
+---
+
+<BaseLayout>
+  <section class="section hero">
+    <p class="eyebrow">Repo-native visual development</p>
+    <h1>
+      Design, code, ship —<br />
+      <span style="background:linear-gradient(90deg,#60a5fa,#a78bfa);-webkit-background-clip:text;color:transparent">one surface.</span>
+    </h1>
+    <p class="lead">{BRAND.description}</p>
+    <div class="actions">
+      <a class="btn btn-primary" href={DEMO_APP}>Try the free demo</a>
+      <a class="btn btn-ghost" href="/pilot">Request a pilot</a>
+      <a class="btn btn-ghost" href="/tools">Free tools</a>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="grid-3">
+      <article class="card">
+        <span class="badge">Sync</span>
+        <h3>AST canvas ↔ TSX</h3>
+        <p class="muted">Edit visually or in code. Recast/Babel patches preserve comments and formatting.</p>
+      </article>
+      <article class="card">
+        <span class="badge">Governance</span>
+        <h3>Designer's Receipts</h3>
+        <p class="muted">Live contrast, spacing, CTA, and clutter checks with one-click fixes.</p>
+      </article>
+      <article class="card">
+        <span class="badge">Ship</span>
+        <h3>Export & deploy</h3>
+        <p class="muted">Vite zip, GitHub push, Vercel deploy — plus a VS Code extension path.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:24px;flex-wrap:wrap">
+      <div>
+        <h2 style="margin:0 0 8px">Validation pricing</h2>
+        <p class="muted" style="margin:0">Free live demo during validation. Facilitated pilots for design–dev pairs.</p>
+      </div>
+      <div class="actions" style="margin:0">
+        <a class="btn btn-primary" href="/pricing">See pricing</a>
+        <a class="btn btn-ghost" href={DEMO_HOME}>Product marketing</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

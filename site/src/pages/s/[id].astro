@@ -1,0 +1,80 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { BRAND, DEMO_APP, SITE_URL } from '../../lib/constants';
+
+export function getStaticPaths() {
+  // Placeholder paths; dynamic shares also work via client hash decode on /s/index
+  return [
+    {
+      params: { id: 'demo-scorecard' },
+      props: {
+        payload: {
+          type: 'scorecard',
+          score: 92,
+          label: 'Design policy score',
+          nodes: 24,
+          fixes: 3,
+          contrastPasses: 5,
+          name: 'Validation session'
+        }
+      }
+    },
+    {
+      params: { id: 'demo-wrapped' },
+      props: {
+        payload: {
+          type: 'wrapped',
+          score: 88,
+          label: 'Sync Wrapped',
+          nodes: 41,
+          fixes: 7,
+          contrastPasses: 12,
+          name: 'Weekly sync'
+        }
+      }
+    }
+  ];
+}
+
+const { payload } = Astro.props;
+const id = Astro.params.id;
+const ogImage = `${SITE_URL}/og-share.svg`;
+const shareUrl = `${SITE_URL}/s/${id}`;
+const tweet = encodeURIComponent(
+  `My BluePainter ${payload.label}: ${payload.score}. Canvas ↔ code with Designer's Receipts.`
+);
+const linkedIn = encodeURIComponent(shareUrl);
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'CreativeWork',
+  name: `${BRAND.name} ${payload.label}`,
+  description: `Score ${payload.score} — ${payload.nodes} nodes, ${payload.fixes} receipt fixes.`
+};
+---
+
+<BaseLayout
+  title={`${payload.label}: ${payload.score} — BluePainter`}
+  description={`Shared BluePainter artifact — score ${payload.score}.`}
+  ogImage={ogImage}
+  jsonLd={jsonLd}
+>
+  <section class="section">
+    <div class="share-card">
+      <p class="eyebrow" style="color:#93c5fd">{BRAND.name}</p>
+      <p class="muted">{payload.name}</p>
+      <div class="score">{payload.score}</div>
+      <p>{payload.label}</p>
+      <div class="share-stats">
+        <div><strong>{payload.nodes}</strong><span class="muted">nodes synced</span></div>
+        <div><strong>{payload.fixes}</strong><span class="muted">receipt fixes</span></div>
+        <div><strong>{payload.contrastPasses}</strong><span class="muted">contrast passes</span></div>
+      </div>
+      <div class="actions" style="justify-content:center">
+        <a class="btn btn-primary" href={`https://twitter.com/intent/tweet?text=${tweet}&url=${encodeURIComponent(shareUrl)}`}>Share on X</a>
+        <a class="btn btn-ghost" href={`https://www.linkedin.com/sharing/share-offsite/?url=${linkedIn}`}>LinkedIn</a>
+        <a class="btn btn-ghost" href={DEMO_APP}>Try BluePainter</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

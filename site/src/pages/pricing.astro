@@ -1,0 +1,76 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { DEMO_APP } from '../lib/constants';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Product',
+  name: 'BluePainter',
+  description: 'AST-preserving canvas ↔ TSX sync with Designer\'s Receipts. Free demo during validation; request a pilot for facilitated sessions.',
+  offers: [
+    {
+      '@type': 'Offer',
+      name: 'Free live demo',
+      price: '0',
+      priceCurrency: 'USD',
+      description: 'Full interactive validation prototype — canvas, code, receipts, export.'
+    },
+    {
+      '@type': 'Offer',
+      name: 'Pilot program',
+      price: '0',
+      priceCurrency: 'USD',
+      description: 'Facilitated validation sessions with scorecard export and priority feedback. Capacity-limited during validation.'
+    }
+  ]
+};
+---
+
+<BaseLayout
+  title="BluePainter Pricing — Free Demo & Pilot"
+  description="BluePainter is free to try during validation. Request a facilitated pilot for design–dev pairs. No paid SKUs yet."
+  jsonLd={jsonLd}
+>
+  <section class="section">
+    <p class="eyebrow">Pricing</p>
+    <h1>Free demo. Request a pilot.</h1>
+    <p class="lead">
+      During validation there are no paid plans. Anyone can use the live demo. Design–dev pairs can request a facilitated pilot with scorecard export and priority product feedback.
+    </p>
+
+    <div class="grid-2" style="margin-top:40px">
+      <article class="card">
+        <span class="badge">Always free</span>
+        <h2>Live demo</h2>
+        <p class="muted">Full interactive prototype: canvas ↔ TSX sync, Designer's Receipts, Figma import, export/deploy, marketing kit.</p>
+        <ul class="muted">
+          <li>No credit card</li>
+          <li>Runs in the browser</li>
+          <li>Share feedback anytime</li>
+        </ul>
+        <a class="btn btn-primary" href={DEMO_APP}>Open free demo</a>
+      </article>
+      <article class="card">
+        <span class="badge">Limited capacity</span>
+        <h2>Pilot</h2>
+        <p class="muted">Facilitated sessions for teams evaluating BluePainter as a workflow bet before v1.</p>
+        <ul class="muted">
+          <li>Guided walkthrough + scorecard</li>
+          <li>Session export (JSON)</li>
+          <li>Priority feedback loop</li>
+          <li>Typical window: 30–45 minutes</li>
+          <li>Capacity: ~8 sessions per validation wave</li>
+        </ul>
+        <p class="muted"><strong>What's not included:</strong> production SLAs, Marketplace billing, or guaranteed roadmap features.</p>
+        <a class="btn btn-primary" href="/pilot">Request a pilot</a>
+      </article>
+    </div>
+
+    <div class="prose" style="margin-top:48px">
+      <h2>Factors that affect access</h2>
+      <p>Pilots prioritize teams with an active React/TSX repo, a design–dev pair, and willingness to share structured feedback. Open seats are announced after each validation wave.</p>
+      <h2>What happens after validation?</h2>
+      <p>If we go to v1, pricing will be published here before any paid conversion. Candidates under discussion: per-seat, per-repo, or open-core (free extension + paid team policy). Nothing is locked yet.</p>
+    </div>
+  </section>
+</BaseLayout>

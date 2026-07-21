@@ -1,4 +1,4 @@
-# AST sync scope — BluePainter Studio v1
+# AST sync scope — BluePainter v1
 
 This document defines what the **Recast + Babel** sync engine supports today. The demo uses AST-first sync (`astSyncEngine.js`) with regex fallback (`syncEngine.js`).
 
@@ -48,9 +48,16 @@ The `id` attribute is the join key between canvas and AST.
 
 ---
 
-## v1 extension path
+## v1 extension
 
-The VS Code extension (`extension/`) reads/writes real files under `src/` using the same AST utilities. See `extension/README.md`.
+The VS Code extension (`extension/`) provides repo-native editing:
+
+- Sidebar **canvas preview**, **inspector**, and **Designer's Receipts**
+- **Canvas editor** tab for larger visual editing
+- **AST write-back** via Recast (with Babel generator fallback in Node)
+- Bootstrap from Pricing/Hero templates or JSX `id` attributes
+
+See `extension/README.md` for install and commands.
 
 ---
 

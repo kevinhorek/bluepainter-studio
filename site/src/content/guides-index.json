@@ -1,0 +1,602 @@
+[
+  {
+    "slug": "best-figma-to-react-tools-for-saas",
+    "title": "Best Figma to React tools for saas teams",
+    "description": "How saas product teams evaluate Figma→React handoff — and when BluePainter's AST sync fits.",
+    "pattern": "best-for-niche"
+  },
+  {
+    "slug": "best-figma-to-react-tools-for-fintech",
+    "title": "Best Figma to React tools for fintech teams",
+    "description": "How fintech product teams evaluate Figma→React handoff — and when BluePainter's AST sync fits.",
+    "pattern": "best-for-niche"
+  },
+  {
+    "slug": "best-figma-to-react-tools-for-healthcare",
+    "title": "Best Figma to React tools for healthcare teams",
+    "description": "How healthcare product teams evaluate Figma→React handoff — and when BluePainter's AST sync fits.",
+    "pattern": "best-for-niche"
+  },
+  {
+    "slug": "best-figma-to-react-tools-for-ecommerce",
+    "title": "Best Figma to React tools for ecommerce teams",
+    "description": "How ecommerce product teams evaluate Figma→React handoff — and when BluePainter's AST sync fits.",
+    "pattern": "best-for-niche"
+  },
+  {
+    "slug": "best-figma-to-react-tools-for-education",
+    "title": "Best Figma to React tools for education teams",
+    "description": "How education product teams evaluate Figma→React handoff — and when BluePainter's AST sync fits.",
+    "pattern": "best-for-niche"
+  },
+  {
+    "slug": "best-figma-to-react-tools-for-marketplace",
+    "title": "Best Figma to React tools for marketplace teams",
+    "description": "How marketplace product teams evaluate Figma→React handoff — and when BluePainter's AST sync fits.",
+    "pattern": "best-for-niche"
+  },
+  {
+    "slug": "best-figma-to-react-tools-for-devtools",
+    "title": "Best Figma to React tools for devtools teams",
+    "description": "How devtools product teams evaluate Figma→React handoff — and when BluePainter's AST sync fits.",
+    "pattern": "best-for-niche"
+  },
+  {
+    "slug": "best-figma-to-react-tools-for-design-systems",
+    "title": "Best Figma to React tools for design-systems teams",
+    "description": "How design-systems product teams evaluate Figma→React handoff — and when BluePainter's AST sync fits.",
+    "pattern": "best-for-niche"
+  },
+  {
+    "slug": "best-figma-to-react-tools-for-agencies",
+    "title": "Best Figma to React tools for agencies teams",
+    "description": "How agencies product teams evaluate Figma→React handoff — and when BluePainter's AST sync fits.",
+    "pattern": "best-for-niche"
+  },
+  {
+    "slug": "best-figma-to-react-tools-for-startups",
+    "title": "Best Figma to React tools for startups teams",
+    "description": "How startups product teams evaluate Figma→React handoff — and when BluePainter's AST sync fits.",
+    "pattern": "best-for-niche"
+  },
+  {
+    "slug": "best-figma-to-react-tools-for-enterprise",
+    "title": "Best Figma to React tools for enterprise teams",
+    "description": "How enterprise product teams evaluate Figma→React handoff — and when BluePainter's AST sync fits.",
+    "pattern": "best-for-niche"
+  },
+  {
+    "slug": "best-figma-to-react-tools-for-b2b",
+    "title": "Best Figma to React tools for b2b teams",
+    "description": "How b2b product teams evaluate Figma→React handoff — and when BluePainter's AST sync fits.",
+    "pattern": "best-for-niche"
+  },
+  {
+    "slug": "best-figma-to-react-tools-for-consumer",
+    "title": "Best Figma to React tools for consumer teams",
+    "description": "How consumer product teams evaluate Figma→React handoff — and when BluePainter's AST sync fits.",
+    "pattern": "best-for-niche"
+  },
+  {
+    "slug": "best-figma-to-react-tools-for-mobile-web",
+    "title": "Best Figma to React tools for mobile-web teams",
+    "description": "How mobile-web product teams evaluate Figma→React handoff — and when BluePainter's AST sync fits.",
+    "pattern": "best-for-niche"
+  },
+  {
+    "slug": "best-figma-to-react-tools-for-dashboard",
+    "title": "Best Figma to React tools for dashboard teams",
+    "description": "How dashboard product teams evaluate Figma→React handoff — and when BluePainter's AST sync fits.",
+    "pattern": "best-for-niche"
+  },
+  {
+    "slug": "best-figma-to-react-tools-for-marketing-sites",
+    "title": "Best Figma to React tools for marketing-sites teams",
+    "description": "How marketing-sites product teams evaluate Figma→React handoff — and when BluePainter's AST sync fits.",
+    "pattern": "best-for-niche"
+  },
+  {
+    "slug": "best-figma-to-react-tools-for-docs-sites",
+    "title": "Best Figma to React tools for docs-sites teams",
+    "description": "How docs-sites product teams evaluate Figma→React handoff — and when BluePainter's AST sync fits.",
+    "pattern": "best-for-niche"
+  },
+  {
+    "slug": "best-figma-to-react-tools-for-internal-tools",
+    "title": "Best Figma to React tools for internal-tools teams",
+    "description": "How internal-tools product teams evaluate Figma→React handoff — and when BluePainter's AST sync fits.",
+    "pattern": "best-for-niche"
+  },
+  {
+    "slug": "best-figma-to-react-tools-for-open-source",
+    "title": "Best Figma to React tools for open-source teams",
+    "description": "How open-source product teams evaluate Figma→React handoff — and when BluePainter's AST sync fits.",
+    "pattern": "best-for-niche"
+  },
+  {
+    "slug": "best-figma-to-react-tools-for-ai-products",
+    "title": "Best Figma to React tools for ai-products teams",
+    "description": "How ai-products product teams evaluate Figma→React handoff — and when BluePainter's AST sync fits.",
+    "pattern": "best-for-niche"
+  },
+  {
+    "slug": "how-to-sync-pricing-card-canvas-and-tsx",
+    "title": "How to sync a pricing card between canvas and TSX",
+    "description": "Practical id-contract checklist for keeping a pricing card editable in BluePainter.",
+    "pattern": "how-to-sync"
+  },
+  {
+    "slug": "how-to-sync-hero-section-canvas-and-tsx",
+    "title": "How to sync a hero section between canvas and TSX",
+    "description": "Practical id-contract checklist for keeping a hero section editable in BluePainter.",
+    "pattern": "how-to-sync"
+  },
+  {
+    "slug": "how-to-sync-navbar-canvas-and-tsx",
+    "title": "How to sync a navbar between canvas and TSX",
+    "description": "Practical id-contract checklist for keeping a navbar editable in BluePainter.",
+    "pattern": "how-to-sync"
+  },
+  {
+    "slug": "how-to-sync-footer-canvas-and-tsx",
+    "title": "How to sync a footer between canvas and TSX",
+    "description": "Practical id-contract checklist for keeping a footer editable in BluePainter.",
+    "pattern": "how-to-sync"
+  },
+  {
+    "slug": "how-to-sync-feature-grid-canvas-and-tsx",
+    "title": "How to sync a feature grid between canvas and TSX",
+    "description": "Practical id-contract checklist for keeping a feature grid editable in BluePainter.",
+    "pattern": "how-to-sync"
+  },
+  {
+    "slug": "how-to-sync-cta-banner-canvas-and-tsx",
+    "title": "How to sync a cta banner between canvas and TSX",
+    "description": "Practical id-contract checklist for keeping a cta banner editable in BluePainter.",
+    "pattern": "how-to-sync"
+  },
+  {
+    "slug": "how-to-sync-testimonial-canvas-and-tsx",
+    "title": "How to sync a testimonial between canvas and TSX",
+    "description": "Practical id-contract checklist for keeping a testimonial editable in BluePainter.",
+    "pattern": "how-to-sync"
+  },
+  {
+    "slug": "how-to-sync-dashboard-page-canvas-and-tsx",
+    "title": "How to sync a dashboard page between canvas and TSX",
+    "description": "Practical id-contract checklist for keeping a dashboard page editable in BluePainter.",
+    "pattern": "how-to-sync"
+  },
+  {
+    "slug": "how-to-sync-settings-form-canvas-and-tsx",
+    "title": "How to sync a settings form between canvas and TSX",
+    "description": "Practical id-contract checklist for keeping a settings form editable in BluePainter.",
+    "pattern": "how-to-sync"
+  },
+  {
+    "slug": "how-to-sync-modal-canvas-and-tsx",
+    "title": "How to sync a modal between canvas and TSX",
+    "description": "Practical id-contract checklist for keeping a modal editable in BluePainter.",
+    "pattern": "how-to-sync"
+  },
+  {
+    "slug": "how-to-sync-sidebar-canvas-and-tsx",
+    "title": "How to sync a sidebar between canvas and TSX",
+    "description": "Practical id-contract checklist for keeping a sidebar editable in BluePainter.",
+    "pattern": "how-to-sync"
+  },
+  {
+    "slug": "how-to-sync-data-table-canvas-and-tsx",
+    "title": "How to sync a data table between canvas and TSX",
+    "description": "Practical id-contract checklist for keeping a data table editable in BluePainter.",
+    "pattern": "how-to-sync"
+  },
+  {
+    "slug": "how-to-sync-empty-state-canvas-and-tsx",
+    "title": "How to sync a empty state between canvas and TSX",
+    "description": "Practical id-contract checklist for keeping a empty state editable in BluePainter.",
+    "pattern": "how-to-sync"
+  },
+  {
+    "slug": "how-to-sync-onboarding-canvas-and-tsx",
+    "title": "How to sync a onboarding between canvas and TSX",
+    "description": "Practical id-contract checklist for keeping a onboarding editable in BluePainter.",
+    "pattern": "how-to-sync"
+  },
+  {
+    "slug": "how-to-sync-checkout-canvas-and-tsx",
+    "title": "How to sync a checkout between canvas and TSX",
+    "description": "Practical id-contract checklist for keeping a checkout editable in BluePainter.",
+    "pattern": "how-to-sync"
+  },
+  {
+    "slug": "figma-dev-mode-vs-bluepainter",
+    "title": "figma dev mode vs BluePainter",
+    "description": "Positioning: generation vs AST-preserving canvas↔code sync with Designer's Receipts.",
+    "pattern": "vs"
+  },
+  {
+    "slug": "v0-vs-bluepainter",
+    "title": "v0 vs BluePainter",
+    "description": "Positioning: generation vs AST-preserving canvas↔code sync with Designer's Receipts.",
+    "pattern": "vs"
+  },
+  {
+    "slug": "cursor-vs-bluepainter",
+    "title": "cursor vs BluePainter",
+    "description": "Positioning: generation vs AST-preserving canvas↔code sync with Designer's Receipts.",
+    "pattern": "vs"
+  },
+  {
+    "slug": "anima-vs-bluepainter",
+    "title": "anima vs BluePainter",
+    "description": "Positioning: generation vs AST-preserving canvas↔code sync with Designer's Receipts.",
+    "pattern": "vs"
+  },
+  {
+    "slug": "locofy-vs-bluepainter",
+    "title": "locofy vs BluePainter",
+    "description": "Positioning: generation vs AST-preserving canvas↔code sync with Designer's Receipts.",
+    "pattern": "vs"
+  },
+  {
+    "slug": "builder-io-vs-bluepainter",
+    "title": "builder io vs BluePainter",
+    "description": "Positioning: generation vs AST-preserving canvas↔code sync with Designer's Receipts.",
+    "pattern": "vs"
+  },
+  {
+    "slug": "framer-vs-bluepainter",
+    "title": "framer vs BluePainter",
+    "description": "Positioning: generation vs AST-preserving canvas↔code sync with Designer's Receipts.",
+    "pattern": "vs"
+  },
+  {
+    "slug": "webflow-vs-bluepainter",
+    "title": "webflow vs BluePainter",
+    "description": "Positioning: generation vs AST-preserving canvas↔code sync with Designer's Receipts.",
+    "pattern": "vs"
+  },
+  {
+    "slug": "plasmic-vs-bluepainter",
+    "title": "plasmic vs BluePainter",
+    "description": "Positioning: generation vs AST-preserving canvas↔code sync with Designer's Receipts.",
+    "pattern": "vs"
+  },
+  {
+    "slug": "teleport-hq-vs-bluepainter",
+    "title": "teleport hq vs BluePainter",
+    "description": "Positioning: generation vs AST-preserving canvas↔code sync with Designer's Receipts.",
+    "pattern": "vs"
+  },
+  {
+    "slug": "designers-receipts-for-contrast",
+    "title": "Designer's Receipts for contrast",
+    "description": "How BluePainter enforces contrast policy and writes fixes back to TSX.",
+    "pattern": "receipts-rule"
+  },
+  {
+    "slug": "designers-receipts-for-spacing",
+    "title": "Designer's Receipts for spacing",
+    "description": "How BluePainter enforces spacing policy and writes fixes back to TSX.",
+    "pattern": "receipts-rule"
+  },
+  {
+    "slug": "designers-receipts-for-cta-copy",
+    "title": "Designer's Receipts for cta copy",
+    "description": "How BluePainter enforces cta copy policy and writes fixes back to TSX.",
+    "pattern": "receipts-rule"
+  },
+  {
+    "slug": "designers-receipts-for-border-radius",
+    "title": "Designer's Receipts for border radius",
+    "description": "How BluePainter enforces border radius policy and writes fixes back to TSX.",
+    "pattern": "receipts-rule"
+  },
+  {
+    "slug": "designers-receipts-for-feature-clutter",
+    "title": "Designer's Receipts for feature clutter",
+    "description": "How BluePainter enforces feature clutter policy and writes fixes back to TSX.",
+    "pattern": "receipts-rule"
+  },
+  {
+    "slug": "contrast-checklist-for-enterprise-react-teams-50",
+    "title": "contrast checklist for enterprise React teams",
+    "description": "A practical contrast checklist for enterprise teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "spacing-checklist-for-b2b-react-teams-51",
+    "title": "spacing checklist for b2b React teams",
+    "description": "A practical spacing checklist for b2b teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "cta-copy-checklist-for-consumer-react-teams-52",
+    "title": "cta copy checklist for consumer React teams",
+    "description": "A practical cta copy checklist for consumer teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "border-radius-checklist-for-mobile-web-react-teams-53",
+    "title": "border radius checklist for mobile-web React teams",
+    "description": "A practical border radius checklist for mobile-web teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "feature-clutter-checklist-for-dashboard-react-teams-54",
+    "title": "feature clutter checklist for dashboard React teams",
+    "description": "A practical feature clutter checklist for dashboard teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "contrast-checklist-for-marketing-sites-react-teams-55",
+    "title": "contrast checklist for marketing-sites React teams",
+    "description": "A practical contrast checklist for marketing-sites teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "spacing-checklist-for-docs-sites-react-teams-56",
+    "title": "spacing checklist for docs-sites React teams",
+    "description": "A practical spacing checklist for docs-sites teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "cta-copy-checklist-for-internal-tools-react-teams-57",
+    "title": "cta copy checklist for internal-tools React teams",
+    "description": "A practical cta copy checklist for internal-tools teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "border-radius-checklist-for-open-source-react-teams-58",
+    "title": "border radius checklist for open-source React teams",
+    "description": "A practical border radius checklist for open-source teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "feature-clutter-checklist-for-ai-products-react-teams-59",
+    "title": "feature clutter checklist for ai-products React teams",
+    "description": "A practical feature clutter checklist for ai-products teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "contrast-checklist-for-saas-react-teams-60",
+    "title": "contrast checklist for saas React teams",
+    "description": "A practical contrast checklist for saas teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "spacing-checklist-for-fintech-react-teams-61",
+    "title": "spacing checklist for fintech React teams",
+    "description": "A practical spacing checklist for fintech teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "cta-copy-checklist-for-healthcare-react-teams-62",
+    "title": "cta copy checklist for healthcare React teams",
+    "description": "A practical cta copy checklist for healthcare teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "border-radius-checklist-for-ecommerce-react-teams-63",
+    "title": "border radius checklist for ecommerce React teams",
+    "description": "A practical border radius checklist for ecommerce teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "feature-clutter-checklist-for-education-react-teams-64",
+    "title": "feature clutter checklist for education React teams",
+    "description": "A practical feature clutter checklist for education teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "contrast-checklist-for-marketplace-react-teams-65",
+    "title": "contrast checklist for marketplace React teams",
+    "description": "A practical contrast checklist for marketplace teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "spacing-checklist-for-devtools-react-teams-66",
+    "title": "spacing checklist for devtools React teams",
+    "description": "A practical spacing checklist for devtools teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "cta-copy-checklist-for-design-systems-react-teams-67",
+    "title": "cta copy checklist for design-systems React teams",
+    "description": "A practical cta copy checklist for design-systems teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "border-radius-checklist-for-agencies-react-teams-68",
+    "title": "border radius checklist for agencies React teams",
+    "description": "A practical border radius checklist for agencies teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "feature-clutter-checklist-for-startups-react-teams-69",
+    "title": "feature clutter checklist for startups React teams",
+    "description": "A practical feature clutter checklist for startups teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "contrast-checklist-for-enterprise-react-teams-70",
+    "title": "contrast checklist for enterprise React teams",
+    "description": "A practical contrast checklist for enterprise teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "spacing-checklist-for-b2b-react-teams-71",
+    "title": "spacing checklist for b2b React teams",
+    "description": "A practical spacing checklist for b2b teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "cta-copy-checklist-for-consumer-react-teams-72",
+    "title": "cta copy checklist for consumer React teams",
+    "description": "A practical cta copy checklist for consumer teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "border-radius-checklist-for-mobile-web-react-teams-73",
+    "title": "border radius checklist for mobile-web React teams",
+    "description": "A practical border radius checklist for mobile-web teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "feature-clutter-checklist-for-dashboard-react-teams-74",
+    "title": "feature clutter checklist for dashboard React teams",
+    "description": "A practical feature clutter checklist for dashboard teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "contrast-checklist-for-marketing-sites-react-teams-75",
+    "title": "contrast checklist for marketing-sites React teams",
+    "description": "A practical contrast checklist for marketing-sites teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "spacing-checklist-for-docs-sites-react-teams-76",
+    "title": "spacing checklist for docs-sites React teams",
+    "description": "A practical spacing checklist for docs-sites teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "cta-copy-checklist-for-internal-tools-react-teams-77",
+    "title": "cta copy checklist for internal-tools React teams",
+    "description": "A practical cta copy checklist for internal-tools teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "border-radius-checklist-for-open-source-react-teams-78",
+    "title": "border radius checklist for open-source React teams",
+    "description": "A practical border radius checklist for open-source teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "feature-clutter-checklist-for-ai-products-react-teams-79",
+    "title": "feature clutter checklist for ai-products React teams",
+    "description": "A practical feature clutter checklist for ai-products teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "contrast-checklist-for-saas-react-teams-80",
+    "title": "contrast checklist for saas React teams",
+    "description": "A practical contrast checklist for saas teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "spacing-checklist-for-fintech-react-teams-81",
+    "title": "spacing checklist for fintech React teams",
+    "description": "A practical spacing checklist for fintech teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "cta-copy-checklist-for-healthcare-react-teams-82",
+    "title": "cta copy checklist for healthcare React teams",
+    "description": "A practical cta copy checklist for healthcare teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "border-radius-checklist-for-ecommerce-react-teams-83",
+    "title": "border radius checklist for ecommerce React teams",
+    "description": "A practical border radius checklist for ecommerce teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "feature-clutter-checklist-for-education-react-teams-84",
+    "title": "feature clutter checklist for education React teams",
+    "description": "A practical feature clutter checklist for education teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "contrast-checklist-for-marketplace-react-teams-85",
+    "title": "contrast checklist for marketplace React teams",
+    "description": "A practical contrast checklist for marketplace teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "spacing-checklist-for-devtools-react-teams-86",
+    "title": "spacing checklist for devtools React teams",
+    "description": "A practical spacing checklist for devtools teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "cta-copy-checklist-for-design-systems-react-teams-87",
+    "title": "cta copy checklist for design-systems React teams",
+    "description": "A practical cta copy checklist for design-systems teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "border-radius-checklist-for-agencies-react-teams-88",
+    "title": "border radius checklist for agencies React teams",
+    "description": "A practical border radius checklist for agencies teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "feature-clutter-checklist-for-startups-react-teams-89",
+    "title": "feature clutter checklist for startups React teams",
+    "description": "A practical feature clutter checklist for startups teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "contrast-checklist-for-enterprise-react-teams-90",
+    "title": "contrast checklist for enterprise React teams",
+    "description": "A practical contrast checklist for enterprise teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "spacing-checklist-for-b2b-react-teams-91",
+    "title": "spacing checklist for b2b React teams",
+    "description": "A practical spacing checklist for b2b teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "cta-copy-checklist-for-consumer-react-teams-92",
+    "title": "cta copy checklist for consumer React teams",
+    "description": "A practical cta copy checklist for consumer teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "border-radius-checklist-for-mobile-web-react-teams-93",
+    "title": "border radius checklist for mobile-web React teams",
+    "description": "A practical border radius checklist for mobile-web teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "feature-clutter-checklist-for-dashboard-react-teams-94",
+    "title": "feature clutter checklist for dashboard React teams",
+    "description": "A practical feature clutter checklist for dashboard teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "contrast-checklist-for-marketing-sites-react-teams-95",
+    "title": "contrast checklist for marketing-sites React teams",
+    "description": "A practical contrast checklist for marketing-sites teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "spacing-checklist-for-docs-sites-react-teams-96",
+    "title": "spacing checklist for docs-sites React teams",
+    "description": "A practical spacing checklist for docs-sites teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "cta-copy-checklist-for-internal-tools-react-teams-97",
+    "title": "cta copy checklist for internal-tools React teams",
+    "description": "A practical cta copy checklist for internal-tools teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "border-radius-checklist-for-open-source-react-teams-98",
+    "title": "border radius checklist for open-source React teams",
+    "description": "A practical border radius checklist for open-source teams evaluating BluePainter.",
+    "pattern": "checklist"
+  },
+  {
+    "slug": "feature-clutter-checklist-for-ai-products-react-teams-99",
+    "title": "feature clutter checklist for ai-products React teams",
+    "description": "A practical feature clutter checklist for ai-products teams evaluating BluePainter.",
+    "pattern": "checklist"
+  }
+]

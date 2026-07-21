@@ -34,7 +34,7 @@ export const initialPricingNodes = {
       fontWeight: 700,
       color: '#64748b'
     },
-    text: 'STUDIO'
+    text: 'PRO'
   },
   'price-container': {
     id: 'price-container',

@@ -1,5 +1,5 @@
 const DEMO_SCRIPT = {
-  title: 'BluePainter Studio — Validation Demo Script',
+  title: 'BluePainter — Validation Demo Script',
   duration: '5–7 minutes',
   audience: 'Designers, frontend developers, founders/PMs',
   sections: [

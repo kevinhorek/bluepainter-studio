@@ -4,7 +4,7 @@ export default function WelcomeModal({ onStart, onShowReceipts }) {
       <div className="welcome-modal">
         <div className="welcome-logo">
           <div className="logo-icon"><div className="logo-dot" /></div>
-          <span>BluePainter Studio</span>
+          <span>BluePainter</span>
         </div>
         <h1>Click around — it&apos;s a live prototype</h1>
         <p className="welcome-lead">

@@ -249,7 +249,7 @@ function buildStandaloneLandingHtml(ctx, copy) {
     </div>
   </section>
 
-  <footer>© ${new Date().getFullYear()} ${escapeHtml(ctx.brandName)} · Generated with BluePainter Studio</footer>
+  <footer>© ${new Date().getFullYear()} ${escapeHtml(ctx.brandName)} · Generated with BluePainter</footer>
 </body>
 </html>`;
 }
@@ -469,7 +469,7 @@ export function buildMarketingStaticFileMap(nodesByFile, toneId = 'default') {
     files: {
       'index.html': buildStandaloneLandingHtml(ctx, copy),
       'vercel.json': JSON.stringify({ rewrites: [{ source: '/(.*)', destination: '/index.html' }] }, null, 2),
-      'README.md': `# ${ctx.brandName} landing\n\nStatic marketing page exported from BluePainter Studio.\n`
+      'README.md': `# ${ctx.brandName} landing\n\nStatic marketing page exported from BluePainter.\n`
     }
   };
 }

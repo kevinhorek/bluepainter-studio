@@ -1,7 +1,7 @@
 export const DEMO_URL = 'https://bluepainter-studio.vercel.app';
 
 export async function copyDemoLink() {
-  const url = `${DEMO_URL}/#/studio`;
+  const url = `${DEMO_URL}/#/app`;
   try {
     await navigator.clipboard.writeText(url);
     return true;

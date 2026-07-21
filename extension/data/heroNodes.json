@@ -1,0 +1,73 @@
+{
+  "hero-frame": {
+    "id": "hero-frame",
+    "type": "frame",
+    "name": "Hero Frame",
+    "tag": "div",
+    "style": {
+      "position": "absolute",
+      "left": 60,
+      "top": 40,
+      "padding": 48,
+      "borderRadius": 8,
+      "background": "#0f172a",
+      "color": "#ffffff",
+      "display": "flex",
+      "flexDirection": "column",
+      "gap": 16,
+      "alignItems": "center",
+      "width": 450,
+      "height": "auto",
+      "borderWidth": 1,
+      "borderColor": "#1e293b",
+      "borderStyle": "solid"
+    },
+    "children": [
+      "hero-title",
+      "hero-subtitle",
+      "hero-button"
+    ]
+  },
+  "hero-title": {
+    "id": "hero-title",
+    "type": "text",
+    "name": "Hero Title",
+    "tag": "h1",
+    "style": {
+      "fontSize": 28,
+      "fontWeight": 800,
+      "textAlign": "center"
+    },
+    "text": "Three surfaces, one source of truth"
+  },
+  "hero-subtitle": {
+    "id": "hero-subtitle",
+    "type": "text",
+    "name": "Hero Subtitle",
+    "tag": "p",
+    "style": {
+      "fontSize": 14,
+      "color": "#94a3b8",
+      "textAlign": "center",
+      "lineHeight": "1.5"
+    },
+    "text": "Edits in visual canvas, code editor, or designer receipts update each other in real time."
+  },
+  "hero-button": {
+    "id": "hero-button",
+    "type": "button",
+    "name": "CTA Button",
+    "tag": "button",
+    "style": {
+      "background": "#2563eb",
+      "color": "#ffffff",
+      "borderWidth": 0,
+      "padding": 10,
+      "borderRadius": 6,
+      "fontWeight": 600,
+      "fontSize": 14,
+      "cursor": "pointer"
+    },
+    "text": "Get Started Free"
+  }
+}

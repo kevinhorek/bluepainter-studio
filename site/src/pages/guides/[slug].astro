@@ -1,0 +1,32 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+export async function getStaticPaths() {
+  const guides = await getCollection('guides');
+  return guides.map((guide) => ({
+    params: { slug: guide.id },
+    props: { guide }
+  }));
+}
+
+const { guide } = Astro.props;
+const { Content } = await render(guide);
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: guide.data.title,
+  description: guide.data.description,
+  datePublished: guide.data.pubDate || '2026-07-21',
+  author: { '@type': 'Organization', name: 'BluePainter' }
+};
+---
+
+<BaseLayout title={`${guide.data.title} — BluePainter`} description={guide.data.description} jsonLd={jsonLd}>
+  <section class="section prose">
+    <p class="eyebrow">{guide.data.pattern}</p>
+    <Content />
+    <p style="margin-top:48px"><a href="/guides">← All guides</a> · <a href="/pilot">Request pilot</a></p>
+  </section>
+</BaseLayout>

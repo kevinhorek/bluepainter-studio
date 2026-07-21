@@ -1,0 +1,36 @@
+{
+  "brand": "BluePainter",
+  "status": "validation_prototype",
+  "urls": {
+    "demo": "https://bluepainter-studio.vercel.app",
+    "demoApp": "https://bluepainter-studio.vercel.app/#/app",
+    "site": "https://bluepainter-launch.vercel.app",
+    "pricing": "https://bluepainter-launch.vercel.app/pricing",
+    "pilot": "https://bluepainter-launch.vercel.app/pilot",
+    "faq": "https://bluepainter-launch.vercel.app/faq"
+  },
+  "pricing": {
+    "model": "validation",
+    "paidSkus": false,
+    "plans": [
+      { "name": "Free live demo", "price": 0, "currency": "USD", "access": "open" },
+      { "name": "Facilitated pilot", "price": 0, "currency": "USD", "access": "capacity_limited", "capacityPerWave": 8 }
+    ]
+  },
+  "services": [
+    { "name": "AST canvas ↔ TSX sync", "description": "Bidirectional format-preserving edits." },
+    { "name": "Designer's Receipts", "description": "Contrast, spacing, CTA, clutter policy." },
+    { "name": "VS Code extension", "description": "Repo-native sidebar + write-back." },
+    { "name": "MCP server", "description": "Agent discovery and tools." }
+  ],
+  "faq": [
+    {
+      "q": "Is BluePainter free?",
+      "a": "Yes during validation. Live demo is free; pilots are free but capacity-limited."
+    },
+    {
+      "q": "What is BluePainter?",
+      "a": "AST-preserving canvas ↔ TSX sync with Designer's Receipts for React teams."
+    }
+  ]
+}

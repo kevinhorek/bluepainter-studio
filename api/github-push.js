@@ -26,7 +26,7 @@ export default async function handler(req, res) {
       repoOwner,
       safeName,
       files,
-      message || 'Deploy from BluePainter Studio'
+      message || 'Deploy from BluePainter'
     );
 
     return res.status(200).json({

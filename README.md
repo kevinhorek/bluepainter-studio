@@ -1,4 +1,4 @@
-# BluePainter Studio
+# BluePainter
 
 Interactive validation demo for a **visual canvas ↔ code workspace** with **Designer's Receipts** and page-level component composition.
 
@@ -10,7 +10,7 @@ Interactive validation demo for a **visual canvas ↔ code workspace** with **De
 
 BluePainter is **not** an LLM wrapper. It's a workflow bet: **AST-preserving bidirectional sync** and **team-configurable design policy** inside existing repos.
 
-This repo is the **validation prototype**. Opens straight into the studio — canvas, code, receipts, and page composition.
+This repo is the **validation prototype**. Opens straight into BluePainter — canvas, code, receipts, and page composition.
 
 ## Quick start
 
@@ -49,9 +49,42 @@ npm run deploy:vercel
 
 Add `?facilitator=1` for break/fix scenarios, tour, spec, and session export.
 
+## Distribution site (Astro)
+
+Crawlable marketing + free tools + guides + knowledge catalog (hybrid launch layer):
+
+```bash
+npm run site:guides   # generate 100 pSEO guide pages
+cd site && npm install && npm run dev
+```
+
+- Pricing / pilot: `/pricing`, `/pilot`
+- Free tools: `/tools/*`
+- AEO: `/faq`, `/knowledge`, `/llms.txt`, `/knowledge.json`
+- MCP: `mcp/` — see [mcp/README.md](./mcp/README.md)
+- Repurpose pillar content: `npm run repurpose -- scripts/fixtures/pillar-transcript.txt`
+- Newsletter ESP: [site/NEWSLETTER.md](./site/NEWSLETTER.md)
+- Marketplace checklist: [extension/MARKETPLACE.md](./extension/MARKETPLACE.md)
+
+**Live distribution site:** https://bluepainter-launch.vercel.app  
+
+Ops checklist (domain, GSC, ESP, Marketplace login): [site/LAUNCH_OPS.md](./site/LAUNCH_OPS.md)
+
+## VS Code extension
+
+Repo-native editing in VS Code — canvas preview, inspector, receipts, and AST write-back.
+
+```bash
+cd extension && npm install
+```
+
+Then **F5** in VS Code (Extension Development Host) or install from `extension/` folder. See [extension/README.md](./extension/README.md).
+
+Try `extension/test-fixtures/PricingCard.tsx` — edit on canvas, changes write back to the file.
+
 ## Prototype limitations
 
-- Sync uses regex, not Recast/Babel (v1 requirement)
+- Browser demo sync uses AST-first with regex fallback; Recast parse can fail on some JSX in Node (extension uses Babel generator fallback)
 - Learning loop uses localStorage only
 
 See [SPEC.md](./SPEC.md) for v1 scope and kill criteria.

@@ -1,4 +1,4 @@
-# BluePainter Studio — Product Spec
+# BluePainter — Product Spec
 
 > **Status:** Validation prototype → v1 planning  
 > **Live demo:** https://bluepainter-studio.vercel.app  

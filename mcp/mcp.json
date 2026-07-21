@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "bluepainter": {
+      "command": "node",
+      "args": ["mcp/src/index.js"],
+      "cwd": ".",
+      "env": {
+        "BLUEPAINTER_SITE_URL": "https://bluepainter-launch.vercel.app",
+        "BLUEPAINTER_WAITLIST_URL": "https://bluepainter-studio.vercel.app/api/waitlist"
+      }
+    }
+  }
+}

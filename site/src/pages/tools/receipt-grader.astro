@@ -1,0 +1,86 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { DEMO_APP, WAITLIST_URL } from '../../lib/constants';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: "BluePainter Receipt Grader",
+  applicationCategory: 'DesignApplication',
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' }
+};
+---
+
+<BaseLayout
+  title="Free Receipt Grader — BluePainter"
+  description="Grade spacing, contrast, CTA copy, radius, and clutter with Designer's Receipts policy. Free tool."
+  jsonLd={jsonLd}
+>
+  <section class="section">
+    <p class="eyebrow">Free tool</p>
+    <h1>Receipt grader</h1>
+    <p class="lead">Score a component against BluePainter team policy. Email unlocks the full checklist and demo CTA.</p>
+    <div class="tool-panel">
+      <div>
+        <label for="padding">Padding (px)</label>
+        <input id="padding" type="number" value="32" />
+        <label for="bg">Button background</label>
+        <input id="bg" value="#93c5fd" />
+        <label for="cta">CTA text</label>
+        <input id="cta" value="Submit" />
+        <label for="radius">Border radius (px)</label>
+        <input id="radius" type="number" value="12" />
+        <label for="features">Feature count</label>
+        <input id="features" type="number" value="6" />
+        <button class="btn btn-primary" id="run" style="margin-top:16px;width:100%">Grade</button>
+        <div class="email-gate" id="gate" hidden>
+          <label for="email">Email for full report</label>
+          <input id="email" type="email" />
+          <button class="btn btn-ghost" id="unlock" style="margin-top:8px;width:100%">Unlock</button>
+          <p class="form-status muted" hidden></p>
+        </div>
+      </div>
+      <div class="result-box" id="result"><p class="muted">Score appears here.</p></div>
+    </div>
+    <p style="margin-top:24px"><a href={DEMO_APP}>Open BluePainter demo →</a></p>
+  </section>
+  <script is:inline src="/js/receipts.js"></script>
+  <script is:inline define:vars={{ DEMO_APP, WAITLIST_URL }}>
+    let last = null;
+    document.getElementById('run').onclick = function () {
+      last = BluePainterTools.gradeSimpleReceipts({
+        padding: document.getElementById('padding').value,
+        background: document.getElementById('bg').value,
+        ctaText: document.getElementById('cta').value,
+        borderRadius: document.getElementById('radius').value,
+        featureCount: document.getElementById('features').value
+      });
+      const summary = last.rules.map(function (r) {
+        return '<li class="' + (r.valid ? 'ok' : 'bad') + '">' + r.title + '</li>';
+      }).join('');
+      document.getElementById('result').innerHTML =
+        '<div class="score-big">' + last.score + '</div><p>Policy score</p><ul>' + summary + '</ul>';
+      document.getElementById('gate').hidden = false;
+    };
+    document.getElementById('unlock').onclick = async function () {
+      const email = document.getElementById('email').value;
+      const status = document.querySelector('#gate .form-status');
+      const res = await fetch(WAITLIST_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, source: 'receipt-grader' })
+      });
+      const data = await res.json();
+      status.hidden = false;
+      status.textContent = data.ok ? 'Unlocked — see fixes below.' : (data.error || 'Failed');
+      if (data.ok && last) {
+        const fixes = last.rules.filter(function (r) { return r.fix; }).map(function (r) {
+          return '<li>' + r.id + ' → ' + r.fix + '</li>';
+        }).join('') || '<li>No fixes needed</li>';
+        document.getElementById('result').innerHTML +=
+          '<h3>Suggested fixes</h3><ul>' + fixes + '</ul>' +
+          '<p><a class="btn btn-primary" href="' + DEMO_APP + '">Open in BluePainter</a></p>';
+      }
+    };
+  </script>
+</BaseLayout>

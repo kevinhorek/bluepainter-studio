@@ -1,5 +1,5 @@
 /** Shared GitHub Git API push for serverless routes. */
-export async function pushFilesToGithub(token, owner, repo, files, message = 'Update from BluePainter Studio') {
+export async function pushFilesToGithub(token, owner, repo, files, message = 'Update from BluePainter') {
   const headers = {
     Authorization: `Bearer ${token}`,
     Accept: 'application/vnd.github+json',

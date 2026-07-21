@@ -1,0 +1,68 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { DEMO_APP, WAITLIST_URL } from '../../lib/constants';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: 'BluePainter Contrast Checker',
+  applicationCategory: 'DesignApplication',
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' }
+};
+---
+
+<BaseLayout
+  title="Free Contrast Checker — BluePainter"
+  description="Check button background contrast against WCAG AA using BluePainter receipt logic."
+  jsonLd={jsonLd}
+>
+  <section class="section">
+    <p class="eyebrow">Free tool</p>
+    <h1>Contrast checker</h1>
+    <p class="lead">Same ratio math as Designer's Receipts. Unlock the full report with email.</p>
+    <div class="tool-panel">
+      <div>
+        <label for="bg">Button background (hex)</label>
+        <input id="bg" value="#2563eb" />
+        <button class="btn btn-primary" id="run" style="margin-top:16px;width:100%">Check contrast</button>
+        <div class="email-gate" id="gate" hidden>
+          <p class="muted">Email for suggested fix + demo link.</p>
+          <label for="email">Email</label>
+          <input id="email" type="email" placeholder="you@company.com" />
+          <button class="btn btn-ghost" id="unlock" style="margin-top:8px;width:100%">Unlock report</button>
+          <p class="form-status muted" hidden></p>
+        </div>
+      </div>
+      <div class="result-box" id="result"><p class="muted">Results appear here.</p></div>
+    </div>
+    <p style="margin-top:24px"><a href={DEMO_APP}>Open BluePainter demo →</a></p>
+  </section>
+  <script is:inline src="/js/receipts.js"></script>
+  <script is:inline define:vars={{ DEMO_APP, WAITLIST_URL }}>
+    let last = null;
+    document.getElementById('run').onclick = function () {
+      last = BluePainterTools.evaluateContrast(document.getElementById('bg').value);
+      document.getElementById('result').innerHTML =
+        '<div class="score-big ' + (last.passesAA ? 'ok' : 'bad') + '">' + last.ratio + ':1</div>' +
+        '<p>' + (last.passesAA ? 'Passes WCAG AA' : 'Fails WCAG AA') + ' (min ' + last.minRatio + ':1)</p>';
+      document.getElementById('gate').hidden = false;
+    };
+    document.getElementById('unlock').onclick = async function () {
+      const email = document.getElementById('email').value;
+      const status = document.querySelector('#gate .form-status');
+      const res = await fetch(WAITLIST_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, source: 'contrast-checker' })
+      });
+      const data = await res.json();
+      status.hidden = false;
+      status.textContent = data.ok ? 'Unlocked.' : (data.error || 'Failed');
+      if (data.ok && last) {
+        document.getElementById('result').innerHTML +=
+          '<p class="ok">Suggested fix: <code>' + last.suggestedFix + '</code></p>' +
+          '<p><a class="btn btn-primary" href="' + DEMO_APP + '">Open in BluePainter</a></p>';
+      }
+    };
+  </script>
+</BaseLayout>

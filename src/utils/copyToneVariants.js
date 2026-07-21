@@ -77,7 +77,7 @@ export function syncMarketingCopyNodes(nodesByFile, { overwrite = false } = {}) 
   const heroSubtitle = hero['hero-subtitle']?.text || '';
   const price = pricing['price-amount']?.text || '$29';
   const period = pricing['price-period']?.text || '/month';
-  const planName = pricing['header-text']?.text || 'STUDIO';
+  const planName = pricing['header-text']?.text || 'PRO';
   const siteUrl = marketing['mkt-site-url']?.text || 'https://yoursite.com';
 
   const updates = {

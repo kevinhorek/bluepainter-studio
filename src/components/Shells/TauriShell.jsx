@@ -55,14 +55,14 @@ export default function TauriShell({
           <div className="window-dot maximize"></div>
         </div>
         <div className="tauri-title">
-          BluePainter Studio — marketing-site / {activeFile === 'pricing' ? 'PricingCard' : 'HeroSection'}
+          BluePainter — marketing-site / {activeFile === 'pricing' ? 'PricingCard' : 'HeroSection'}
         </div>
         <div style={{ width: 50 }}></div>
       </div>
 
       {/* 2. Tauri Menubar */}
       <div className="tauri-menubar">
-        <span className="tauri-menu-item" style={{ fontWeight: 700, color: 'var(--blue-primary)' }}>Studio</span>
+        <span className="tauri-menu-item" style={{ fontWeight: 700, color: 'var(--blue-primary)' }}>BluePainter</span>
         <span className="tauri-menu-item">File</span>
         <span className="tauri-menu-item">Edit</span>
         <span className="tauri-menu-item">View</span>

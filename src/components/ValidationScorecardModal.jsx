@@ -1,10 +1,17 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { buildSessionScorecard, getScorecardChecks } from '../utils/sessionScorecard';
 import { downloadValidationExport } from '../utils/validationExport';
+import {
+  buildScorecardSharePayload,
+  buildSyncWrappedPayload,
+  copyShareLink,
+  openNativeShare
+} from '../utils/shareViral';
 
 export default function ValidationScorecardModal({ isOpen, onClose }) {
   const scorecard = useMemo(() => (isOpen ? buildSessionScorecard() : null), [isOpen]);
   const checks = useMemo(() => (scorecard ? getScorecardChecks(scorecard) : []), [scorecard]);
+  const [shareStatus, setShareStatus] = useState('');
 
   if (!isOpen || !scorecard) return null;
 
@@ -13,6 +20,18 @@ export default function ValidationScorecardModal({ isOpen, onClose }) {
     : scorecard.recommendation === 'NO-GO'
       ? 'scorecard-rec-nogo'
       : 'scorecard-rec-continue';
+
+  const handleShareScorecard = async () => {
+    const payload = buildScorecardSharePayload(scorecard);
+    const result = await copyShareLink(payload);
+    setShareStatus(result.ok ? `Copied ${result.url}` : `Share: ${result.url}`);
+  };
+
+  const handleShareWrapped = async () => {
+    const payload = buildSyncWrappedPayload(scorecard.learning);
+    await openNativeShare(payload);
+    setShareStatus('Opened share sheet');
+  };
 
   return (
     <div className="demo-script-overlay" onClick={onClose}>
@@ -59,17 +78,20 @@ export default function ValidationScorecardModal({ isOpen, onClose }) {
           </ul>
 
           <p className="validation-script-intro">
-            Export JSON after each session for go/no-go review. See <strong>VALIDATION.md</strong> and <strong>AST_SCOPE.md</strong>.
+            Export JSON after each session for go/no-go review. Share a viral scorecard card to X/LinkedIn.
           </p>
+          {shareStatus && <p className="validation-script-intro">{shareStatus}</p>}
         </div>
 
         <div className="demo-script-actions">
-          <button
-            type="button"
-            className="feedback-cancel-btn"
-            onClick={() => downloadValidationExport()}
-          >
+          <button type="button" className="feedback-cancel-btn" onClick={() => downloadValidationExport()}>
             Export session JSON
+          </button>
+          <button type="button" className="feedback-cancel-btn" onClick={handleShareScorecard}>
+            Copy share card
+          </button>
+          <button type="button" className="feedback-cancel-btn" onClick={handleShareWrapped}>
+            Sync Wrapped
           </button>
           <button type="button" className="landing-cta-primary" style={{ padding: '10px 20px', fontSize: '0.85rem' }} onClick={onClose}>
             Done

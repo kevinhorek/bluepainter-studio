@@ -34,7 +34,7 @@ const FEATURES = [
     icon: '↑',
     tag: 'Ship',
     title: 'Export & deploy',
-    desc: 'Download a Vite app, push to GitHub, or deploy to Vercel — straight from the studio.'
+    desc: 'Download a Vite app, push to GitHub, or deploy to Vercel — straight from BluePainter.'
   },
   {
     id: 'marketing',
@@ -113,7 +113,7 @@ const INTEGRATIONS = [
   { name: 'VS Code', desc: 'Extension v1' }
 ];
 
-function StudioMock() {
+function ProductMock() {
   return (
     <div className="landing-mock" aria-hidden>
       <div className="landing-mock-titlebar">
@@ -149,7 +149,7 @@ function StudioMock() {
 export default function MarketingPage({ onLaunchDemo, onShowFeedback }) {
   const openFacilitator = () => {
     const base = window.location.pathname || '/';
-    window.location.assign(`${base}?facilitator=1#/studio`);
+    window.location.assign(`${base}?facilitator=1#/app`);
   };
 
   const scrollTo = (id) => {
@@ -161,23 +161,25 @@ export default function MarketingPage({ onLaunchDemo, onShowFeedback }) {
       <div className="landing-glow landing-glow-a" />
       <div className="landing-glow landing-glow-b" />
 
-      <header className="landing-header landing-header-sticky">
-        <div className="landing-logo">
-          <div className="logo-icon"><div className="logo-dot" /></div>
-          <span>BluePainter <span className="landing-logo-light">Studio</span></span>
-        </div>
-        <nav className="landing-nav">
-          <button type="button" onClick={() => scrollTo('features')}>Features</button>
-          <button type="button" onClick={() => scrollTo('workflow')}>Workflow</button>
-          <button type="button" onClick={() => scrollTo('integrations')}>Integrations</button>
-        </nav>
-        <div className="landing-header-actions">
-          <button type="button" className="landing-cta-sm" onClick={onShowFeedback}>
-            Feedback
-          </button>
-          <button type="button" className="landing-cta-sm landing-cta-sm-primary" onClick={() => onLaunchDemo('phase1')}>
-            Open Studio
-          </button>
+      <header className="landing-header-bar">
+        <div className="landing-header">
+          <div className="landing-logo">
+            <div className="logo-icon"><div className="logo-dot" /></div>
+            <span>BluePainter</span>
+          </div>
+          <nav className="landing-nav">
+            <button type="button" onClick={() => scrollTo('features')}>Features</button>
+            <button type="button" onClick={() => scrollTo('workflow')}>Workflow</button>
+            <button type="button" onClick={() => scrollTo('integrations')}>Integrations</button>
+          </nav>
+          <div className="landing-header-actions">
+            <button type="button" className="landing-cta-sm" onClick={onShowFeedback}>
+              Feedback
+            </button>
+            <button type="button" className="landing-cta-sm landing-cta-sm-primary" onClick={() => onLaunchDemo('phase1')}>
+              Open BluePainter
+            </button>
+          </div>
         </div>
       </header>
 
@@ -189,7 +191,7 @@ export default function MarketingPage({ onLaunchDemo, onShowFeedback }) {
             <span className="landing-gradient-text">one surface.</span>
           </h1>
           <p className="landing-lead">
-            BluePainter Studio is a validation prototype for React teams: canvas and TSX stay in sync,
+            BluePainter is a validation prototype for React teams: canvas and TSX stay in sync,
             Designer&apos;s Receipts enforce policy, and you export real projects — not throwaway codegen.
           </p>
           <div className="landing-actions">
@@ -201,19 +203,19 @@ export default function MarketingPage({ onLaunchDemo, onShowFeedback }) {
             </button>
           </div>
           <div className="landing-hero-stats">
-            <div><strong>12+</strong><span>Studio features</span></div>
+            <div><strong>12+</strong><span>Features</span></div>
             <div><strong>AST</strong><span>Format-preserving sync</span></div>
             <div><strong>0</strong><span>Lock-in runtime</span></div>
           </div>
         </div>
-        <StudioMock />
+        <ProductMock />
       </section>
 
       <section id="features" className="landing-section">
         <div className="landing-section-head">
           <p className="landing-section-eyebrow">Everything in the prototype</p>
           <h2>Built for the full product loop</h2>
-          <p>From Figma import to GitHub push — every feature in the studio is live in this demo.</p>
+          <p>From Figma import to GitHub push — every feature in BluePainter is live in this demo.</p>
         </div>
         <div className="landing-bento">
           {FEATURES.map((f) => (
@@ -306,10 +308,10 @@ export default function MarketingPage({ onLaunchDemo, onShowFeedback }) {
 
       <section className="landing-cta-banner">
         <h2>Ready to click around?</h2>
-        <p>The studio is a fully interactive prototype — edit canvas, edit code, export, deploy.</p>
+        <p>BluePainter is a fully interactive prototype — edit canvas, edit code, export, deploy.</p>
         <div className="landing-actions landing-actions-center">
           <button type="button" className="landing-cta-primary" onClick={() => onLaunchDemo('phase1')}>
-            Open Studio free
+            Try BluePainter free
           </button>
           <button type="button" className="landing-cta-secondary" onClick={onShowFeedback}>
             Share feedback
@@ -320,13 +322,22 @@ export default function MarketingPage({ onLaunchDemo, onShowFeedback }) {
       <footer className="landing-footer landing-footer-v2">
         <div className="landing-footer-brand">
           <div className="logo-icon"><div className="logo-dot" /></div>
-          <span>BluePainter Studio</span>
+          <span>BluePainter</span>
         </div>
         <span className="landing-footer-note">Validation prototype · July 2026</span>
         <div className="landing-footer-links">
           <button type="button" className="landing-footer-link" onClick={() => onLaunchDemo('phase1')}>
-            Studio
+            Demo
           </button>
+          <a className="landing-footer-link" href="https://bluepainter-launch.vercel.app/pricing">
+            Pricing
+          </a>
+          <a className="landing-footer-link" href="https://bluepainter-launch.vercel.app/pilot">
+            Request pilot
+          </a>
+          <a className="landing-footer-link" href="https://bluepainter-launch.vercel.app/tools">
+            Free tools
+          </a>
           <button type="button" className="landing-footer-link" onClick={openFacilitator}>
             Facilitator
           </button>

@@ -1,0 +1,36 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { FAQ_ITEMS } from '../lib/faq';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: FAQ_ITEMS.map((item) => ({
+    '@type': 'Question',
+    name: item.q,
+    acceptedAnswer: { '@type': 'Answer', text: item.a }
+  }))
+};
+---
+
+<BaseLayout
+  title="BluePainter FAQ — Canvas ↔ Code Sync & Receipts"
+  description="Answers about BluePainter pricing, AST sync, Designer's Receipts, VS Code, Figma import, and validation status."
+  jsonLd={jsonLd}
+>
+  <section class="section">
+    <p class="eyebrow">FAQ</p>
+    <h1>Frequently asked questions</h1>
+    <p class="lead">
+      BluePainter is a free validation prototype for AST-preserving canvas ↔ TSX sync with Designer's Receipts. Direct answers below are written for humans and AI citation.
+    </p>
+    <div class="prose" style="margin-top:32px;max-width:800px">
+      {FAQ_ITEMS.map((item) => (
+        <div class="faq-item">
+          <h3>{item.q}</h3>
+          <p>{item.a}</p>
+        </div>
+      ))}
+    </div>
+  </section>
+</BaseLayout>

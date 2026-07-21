@@ -1,0 +1,28 @@
+# Smithery AI MCP registry config
+# https://smithery.ai — submit this repo path after connecting GitHub
+
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      BLUEPAINTER_SITE_URL:
+        type: string
+        default: https://bluepainter-launch.vercel.app
+      BLUEPAINTER_WAITLIST_URL:
+        type: string
+        default: https://bluepainter-studio.vercel.app/api/waitlist
+  commandFunction: |
+    (config) => ({
+      command: 'node',
+      args: ['src/index.js'],
+      env: {
+        BLUEPAINTER_SITE_URL: config.BLUEPAINTER_SITE_URL,
+        BLUEPAINTER_WAITLIST_URL: config.BLUEPAINTER_WAITLIST_URL
+      }
+    })
+
+# Manual submit steps (requires your Smithery account):
+# 1. https://smithery.ai → New Server → connect kevinhorek/bluepainter-studio
+# 2. Set subdirectory to mcp/
+# 3. Publish; link from https://bluepainter-launch.vercel.app/knowledge/mcp

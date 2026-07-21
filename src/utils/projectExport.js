@@ -80,7 +80,7 @@ const VERCEL_JSON = JSON.stringify({
 
 const DEPLOY_MD = `# Deploy this app to Vercel
 
-Exported from [BluePainter Studio](https://bluepainter-studio.vercel.app).
+Exported from [BluePainter](https://bluepainter-studio.vercel.app).
 
 ## Quick deploy
 

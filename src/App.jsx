@@ -41,7 +41,7 @@ const facilitator = isFacilitatorMode();
 
 function parseHash() {
   const hash = window.location.hash.replace(/^#\/?/, '');
-  if (!hash || hash === 'studio') return { phase: 'phase1', startTour: false };
+  if (!hash || hash === 'app' || hash === 'studio') return { phase: 'phase1', startTour: false };
   if (hash === 'home' || hash === 'landing') return { phase: 'landing', startTour: false };
   if (hash === 'about') return { phase: 'phase1', startTour: false, openAbout: true };
   if (hash === 'demo') {
@@ -58,7 +58,7 @@ function parseHash() {
 function phaseToHash(phase, tourActive) {
   if (phase === 'landing') return '#/home';
   if (tourActive) return '#/demo';
-  return '#/studio';
+  return '#/app';
 }
 
 export default function App() {
@@ -248,7 +248,7 @@ export default function App() {
 
   useEffect(() => {
     if (!window.location.hash || window.location.hash === '#/' || window.location.hash === '#') {
-      window.location.hash = '#/studio';
+      window.location.hash = '#/app';
     }
   }, []);
 
@@ -297,15 +297,15 @@ export default function App() {
     window.location.hash = '#/home';
   }, []);
 
-  const handleLaunchStudio = useCallback((nextPhase = 'phase1') => {
+  const handleLaunchApp = useCallback((nextPhase = 'phase1') => {
     setPhase(nextPhase);
-    window.location.hash = '#/studio';
+    window.location.hash = '#/app';
     markWelcomeSeen();
     setWelcomeOpen(false);
   }, []);
 
   const handleWelcomeStart = () => {
-    handleLaunchStudio('phase1');
+    handleLaunchApp('phase1');
   };
 
   const handleWelcomeShowReceipts = () => {
@@ -322,7 +322,7 @@ export default function App() {
 
   const handleCopyLink = async () => {
     const ok = await copyDemoLink();
-    notify(ok ? 'Demo link copied!' : `Copy this link: ${DEMO_URL}/#/studio`);
+    notify(ok ? 'Demo link copied!' : `Copy this link: ${DEMO_URL}/#/app`);
   };
 
   useEffect(() => {
@@ -633,7 +633,7 @@ export default function App() {
     return (
       <div className="app-container app-landing">
         <MarketingSite
-          onLaunchDemo={handleLaunchStudio}
+          onLaunchDemo={handleLaunchApp}
           onShowFeedback={() => setFeedbackOpen(true)}
         />
         <FeedbackModal isOpen={feedbackOpen} onClose={handleFeedbackClose} />

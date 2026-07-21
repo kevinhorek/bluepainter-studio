@@ -1,0 +1,26 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const guides = (await getCollection('guides')).sort((a, b) => a.data.title.localeCompare(b.data.title));
+---
+
+<BaseLayout
+  title="BluePainter Guides — Figma to React, Sync & Receipts"
+  description="Programmatic guides on Figma→React handoff, canvas↔TSX sync, competitor comparisons, and Designer's Receipts."
+>
+  <section class="section">
+    <p class="eyebrow">Guides</p>
+    <h1>SEO guides ({guides.length})</h1>
+    <p class="lead">Original BluePainter-positioned pages for handoff, sync, and policy topics. Indexation MVP — edit top performers after Search Console data.</p>
+    <div class="grid-2" style="margin-top:32px">
+      {guides.map((g) => (
+        <a class="card" href={`/guides/${g.id}`} style="color:inherit">
+          <span class="badge">{g.data.pattern || 'guide'}</span>
+          <h3>{g.data.title}</h3>
+          <p class="muted">{g.data.description}</p>
+        </a>
+      ))}
+    </div>
+  </section>
+</BaseLayout>

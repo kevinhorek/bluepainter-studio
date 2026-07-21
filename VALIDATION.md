@@ -1,4 +1,4 @@
-# Validation guide — BluePainter Studio
+# Validation guide — BluePainter
 
 Use this for **5–8 sessions** with frontend devs, design engineers, or founders shipping React UI. Sessions should be **15–20 minutes** of them using the tool, not you presenting.
 

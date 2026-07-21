@@ -11,10 +11,13 @@ node_modules
 dist
 dist-ssr
 *.local
+.astro
+*.vsix
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
+!.vscode/launch.json
 .idea
 .DS_Store
 *.suo
@@ -23,3 +26,7 @@ dist-ssr
 *.sln
 *.sw?
 .vercel
+site/drafts/*.json
+site/drafts/*.txt
+site/drafts/*.md
+!site/drafts/.gitkeep

@@ -1,0 +1,11 @@
+# BluePainter content pillar (sample transcript)
+
+Stop vibe coding throwaway UI. BluePainter is a validation prototype for AST-preserving canvas to TSX sync with Designer's Receipts.
+
+Designers and frontend engineers lose spacing, contrast, and CTA quality on handoff. Generators create new code; they do not keep your repo formatting or team policy.
+
+In BluePainter you edit the canvas or the code. Stable id attributes join layers to JSX. Recast patches styles and text in place. Receipts flag weak contrast and generic CTAs, then write fixes back.
+
+We are free during validation. Open the live demo. Request a facilitated pilot if you want a scorecard session. After validation we will publish pricing before any paid conversion.
+
+Agents can read llms.txt and knowledge.json, or use our MCP server to open the demo, analyze TSX ids, and submit pilot requests.

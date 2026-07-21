@@ -1,0 +1,73 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { DEMO_APP, WAITLIST_URL } from '../../lib/constants';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: 'BluePainter TSX Id Analyzer',
+  applicationCategory: 'DeveloperApplication',
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' }
+};
+---
+
+<BaseLayout
+  title="Free TSX Id Analyzer — BluePainter"
+  description="Count syncable JSX id attributes for BluePainter canvas ↔ code sync. Free tool."
+  jsonLd={jsonLd}
+>
+  <section class="section">
+    <p class="eyebrow">Free tool</p>
+    <h1>TSX id analyzer</h1>
+    <p class="lead">BluePainter joins canvas nodes to JSX via stable <code>id</code> attributes. Paste a component to count syncable ids.</p>
+    <div class="tool-panel">
+      <div>
+        <label for="code">TSX / JSX</label>
+        <textarea id="code">{`export function PricingCard() {
+  return (
+    <div id="pricing-card-frame" style={{ padding: 32 }}>
+      <button id="cta-button">Submit</button>
+    </div>
+  );
+}`}</textarea>
+        <button class="btn btn-primary" id="run" style="margin-top:16px;width:100%">Analyze</button>
+        <div class="email-gate" id="gate" hidden>
+          <label for="email">Email for VS Code extension tips</label>
+          <input id="email" type="email" />
+          <button class="btn btn-ghost" id="unlock" style="margin-top:8px;width:100%">Unlock</button>
+          <p class="form-status muted" hidden></p>
+        </div>
+      </div>
+      <div class="result-box" id="result"><p class="muted">Ids appear here.</p></div>
+    </div>
+    <p style="margin-top:24px"><a href={DEMO_APP}>Open BluePainter demo →</a></p>
+  </section>
+  <script is:inline src="/js/receipts.js"></script>
+  <script is:inline define:vars={{ DEMO_APP, WAITLIST_URL }}>
+    let last = null;
+    document.getElementById('run').onclick = function () {
+      last = BluePainterTools.analyzeTsxIds(document.getElementById('code').value);
+      document.getElementById('result').innerHTML =
+        '<div class="score-big">' + last.count + '</div><p>syncable id(s)</p><code>' +
+        last.ids.join(', ') + '</code>';
+      document.getElementById('gate').hidden = false;
+    };
+    document.getElementById('unlock').onclick = async function () {
+      const email = document.getElementById('email').value;
+      const status = document.querySelector('#gate .form-status');
+      const res = await fetch(WAITLIST_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, source: 'tsx-id-analyzer' })
+      });
+      const data = await res.json();
+      status.hidden = false;
+      status.textContent = data.ok ? 'Unlocked.' : (data.error || 'Failed');
+      if (data.ok) {
+        document.getElementById('result').innerHTML +=
+          '<p class="muted" style="margin-top:16px">Tip: install the VS Code extension from the repo <code>extension/</code> folder, then run BluePainter: Sync Canvas from File.</p>' +
+          '<p><a class="btn btn-primary" href="' + DEMO_APP + '">Open demo</a></p>';
+      }
+    };
+  </script>
+</BaseLayout>

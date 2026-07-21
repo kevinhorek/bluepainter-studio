@@ -1,0 +1,65 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { DEMO_APP, WAITLIST_URL } from '../lib/constants';
+---
+
+<BaseLayout
+  title="Request a BluePainter Pilot"
+  description="Request a facilitated BluePainter validation pilot — scorecard, session export, priority feedback."
+>
+  <section class="section">
+    <p class="eyebrow">Pilot</p>
+    <h1>Request a facilitated pilot</h1>
+    <p class="lead">
+      Tell us about your team. We schedule ~8 pilots per wave. Meanwhile, the <a href={DEMO_APP}>free demo</a> is open to everyone.
+    </p>
+
+    <form class="card" style="max-width:520px;margin-top:32px" id="pilot-form" data-waitlist-url={WAITLIST_URL}>
+      <label for="name">Name</label>
+      <input id="name" name="name" required placeholder="Alex Designer" />
+
+      <label for="email">Work email</label>
+      <input id="email" name="email" type="email" required placeholder="alex@company.com" />
+
+      <label for="company">Company / team</label>
+      <input id="company" name="company" placeholder="Acme Design Systems" />
+
+      <label for="role">Role</label>
+      <select id="role" name="role">
+        <option>Designer</option>
+        <option>Frontend engineer</option>
+        <option>Design engineer</option>
+        <option>Engineering manager</option>
+        <option>Other</option>
+      </select>
+
+      <label for="message">Why BluePainter? (optional)</label>
+      <textarea id="message" name="message" placeholder="We lose spacing tokens on Figma handoff…"></textarea>
+
+      <input type="hidden" name="source" value="pilot" />
+      <button type="submit" class="btn btn-primary" style="margin-top:16px;width:100%">Submit request</button>
+      <p class="form-status muted" hidden style="margin-top:12px"></p>
+    </form>
+  </section>
+
+  <script>
+    const form = document.getElementById('pilot-form');
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const status = form.querySelector('.form-status');
+      const fd = new FormData(form);
+      const endpoint = form.getAttribute('data-waitlist-url') || '/api/waitlist';
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(Object.fromEntries(fd))
+      });
+      const data = await res.json();
+      status.hidden = false;
+      status.textContent = data.ok
+        ? 'Request received. We will email you when a seat opens.'
+        : (data.error || 'Something went wrong.');
+      if (data.ok) form.reset();
+    });
+  </script>
+</BaseLayout>

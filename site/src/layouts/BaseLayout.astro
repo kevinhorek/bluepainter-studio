@@ -1,0 +1,118 @@
+---
+import { BRAND, DEMO_APP, SITE_URL, WAITLIST_URL } from '../lib/constants';
+
+interface Props {
+  title?: string;
+  description?: string;
+  canonical?: string;
+  ogImage?: string;
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+}
+
+const {
+  title = `${BRAND.name} — ${BRAND.tagline}`,
+  description = BRAND.description,
+  canonical,
+  ogImage = `${SITE_URL}/og-default.svg`,
+  jsonLd
+} = Astro.props;
+
+const canonicalUrl = canonical || new URL(Astro.url.pathname, SITE_URL).toString();
+const year = new Date().getFullYear();
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalUrl} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={BRAND.name} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={ogImage} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/styles/global.css" />
+    {jsonLd && (
+      <script type="application/ld+json" set:html={JSON.stringify(Array.isArray(jsonLd) ? jsonLd : jsonLd)} />
+    )}
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="site-header-inner">
+        <a class="logo" href="/">{BRAND.name}</a>
+        <nav class="nav">
+          <a href="/pricing">Pricing</a>
+          <a href="/tools">Tools</a>
+          <a href="/guides">Guides</a>
+          <a href="/faq">FAQ</a>
+          <a href="/knowledge">Knowledge</a>
+        </nav>
+        <div class="header-actions">
+          <a class="btn btn-ghost" href="/pilot">Request pilot</a>
+          <a class="btn btn-primary" href={DEMO_APP}>Open demo</a>
+        </div>
+      </div>
+    </header>
+    <main>
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <div class="site-footer-inner">
+        <div>
+          <strong>{BRAND.name}</strong>
+          <p class="muted">Validation prototype · Free demo · Request a pilot</p>
+        </div>
+        <form class="newsletter-form" action={WAITLIST_URL} method="POST" data-newsletter data-waitlist-url={WAITLIST_URL}>
+          <label for="nl-email">Newsletter</label>
+          <div class="newsletter-row">
+            <input id="nl-email" name="email" type="email" required placeholder="you@company.com" />
+            <input type="hidden" name="source" value="newsletter" />
+            <button type="submit" class="btn btn-primary">Subscribe</button>
+          </div>
+          <p class="form-status muted" hidden></p>
+        </form>
+        <div class="footer-links">
+          <a href="/pricing">Pricing</a>
+          <a href="/pilot">Pilot</a>
+          <a href="/faq">FAQ</a>
+          <a href="/llms.txt">llms.txt</a>
+          <a href="/knowledge.json">knowledge.json</a>
+        </div>
+      </div>
+      <p class="copyright">© {year} {BRAND.name}</p>
+    </footer>
+    <script>
+      document.querySelectorAll('[data-newsletter]').forEach((form) => {
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const status = form.querySelector('.form-status');
+          const fd = new FormData(form);
+          try {
+            const endpoint = form.getAttribute('data-waitlist-url') || '/api/waitlist';
+            const res = await fetch(endpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(Object.fromEntries(fd))
+            });
+            const data = await res.json();
+            status.hidden = false;
+            status.textContent = data.ok ? 'Thanks — you\'re on the list.' : (data.error || 'Something went wrong.');
+            if (data.ok) form.reset();
+          } catch {
+            status.hidden = false;
+            status.textContent = 'Network error — try again.';
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
