@@ -375,7 +375,7 @@ export default function CanvasView({
       userSelect: 'none'
     };
 
-    const isEditable = node.type === 'text' || node.type === 'button' || node.type === 'comment';
+    const isEditable = node.type === 'text' || node.type === 'button' || node.type === 'list-item' || node.type === 'comment';
     const isLeaf = isLeafNode(node);
     const dragOverProps = !isLeaf ? {
       onDragOver: (e) => {

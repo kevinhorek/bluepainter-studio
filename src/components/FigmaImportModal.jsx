@@ -48,9 +48,11 @@ export default function FigmaImportModal({ isOpen, onClose, onImported, onNotify
         frameName: result.frameName,
         nodeCount: result.nodeCount
       });
+      onNotify?.(`Imported "${result.frameName || 'frame'}" — ${result.nodeCount} layers`);
       onClose();
     } catch (e) {
       setError(e.message);
+      onNotify?.(e.message);
     } finally {
       setImporting(false);
     }

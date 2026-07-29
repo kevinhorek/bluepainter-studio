@@ -7,9 +7,12 @@ const traverse = traverseModule.default || traverseModule;
 
 const babelParser = {
   parse(source) {
+    // Recast requires tokens on the AST; without them it throws
+    // "Invalid regular expression: missing /" on ordinary JSX.
     return parse(source, {
       sourceType: 'module',
-      plugins: ['jsx', 'typescript']
+      plugins: ['jsx', 'typescript'],
+      tokens: true
     });
   }
 };
@@ -113,7 +116,7 @@ function parseTSXWithAST(code, nodesMap) {
           if (parsed) node.style = { ...(node.style || {}), ...parsed };
         }
 
-        if (node.type === 'text' || node.type === 'button') {
+        if (node.type === 'text' || node.type === 'button' || node.type === 'list-item') {
           const text = readJsxText(path.node);
           if (text != null) node.text = text;
         }
@@ -153,7 +156,7 @@ function patchTSXWithAST(code, nodesMap) {
           upsertStyleAttribute(opening, node.style);
         }
 
-        if (node.type === 'text' || node.type === 'button') {
+        if (node.type === 'text' || node.type === 'button' || node.type === 'list-item') {
           setJsxText(path.node, node.text || '');
         }
 

@@ -98,5 +98,6 @@ export function analyzeTsxIds(source) {
   const re = /\bid\s*=\s*["']([^"']+)["']/g;
   let m;
   while ((m = re.exec(source))) ids.push(m[1]);
-  return { count: ids.length, ids: [...new Set(ids)] };
+  const unique = [...new Set(ids)];
+  return { count: unique.length, ids: unique };
 }

@@ -1,6 +1,6 @@
 import JSZip from 'jszip';
 import { generateTSX } from './syncEngine';
-import { WORKSPACE_FILES, APP_EXPORT_FILE_IDS } from '../data/workspaceFiles';
+import { WORKSPACE_FILES } from '../data/workspaceFiles';
 import { applyCopyTone } from './copyToneVariants';
 
 function exportFilename(label) {

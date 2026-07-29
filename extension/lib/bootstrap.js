@@ -16,6 +16,7 @@ const FILE_TEMPLATES = [
 function inferNodeType(tagName) {
   if (tagName === 'button') return 'button';
   if (tagName === 'img') return 'image';
+  if (tagName === 'li') return 'list-item';
   if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'label', 'a'].includes(tagName)) return 'text';
   return 'frame';
 }
