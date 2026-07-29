@@ -9,6 +9,7 @@ MCP server so AI assistants (Claude, Cursor, ChatGPT tools) can discover BluePai
 | `bluepainter_open_demo` | Demo + site deep links |
 | `bluepainter_analyze_tsx` | Count syncable JSX `id`s |
 | `bluepainter_receipts_evaluate` | Contrast / CTA / spacing checks |
+| `bluepainter_estimate_roi` | Estimate yearly time/cost saved reviewing in-editor before merge |
 | `bluepainter_get_knowledge` | Knowledge catalog / FAQ |
 | `bluepainter_request_pilot` | Submit pilot waitlist |
 | `bluepainter_figma_import` | Call Figma import API |
