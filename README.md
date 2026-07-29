@@ -22,6 +22,15 @@ npm run dev
 
 Open http://localhost:5173 — lands on `DashboardPage.tsx`.
 
+### Desktop app
+
+```bash
+npm install
+npm run desktop
+```
+
+Opens BluePainter in a native desktop window (Electron). See [desktop/README.md](./desktop/README.md).
+
 ## Validation workflow
 
 1. Share **https://bluepainter-studio.vercel.app**
