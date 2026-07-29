@@ -13,6 +13,8 @@ dist-ssr
 *.local
 .astro
 *.vsix
+desktop/dist
+out
 
 # Editor directories and files
 .vscode/*
