@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { GENERATION_TYPES, PROMPT_SUGGESTIONS, GENERATION_SCHEMAS } from '../utils/aiPrompts';
 import { generateWithAI } from '../utils/aiGenerate';
 import { loadOpenAIKey, saveOpenAIKey, maskKey } from '../utils/aiStorage';
@@ -14,15 +14,20 @@ export default function AIGeneratePanel({
   onNotify
 }) {
   const [type, setType] = useState(initialType);
+  const [syncedOpenType, setSyncedOpenType] = useState({ open: isOpen, type: initialType });
   const [prompt, setPrompt] = useState('');
   const [generating, setGenerating] = useState(false);
   const [preview, setPreview] = useState(null);
   const [apiKey, setApiKey] = useState(() => loadOpenAIKey());
   const [showKeyInput, setShowKeyInput] = useState(false);
 
-  useEffect(() => {
-    if (isOpen) setType(initialType);
-  }, [isOpen, initialType]);
+  // Reset generation type when the panel opens (or opener changes type).
+  if (isOpen && (!syncedOpenType.open || syncedOpenType.type !== initialType)) {
+    setSyncedOpenType({ open: true, type: initialType });
+    setType(initialType);
+  } else if (!isOpen && syncedOpenType.open) {
+    setSyncedOpenType({ open: false, type: syncedOpenType.type });
+  }
 
   const context = useMemo(
     () => buildAIContext(nodesByFile, activeFile),

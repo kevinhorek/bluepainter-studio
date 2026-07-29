@@ -1,8 +1,13 @@
+/**
+ * Verify that a BluePainter project export builds with Vite.
+ * Run: npm run verify:export
+ * (Uses scripts/esm-resolve.mjs so Vite-style extensionless imports resolve in Node.)
+ */
 import JSZip from 'jszip';
 import { writeFileSync, mkdirSync, rmSync } from 'fs';
 import { execSync } from 'child_process';
 import { generateTSX } from '../src/utils/syncEngine.js';
-import { FILE_ORDER, WORKSPACE_FILES } from '../src/data/workspaceFiles.js';
+import { APP_EXPORT_FILE_IDS, WORKSPACE_FILES } from '../src/data/workspaceFiles.js';
 import { getFreshPricingNodes, getFreshHeroNodes, getFreshDashboardNodes } from '../src/utils/demoScenarios.js';
 
 const nodesByFile = {
@@ -20,7 +25,7 @@ function fixImportPaths(code) {
 }
 
 const zip = new JSZip();
-FILE_ORDER.forEach((fileId) => {
+APP_EXPORT_FILE_IDS.forEach((fileId) => {
   const file = WORKSPACE_FILES[fileId];
   zip.file(`src/${exportFilename(file.label)}`, fixImportPaths(generateTSX(file.rootId, nodesByFile[fileId])));
 });

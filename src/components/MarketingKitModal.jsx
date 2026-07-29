@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   getMarketingPreview,
   generateMarketingCopy,
@@ -10,6 +10,12 @@ import {
 import { MARKETING_FIELD_GROUPS, getFieldText, getFieldFileLabel } from '../data/marketingFields';
 import { COPY_TONES } from '../utils/copyToneVariants';
 import MarketingDeployButtons from './MarketingDeployButtons';
+
+function revokePreviewMap(previews) {
+  Object.values(previews || {}).forEach((url) => {
+    if (url) URL.revokeObjectURL(url);
+  });
+}
 
 const GROUP_AI_TYPE = {
   brand: 'brand',
@@ -80,13 +86,14 @@ export default function MarketingKitModal({
   const [downloading, setDownloading] = useState(false);
   const [capturing, setCapturing] = useState(false);
   const [imagePreviews, setImagePreviews] = useState({});
+  const previewUrlsRef = useRef({});
 
   const ctx = useMemo(() => getMarketingPreview(nodesByFile).ctx, [nodesByFile]);
   const copy = useMemo(() => generateMarketingCopy(ctx, toneId), [ctx, toneId]);
 
   const screenshotForExport = useScreenshot ? screenshotBlob : null;
 
-  const loadImages = useCallback(async () => {
+  const buildImagePreviews = useCallback(async () => {
     const previews = {};
     for (const spec of IMAGE_SPECS) {
       const blob = await renderMarketingImage(ctx, copy, {
@@ -97,22 +104,27 @@ export default function MarketingKitModal({
       });
       previews[spec.id] = URL.createObjectURL(blob);
     }
-    setImagePreviews((prev) => {
-      Object.values(prev).forEach(URL.revokeObjectURL);
-      return previews;
-    });
+    return previews;
   }, [ctx, copy, screenshotForExport]);
 
   useEffect(() => {
-    if (!isOpen) return;
-    if (tab === 'export') loadImages();
+    if (!isOpen || tab !== 'export') return undefined;
+    let cancelled = false;
+    buildImagePreviews().then((previews) => {
+      if (cancelled) {
+        revokePreviewMap(previews);
+        return;
+      }
+      revokePreviewMap(previewUrlsRef.current);
+      previewUrlsRef.current = previews;
+      setImagePreviews(previews);
+    });
     return () => {
-      setImagePreviews((prev) => {
-        Object.values(prev).forEach(URL.revokeObjectURL);
-        return {};
-      });
+      cancelled = true;
+      revokePreviewMap(previewUrlsRef.current);
+      previewUrlsRef.current = {};
     };
-  }, [isOpen, tab, loadImages]);
+  }, [isOpen, tab, buildImagePreviews]);
 
   const handleFieldChange = (field, text) => {
     onUpdateField(field.fileId, field.nodeId, { text });

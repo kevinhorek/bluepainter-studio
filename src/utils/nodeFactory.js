@@ -3,6 +3,7 @@ import { isPlacableTool } from '../data/canvasTools';
 export const LEAF_NODE_TYPES = new Set([
   'text',
   'button',
+  'list-item',
   'image',
   'line',
   'shape',

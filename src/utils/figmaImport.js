@@ -55,7 +55,7 @@ function findImportRoot(figmaFile, nodeId) {
 
   const pages = figmaFile.document?.children || [];
   for (const page of pages) {
-    const frames = (page.children || []).filter((c) => c.type === 'FRAME' || c.type === 'COMPONENT');
+    const frames = (page.children || []).filter((c) => isFrameLike(c));
     if (frames.length) {
       const target = nodeId
         ? findNodeById(page, nodeId) || frames[0]

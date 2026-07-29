@@ -39,7 +39,7 @@ function generateTSXFromTemplate(rootNodeId, nodesMap) {
       return `${indent}<div${idAttr}${styleAttr}>\n${indent}  <${compName} />\n${indent}</div>`;
     }
 
-    if (node.type === 'text' || node.type === 'button') {
+    if (node.type === 'text' || node.type === 'button' || node.type === 'list-item') {
       const textVal = node.text || '';
       return `${indent}<${tag}${idAttr}${styleAttr}${classAttr}>${textVal}</${tag}>`;
     }
@@ -142,7 +142,7 @@ function parseTSXWithRegex(code, nodesMap) {
         });
       }
 
-      if (node.type === 'text' || node.type === 'button') {
+      if (node.type === 'text' || node.type === 'button' || node.type === 'list-item') {
         const textRegex = new RegExp(`<${node.tag}[^>]*id=["']${node.id}["'][^>]*>\\s*["']?([^"'\n<]+)["']?\\s*</${node.tag}>`);
         const textMatch = code.match(textRegex);
         if (textMatch) {

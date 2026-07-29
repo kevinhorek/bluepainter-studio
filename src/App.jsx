@@ -32,8 +32,9 @@ import MarketingKitModal from './components/MarketingKitModal';
 import { getEmptyFigmaImportNodes } from './utils/figmaImport';
 import FigmaImportModal from './components/FigmaImportModal';
 import AIGeneratePanel from './components/AIGeneratePanel';
-import { createNodeFromTool, canDropIntoNode, isLeafNode } from './utils/nodeFactory';
-import { getToolByShortcut } from './data/canvasTools';
+import { createNodeFromTool, canDropIntoNode } from './utils/nodeFactory';
+import { getToolByShortcut, isPlacableTool } from './data/canvasTools';
+import { applyAIUpdates, getFirstUpdateTarget } from './utils/aiApply';
 
 const VALID_PHASES = ['landing', 'phase1', 'phase2', 'phase3', 'phase4'];
 const TOUR_SEEN_KEY = 'bluepainter-tour-seen';
@@ -351,7 +352,6 @@ export default function App() {
       return;
     }
     if (activeRootId && activeNodesMap) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync generated code from canvas state
       setCode(generateTSX(activeRootId, activeNodesMap, codeRef.current));
     }
   }, [activeFile, activeRootId, activeNodesMap]);
