@@ -7,9 +7,14 @@ const traverse = traverseModule.default || traverseModule;
 
 const babelParser = {
   parse(source) {
+    // recast needs the token stream and node ranges to preserve original
+    // formatting; without `tokens`/`ranges` it falls back to its own
+    // (non-JSX) tokenizer and throws "Invalid regular expression" on JSX.
     return parse(source, {
       sourceType: 'module',
-      plugins: ['jsx', 'typescript']
+      plugins: ['jsx', 'typescript'],
+      tokens: true,
+      ranges: true
     });
   }
 };
