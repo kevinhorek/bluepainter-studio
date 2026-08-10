@@ -1,5 +1,6 @@
 {
   "name": "bluepainter",
+  "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [{ "source": "/((?!assets/|api/).*)", "destination": "/index.html" }]
