@@ -4,7 +4,8 @@ Interactive validation demo for a **visual canvas ↔ code workspace** with **De
 
 - **Live demo:** https://bluepainter-studio.vercel.app  
 - **Product spec:** [SPEC.md](./SPEC.md)  
-- **Interview guide:** [VALIDATION.md](./VALIDATION.md)
+- **Interview guide:** [VALIDATION.md](./VALIDATION.md)  
+- **Figma import:** [FIGMA_IMPORT.md](./FIGMA_IMPORT.md)
 
 ## What this is
 
@@ -82,9 +83,19 @@ Then **F5** in VS Code (Extension Development Host) or install from `extension/`
 
 Try `extension/test-fixtures/PricingCard.tsx` — edit on canvas, changes write back to the file.
 
+## Figma import
+
+Pull frames from Figma → canvas → export as React. One-way only (no sync back to Figma).
+
+- **URL import:** Requires Figma personal access token + `/api/figma-import` (works on live demo, or `npx vercel dev` locally)
+- **JSON paste:** Offline fallback — paste Figma REST API JSON
+
+See [FIGMA_IMPORT.md](./FIGMA_IMPORT.md) for supported node types, limitations, and usage.
+
 ## Prototype limitations
 
 - Browser demo sync uses AST-first with regex fallback; Recast parse can fail on some JSX in Node (extension uses Babel generator fallback)
 - Learning loop uses localStorage only
+- Figma import is one-way (no bidirectional sync)
 
 See [SPEC.md](./SPEC.md) for v1 scope and kill criteria.
