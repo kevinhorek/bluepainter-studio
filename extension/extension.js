@@ -421,10 +421,11 @@ class BluePainterController {
           }
         }
         break;
-      case 'exportLearningLoop':
+      case 'exportLearningLoop': {
         const loopData = this.learningLoop.exportJSON();
         vscode.window.showInformationMessage(`Learning loop: ${loopData.stats.total} events`);
         break;
+      }
       case 'syncFromFile':
         this.syncFromFile(editor);
         break;
