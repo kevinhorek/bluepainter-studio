@@ -14,11 +14,16 @@ function formatStyleAttr(styleObj) {
 }
 
 // 1. GENERATE TSX CODE FROM NODE TREE STATE
+// Fail-loud: returns null when AST patch fails on existing code (SPEC §5)
 export function generateTSX(rootNodeId, nodesMap, existingCode = null) {
   if (existingCode?.trim()) {
     const patched = patchTSXWithAST(existingCode, nodesMap);
     if (patched) return patched;
+    // AST patch failed - return null to trigger error handling (fail-loud)
+    console.error('[syncEngine] AST patch failed - refusing to regenerate template');
+    return null;
   }
+  // No existing code - generate from template (fresh component)
   return generateTSXFromTemplate(rootNodeId, nodesMap);
 }
 

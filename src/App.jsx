@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { generateTSX, parseTSX } from './utils/syncEngine';
 import { applyBrokenDesignScenario, applyFixedDesignScenario, getFreshHeroNodes, getFreshPricingNodes, getFreshDashboardNodes } from './utils/demoScenarios';
 import { getFreshMarketingNodes } from './data/marketingPage';
@@ -6,7 +6,7 @@ import { captureCanvasPageFrame } from './utils/canvasCapture';
 import { getWorkspaceFile } from './data/workspaceFiles';
 import { downloadValidationExport, getFeedbackSummary } from './utils/validationExport';
 import { loadReceiptPolicy, saveReceiptPolicy } from './data/defaultReceiptPolicy';
-import { logLearningEvent, getLearningSummary } from './utils/learningLoop';
+import { LearningLoop, getLearningSummary } from './utils/learningLoop';
 import { runPresenterSequence } from './utils/presenterMode';
 import { isFacilitatorMode } from './utils/facilitatorMode';
 import VSCodeShell from './components/Shells/VSCodeShell';
@@ -68,6 +68,10 @@ export default function App() {
     const route = initialRoute.phase === 'landing' ? 'landing' : initialRoute.phase;
     return route;
   });
+  
+  // Learning loop instance for comprehensive logging (SPEC §3)
+  const learningLoop = useMemo(() => new LearningLoop(), []);
+  
   const [aboutOpen, setAboutOpen] = useState(Boolean(initialRoute.openAbout));
   const [validationScriptOpen, setValidationScriptOpen] = useState(false);
   const [scorecardOpen, setScorecardOpen] = useState(false);
@@ -206,9 +210,9 @@ export default function App() {
     setActiveFile(targetFile);
     setSelectedNodeId(selectionId);
     setFocusedPanel('canvas');
-    logLearningEvent('figma_import', { targetFile, nodeCount, frameName });
+    learningLoop.log('figma_import', { targetFile, nodeCount, frameName });
     notify(`Imported "${frameName || 'frame'}" — ${nodeCount} layers`);
-  }, [notify]);
+  }, [learningLoop, notify]);
 
   const handleApplyAI = useCallback(({ type, updates, message, source }) => {
     const { nodesByFile: next, applied } = applyAIUpdates(nodesByFile, updates, type);
@@ -219,9 +223,9 @@ export default function App() {
       setSelectedNodeId(target.nodeId);
       setFocusedPanel('canvas');
     }
-    logLearningEvent('ai_generate_applied', { type, applied, source });
+    learningLoop.log('ai_generate_applied', { type, applied, source });
     notify(message || `Applied ${applied} updates to canvas`);
-  }, [nodesByFile, notify]);
+  }, [learningLoop, nodesByFile, notify]);
 
   const handleCaptureDashboardScreenshot = useCallback(async () => {
     if (activeFile !== 'dashboard') {
@@ -352,9 +356,19 @@ export default function App() {
       return;
     }
     if (activeRootId && activeNodesMap) {
-      setCode(generateTSX(activeRootId, activeNodesMap, codeRef.current));
+      const nextCode = generateTSX(activeRootId, activeNodesMap, codeRef.current);
+      if (nextCode === null) {
+        // AST patch failed - show error and keep existing code (fail-loud behavior)
+        notify('AST sync failed. Code unchanged. Ensure elements have stable id attributes.');
+        return;
+      }
+      setCode(nextCode);
+      // Log canvas-to-code sync when code is actually updated
+      if (codeRef.current) {
+        learningLoop.logCanvasToCodeSync(activeRootId, activeFile, codeRef.current ? 'patch' : 'generate');
+      }
     }
-  }, [activeFile, activeRootId, activeNodesMap]);
+  }, [activeFile, activeRootId, activeNodesMap, notify, learningLoop]);
 
   useEffect(() => {
     codeRef.current = code;
@@ -374,8 +388,9 @@ export default function App() {
   const handleCodeChange = (newCode) => {
     skipCodegenRef.current = true;
     setCode(newCode);
-    setActiveNodesMap(parseTSX(newCode, activeNodesMap));
-    logLearningEvent('round_trip_code', { source: 'editor' });
+    const updatedNodes = parseTSX(newCode, activeNodesMap);
+    setActiveNodesMap(updatedNodes);
+    learningLoop.logCodeToCanvasSync(activeFile, Object.keys(updatedNodes).length);
     refreshLearningSummary();
   };
 
@@ -392,7 +407,7 @@ export default function App() {
         }
       };
     });
-    logLearningEvent('round_trip_canvas', { nodeId, source: 'canvas' });
+    learningLoop.logCanvasToCodeSync(nodeId, activeFile, 'node_update');
     refreshLearningSummary();
   };
 
@@ -475,9 +490,9 @@ export default function App() {
       [newId]: newNode
     }));
     setSelectedNodeId(newId);
-    logLearningEvent('component_instance_added', { refFile, page: activeFile });
+    learningLoop.log('component_instance_added', { refFile, page: activeFile });
     refreshLearningSummary();
-  }, [activeFile, activeNodesMap, activeRootId, fileConfig.isPage, setActiveNodesMap, notify]);
+  }, [learningLoop, activeFile, activeNodesMap, activeRootId, fileConfig.isPage, setActiveNodesMap, notify]);
 
   const handleBreakDesign = () => {
     handleSetActiveFile('pricing');
@@ -511,18 +526,19 @@ export default function App() {
   const handlePolicyChange = (nextPolicy) => {
     setReceiptPolicy(nextPolicy);
     saveReceiptPolicy(nextPolicy);
-    logLearningEvent('policy_updated', { policy: nextPolicy });
+    const oldPolicy = receiptPolicy;
+    learningLoop.logPolicyChange('receiptPolicy', oldPolicy, nextPolicy);
     refreshLearningSummary();
   };
 
   const handleDismissRule = (ruleId) => {
     setDismissedRules((prev) => new Set([...prev, ruleId]));
-    logLearningEvent('rule_dismissed', { ruleId });
+    learningLoop.logReceiptDismissed(ruleId, selectedNodeId, activeFile);
     refreshLearningSummary();
   };
 
   const handleReceiptFix = (ruleId, fixKey) => {
-    logLearningEvent('fix_applied', { ruleId, fixKey });
+    learningLoop.logReceiptFixApplied(fixKey, selectedNodeId, { ruleId }, ruleId);
     refreshLearningSummary();
   };
 
