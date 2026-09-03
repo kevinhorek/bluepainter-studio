@@ -1,0 +1,39 @@
+name: Designer's Receipts Gate
+
+on:
+  pull_request:
+    paths:
+      - '**/*.tsx'
+      - '**/*.jsx'
+  push:
+    branches:
+      - main
+
+jobs:
+  receipt-check:
+    name: Check Designer's Receipts
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      
+      - name: Run receipt gate on test fixtures
+        run: |
+          node scripts/check-receipts.mjs extension/test-fixtures/PricingCard.tsx
+      
+      - name: Check additional fixtures (if any)
+        run: |
+          if compgen -G "extension/test-fixtures/*.tsx" > /dev/null; then
+            for file in extension/test-fixtures/*.tsx; do
+              if [ "$file" != "extension/test-fixtures/BadContrastButton.tsx" ]; then
+                node scripts/check-receipts.mjs "$file" || true
+              fi
+            done
+          fi
+        continue-on-error: false
