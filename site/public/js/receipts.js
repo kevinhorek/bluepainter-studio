@@ -93,6 +93,41 @@
     return { rules: rules, score: Math.max(0, score), policy: policy };
   }
 
+  // Estimate the value of catching design-system issues (Designer's Receipts)
+  // and canvas <-> code round-trips before merge, versus manual review + rework.
+  function estimateReviewRoi(input) {
+    const devs = Math.max(0, parseFloat(input.devs) || 0);
+    const componentsPerMonth = Math.max(0, parseFloat(input.componentsPerMonth) || 0);
+    const reviewMinutes = Math.max(0, parseFloat(input.reviewMinutes) || 0);
+    const hourlyRate = Math.max(0, parseFloat(input.hourlyRate) || 0);
+    // Share of manual design-review + rework time removed when policy checks
+    // and round-trip sync happen in-editor before merge.
+    const savingsFactor = 0.6;
+
+    const minutesSavedMonthly = componentsPerMonth * reviewMinutes * savingsFactor;
+    const hoursSavedMonthly = Math.round((minutesSavedMonthly / 60) * 10) / 10;
+    const monthlySavings = Math.round(hoursSavedMonthly * hourlyRate);
+    const annualSavings = monthlySavings * 12;
+
+    return {
+      estimate: annualSavings,
+      unit: 'USD/year',
+      monthlySavings: monthlySavings,
+      annualSavings: annualSavings,
+      hoursSavedMonthly: hoursSavedMonthly,
+      explanation:
+        'Assumes BluePainter removes ~' + Math.round(savingsFactor * 100) +
+        '% of manual design-review and rework time by catching contrast, spacing, CTA, and clutter issues in-editor and keeping canvas and TSX in sync before merge.',
+      assumptions: [
+        devs + ' frontend dev(s) on the team',
+        componentsPerMonth + ' components/PRs reviewed per month',
+        reviewMinutes + ' min manual design review + rework per component today',
+        '$' + hourlyRate + '/hr blended cost',
+        Math.round(savingsFactor * 100) + '% of that review/rework time removed'
+      ]
+    };
+  }
+
   function analyzeTsxIds(source) {
     const ids = [];
     const re = /\bid\s*=\s*["']([^"']+)["']/g;
@@ -108,6 +143,7 @@
   global.BluePainterTools = {
     evaluateContrast: evaluateContrast,
     gradeSimpleReceipts: gradeSimpleReceipts,
+    estimateReviewRoi: estimateReviewRoi,
     analyzeTsxIds: analyzeTsxIds,
     DEFAULT_POLICY: DEFAULT_POLICY
   };
