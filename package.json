@@ -17,7 +17,8 @@
     "mcp:start": "npm --prefix mcp start",
     "repurpose": "node scripts/repurpose.mjs",
     "verify:export": "node --import ./scripts/esm-resolve.mjs ./scripts/verify-export.mjs",
-    "test:features": "node --import ./scripts/esm-resolve.mjs ./scripts/feature-tests.mjs"
+    "test:features": "node --import ./scripts/esm-resolve.mjs ./scripts/feature-tests.mjs",
+    "check:receipts": "node scripts/check-receipts.mjs extension/test-fixtures/PricingCard.tsx"
   },
   "dependencies": {
     "@babel/parser": "^8.0.0",
