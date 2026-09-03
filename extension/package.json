@@ -94,6 +94,14 @@
           "default": 5,
           "description": "Maximum feature list items before clutter receipt fires."
         },
+        "bluepainter.weakCtaWords": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": ["submit", "click here", "send", "button", "ok", "enter"],
+          "description": "Weak CTA words that trigger conversion receipts."
+        },
         "bluepainter.suggestedCta": {
           "type": "string",
           "default": "Start free trial",

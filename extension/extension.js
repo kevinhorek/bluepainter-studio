@@ -7,6 +7,7 @@ const { parseTSX, generateTSX } = require('./lib/syncEngine');
 const { evaluateReceipts, applyReceiptFix } = require('./lib/receiptPolicy');
 const { loadReceiptPolicyFromConfig } = require('./lib/defaultReceiptPolicy');
 const { SessionStore } = require('./lib/sessionStore');
+const { LearningLoop } = require('./lib/learningLoop');
 
 const traverse = traverseModule.default || traverseModule;
 const SUPPORTED_LANGS = new Set(['typescriptreact', 'javascriptreact']);
@@ -95,6 +96,7 @@ class BluePainterController {
   constructor(context) {
     this.context = context;
     this.sessionStore = new SessionStore(context);
+    this.learningLoop = new LearningLoop(context);
     this.docState = new Map();
     this.skipParse = false;
     this.sidebarView = null;
@@ -122,7 +124,8 @@ class BluePainterController {
         rootNodeId: null,
         nodesMap: {},
         selectedNodeId: null,
-        source: 'empty'
+        source: 'empty',
+        lastSyncedVersion: editor.document.version
       });
     }
     return { uri, editor, state: this.docState.get(uri) };
@@ -140,6 +143,7 @@ class BluePainterController {
     ctx.state.rootNodeId = boot.rootNodeId;
     ctx.state.nodesMap = boot.nodesMap;
     ctx.state.source = boot.source;
+    ctx.state.lastSyncedVersion = editor.document.version;
 
     if (!ctx.state.selectedNodeId && boot.rootNodeId) {
       ctx.state.selectedNodeId = boot.rootNodeId;
@@ -218,6 +222,36 @@ class BluePainterController {
       return false;
     }
 
+    // Conflict detection: check if document has changed since last sync
+    const currentVersion = ctx.editor.document.version;
+    const hasConflict = ctx.state.lastSyncedVersion && currentVersion !== ctx.state.lastSyncedVersion && !options.forceOverwrite;
+
+    if (hasConflict && !options.quiet) {
+      const choice = await vscode.window.showWarningMessage(
+        'The file has been modified externally. How do you want to proceed?',
+        { modal: true },
+        'Overwrite with canvas',
+        'Discard canvas changes',
+        'Cancel'
+      );
+
+      if (choice === 'Discard canvas changes') {
+        this.syncFromFile(editor);
+        this.learningLoop.log('conflict_resolved', {
+          resolution: 'discard_canvas',
+          fileName: path.basename(ctx.editor.document.fileName)
+        });
+        return false;
+      } else if (choice === 'Cancel' || !choice) {
+        return false;
+      }
+      // If 'Overwrite with canvas', continue with write
+      this.learningLoop.log('conflict_resolved', {
+        resolution: 'overwrite_with_canvas',
+        fileName: path.basename(ctx.editor.document.fileName)
+      });
+    }
+
     const existing = ctx.editor.document.getText();
     const nextCode = generateTSX(ctx.state.nodesMap, existing);
     if (!nextCode) {
@@ -227,6 +261,7 @@ class BluePainterController {
 
     if (nextCode === existing) {
       if (!options.quiet) vscode.window.showInformationMessage('BluePainter: file already up to date.');
+      ctx.state.lastSyncedVersion = currentVersion;
       return true;
     }
 
@@ -246,6 +281,7 @@ class BluePainterController {
       return false;
     }
 
+    ctx.state.lastSyncedVersion = ctx.editor.document.version + 1;
     this.persist(ctx.uri, ctx.state);
     if (!options.quiet) vscode.window.showInformationMessage('BluePainter: wrote canvas changes to file.');
     this.refreshViews(editor);
@@ -261,19 +297,23 @@ class BluePainterController {
     this.persist(ctx.uri, ctx.state);
 
     if (options.autoWrite !== false) {
+      const patchType = Object.keys(patch).join(',');
+      this.learningLoop.logCanvasToCodeSync(nodeId, path.basename(editor.document.fileName), patchType);
       this.writeBack(editor, { quiet: true });
     } else {
       this.refreshViews(editor);
     }
   }
 
-  applyFix(editor, fixKey, fixMeta) {
+  applyFix(editor, fixKey, fixMeta, ruleId) {
     const ctx = this.getEditorState(editor);
     if (!ctx) return;
 
     applyReceiptFix(fixKey, fixMeta, ctx.state.nodesMap, (nodeId, patch) => {
       ctx.state.nodesMap = mergeNodeUpdate(ctx.state.nodesMap, nodeId, patch);
     });
+
+    this.learningLoop.logReceiptFixApplied(fixKey, fixMeta.nodeId, fixMeta, ruleId);
 
     this.persist(ctx.uri, ctx.state);
     this.writeBack(editor, { quiet: true });
@@ -302,8 +342,11 @@ class BluePainterController {
       const ctx = this.getEditorState(editor);
       if (!ctx) return;
       const parsed = parseTSX(document.getText(), ctx.state.nodesMap);
+      const nodeCount = Object.keys(parsed).length;
       ctx.state.nodesMap = parsed;
+      ctx.state.lastSyncedVersion = document.version;
       this.persist(ctx.uri, ctx.state);
+      this.learningLoop.logCodeToCanvasSync(path.basename(document.fileName), nodeCount);
       this.refreshViews(editor);
     }, 350);
   }
@@ -367,8 +410,20 @@ class BluePainterController {
         break;
       case 'applyFix':
         if (editor && msg.fixKey) {
-          this.applyFix(editor, msg.fixKey, msg.fixMeta);
+          this.applyFix(editor, msg.fixKey, msg.fixMeta, msg.ruleId);
         }
+        break;
+      case 'dismissReceipt':
+        if (editor && msg.ruleId) {
+          const ctx = this.getEditorState(editor);
+          if (ctx) {
+            this.learningLoop.logReceiptDismissed(msg.ruleId, msg.nodeId, path.basename(editor.document.fileName));
+          }
+        }
+        break;
+      case 'exportLearningLoop':
+        const loopData = this.learningLoop.exportJSON();
+        vscode.window.showInformationMessage(`Learning loop: ${loopData.stats.total} events`);
         break;
       case 'syncFromFile':
         this.syncFromFile(editor);
