@@ -6,7 +6,7 @@ import { captureCanvasPageFrame } from './utils/canvasCapture';
 import { getWorkspaceFile } from './data/workspaceFiles';
 import { downloadValidationExport, getFeedbackSummary } from './utils/validationExport';
 import { loadReceiptPolicy, saveReceiptPolicy } from './data/defaultReceiptPolicy';
-import { LearningLoop, logLearningEvent, getLearningSummary } from './utils/learningLoop';
+import { LearningLoop, getLearningSummary } from './utils/learningLoop';
 import { runPresenterSequence } from './utils/presenterMode';
 import { isFacilitatorMode } from './utils/facilitatorMode';
 import VSCodeShell from './components/Shells/VSCodeShell';
@@ -212,7 +212,7 @@ export default function App() {
     setFocusedPanel('canvas');
     learningLoop.log('figma_import', { targetFile, nodeCount, frameName });
     notify(`Imported "${frameName || 'frame'}" — ${nodeCount} layers`);
-  }, [notify]);
+  }, [learningLoop, notify]);
 
   const handleApplyAI = useCallback(({ type, updates, message, source }) => {
     const { nodesByFile: next, applied } = applyAIUpdates(nodesByFile, updates, type);
@@ -225,7 +225,7 @@ export default function App() {
     }
     learningLoop.log('ai_generate_applied', { type, applied, source });
     notify(message || `Applied ${applied} updates to canvas`);
-  }, [nodesByFile, notify]);
+  }, [learningLoop, nodesByFile, notify]);
 
   const handleCaptureDashboardScreenshot = useCallback(async () => {
     if (activeFile !== 'dashboard') {
@@ -492,7 +492,7 @@ export default function App() {
     setSelectedNodeId(newId);
     learningLoop.log('component_instance_added', { refFile, page: activeFile });
     refreshLearningSummary();
-  }, [activeFile, activeNodesMap, activeRootId, fileConfig.isPage, setActiveNodesMap, notify]);
+  }, [learningLoop, activeFile, activeNodesMap, activeRootId, fileConfig.isPage, setActiveNodesMap, notify]);
 
   const handleBreakDesign = () => {
     handleSetActiveFile('pricing');
