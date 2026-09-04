@@ -376,13 +376,6 @@ export default function App() {
         setScorecardOpen(prev => !prev);
         return;
       }
-      
-      // Cmd/Ctrl + E: Export validation data
-      if ((e.metaKey || e.ctrlKey) && e.key === 'e' && !e.shiftKey) {
-        e.preventDefault();
-        handleExportValidation();
-        return;
-      }
     };
     
     window.addEventListener('keydown', handleFacilitatorShortcuts);
@@ -678,35 +671,6 @@ export default function App() {
     saveReceiptPolicy(nextPolicy);
     const oldPolicy = receiptPolicy;
     learningLoop.logPolicyChange('receiptPolicy', oldPolicy, nextPolicy);
-    refreshLearningSummary();
-  };
-
-  const handleLearningSuggestionApplied = (suggestion) => {
-    const updatedConfig = { ...learningConfig };
-
-    if (suggestion.type === 'downgrade_rule') {
-      if (!updatedConfig.hiddenRules.includes(suggestion.ruleId)) {
-        updatedConfig.hiddenRules = [...updatedConfig.hiddenRules, suggestion.ruleId];
-        learningLoop.log('learning_rule_hidden', {
-          ruleId: suggestion.ruleId,
-          reason: suggestion.reason
-        });
-      }
-    } else if (suggestion.type === 'prefer_quick_fix') {
-      updatedConfig.preferredFixes[suggestion.fixKey] = {
-        priority: 'high',
-        appliedCount: suggestion.fixCount,
-        ruleIds: suggestion.ruleIds,
-        timestamp: Date.now()
-      };
-      learningLoop.log('learning_fix_preferred', {
-        fixKey: suggestion.fixKey,
-        ruleIds: suggestion.ruleIds
-      });
-    }
-
-    setLearningConfig(updatedConfig);
-    saveLearningConfig(updatedConfig);
     refreshLearningSummary();
   };
 

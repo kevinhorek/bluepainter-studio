@@ -394,27 +394,6 @@ html {
   cursor: pointer;
 }
 
-.team-policy-divider {
-  height: 1px;
-  background: rgba(255, 255, 255, 0.06);
-  margin: 12px 0;
-}
-
-.team-policy-section-label {
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #94a3b8;
-  margin-bottom: 8px;
-}
-
-.team-policy-grid input[type="color"] {
-  height: 32px;
-  padding: 2px;
-  cursor: pointer;
-}
-
 .learning-loop-strip {
   display: flex;
   justify-content: space-between;
@@ -6793,6 +6772,7 @@ input:checked + .slider-round:before {
   max-height: 500px;
   overflow-y: auto;
 }
+
 /* Validation Scorecard Enhancements */
 .validation-scorecard-stat-success {
   background: rgba(16, 185, 129, 0.1) !important;

@@ -6,7 +6,7 @@ export default function ConflictDialog({
   conflictContext = {} 
 }) {
   const [showDiff, setShowDiff] = useState(false);
-  const { lastSyncedCode, currentCode, pendingUpdate, nodeId } = conflictContext;
+  const { lastSyncedCode, currentCode, pendingUpdate } = conflictContext;
 
   const diffInfo = useMemo(() => {
     if (!lastSyncedCode || !currentCode) return null;
