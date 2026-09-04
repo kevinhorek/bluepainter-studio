@@ -4,6 +4,19 @@ import LearningSuggestions from './LearningSuggestions';
 import { evaluateReceipts, applyReceiptFix } from '@bluepainter/shared/receiptPolicy';
 import { isFacilitatorMode } from '../utils/facilitatorMode';
 
+function formatTimestamp(timestamp) {
+  const now = Date.now();
+  const diff = now - timestamp;
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  return `${days}d ago`;
+}
+
 export default function ReceiptsPanel({
   component,
   nodesMap,
@@ -91,6 +104,11 @@ export default function ReceiptsPanel({
           <div className="learning-loop-strip">
             <span>Learning loop</span>
             <span>{learningSummary.fixesApplied} fixes · {learningSummary.roundTripsCanvas + learningSummary.roundTripsCode} syncs</span>
+            {learningLoop && learningLoop.getLastActivityTimestamp() && (
+              <span className="learning-loop-timestamp" title="Last learning event">
+                {formatTimestamp(learningLoop.getLastActivityTimestamp())}
+              </span>
+            )}
           </div>
         )}
 
