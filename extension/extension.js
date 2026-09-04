@@ -126,7 +126,8 @@ class BluePainterController {
         nodesMap: {},
         selectedNodeId: null,
         source: 'empty',
-        lastSyncedVersion: editor.document.version
+        lastSyncedVersion: editor.document.version,
+        dismissedRules: new Set()
       });
     }
     return { uri, editor, state: this.docState.get(uri) };
@@ -145,6 +146,13 @@ class BluePainterController {
     ctx.state.nodesMap = boot.nodesMap;
     ctx.state.source = boot.source;
     ctx.state.lastSyncedVersion = editor.document.version;
+    
+    // Restore dismissedRules from saved session (convert from array to Set)
+    if (saved && saved.dismissedRules) {
+      ctx.state.dismissedRules = new Set(saved.dismissedRules);
+    } else {
+      ctx.state.dismissedRules = ctx.state.dismissedRules || new Set();
+    }
 
     if (!ctx.state.selectedNodeId && boot.rootNodeId) {
       ctx.state.selectedNodeId = boot.rootNodeId;
@@ -166,8 +174,9 @@ class BluePainterController {
     const syncInfo = countSyncableIds(code);
     const selected = ctx.state.selectedNodeId ? ctx.state.nodesMap[ctx.state.selectedNodeId] : null;
     const policy = this.getConfig();
+    const dismissedRules = ctx.state.dismissedRules || new Set();
     const receiptResult = selected
-      ? evaluateReceipts(ctx.state.nodesMap, selected, policy)
+      ? evaluateReceipts(ctx.state.nodesMap, selected, policy, dismissedRules)
       : { rules: [], scores: { design: 100, accessibility: 100, buildability: 100, total: 100 } };
 
     return {
@@ -479,7 +488,10 @@ class BluePainterController {
         if (editor && msg.ruleId) {
           const ctx = this.getEditorState(editor);
           if (ctx) {
+            ctx.state.dismissedRules.add(msg.ruleId);
+            this.persist(ctx.uri, ctx.state);
             this.learningLoop.logReceiptDismissed(msg.ruleId, msg.nodeId, path.basename(editor.document.fileName));
+            this.refreshViews(editor);
           }
         }
         break;
