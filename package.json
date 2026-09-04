@@ -24,7 +24,7 @@
     "repurpose": "node scripts/repurpose.mjs",
     "verify:export": "node --import ./scripts/esm-resolve.mjs ./scripts/verify-export.mjs",
     "test:features": "node --import ./scripts/esm-resolve.mjs ./scripts/feature-tests.mjs",
-    "test:ast": "node scripts/test-ast-sync.mjs && node scripts/test-ast-sync-advanced.mjs && node scripts/test-ast-sync-expanded.mjs && node scripts/test-ast-sync-card-patterns.mjs && node scripts/test-ast-sync-hero-form-nav.mjs && node scripts/test-ast-sync-edge-cases.mjs",
+    "test:ast": "node scripts/test-ast-sync.mjs && node scripts/test-ast-sync-advanced.mjs && node scripts/test-ast-sync-expanded.mjs && node scripts/test-ast-sync-card-patterns.mjs && node scripts/test-ast-sync-hero-form-nav.mjs && node scripts/test-ast-sync-edge-cases.mjs && node scripts/test-ast-sync-app-ui.mjs",
     "check:receipts": "node scripts/check-receipts.mjs extension/test-fixtures/PricingCard.tsx",
     "desktop": "concurrently -k -s first -n vite,desktop \"vite --host 127.0.0.1 --port 5173\" \"wait-on http://127.0.0.1:5173 && electron .\"",
     "desktop:prod": "npm run build && cross-env BLUEPAINTER_DESKTOP_PROD=1 electron ."

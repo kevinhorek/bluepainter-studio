@@ -14,6 +14,7 @@ BluePainter v1 AST sync supports the following node types for bidirectional canv
 | **Link** | `<a>` | `text` content, `href` attribute, `style` (inline) | `className` preserved but not modified by canvas |
 | **Image** | `<img>` | `src`, `alt`, `style` (inline) | `className` preserved but not modified by canvas |
 | **Input** | `<input>`, `<textarea>` | `type`, `placeholder`, `style` (inline) | Text content not synced (controlled by value/onChange) |
+| **Table** | `<table>`, `<thead>`, `<tbody>`, `<tr>`, `<th>`, `<td>` | `text` content (th/td), `style` (inline) | Full table structure support |
 | **Line** | `<hr>` | `style` (inline) | `className` preserved but not modified by canvas |
 | **Shape** | `<div role="presentation">` | `style` (inline) | `className` preserved but not modified by canvas |
 | **List** | `<ul>`, `<ol>` | `style` (inline) | `className` preserved but not modified by canvas |
@@ -174,7 +175,12 @@ npm run test:ast
 - Hero/Form/Nav patterns: hero sections, contact forms with labels/inputs/textareas, navigation bars, footers, stats sections
 - Style source detection: Tailwind, CSS modules, inline styles, mixed
 
-**Total:** 30 tests covering production-ready component patterns for landing pages, e-commerce, and app UIs
+**Total:** 40 tests covering production-ready component patterns for landing pages, e-commerce, and app UIs, plus edge cases and robustness
+
+**Edge cases tested:**
+- Empty elements, self-closing tags, mixed content
+- Comment preservation, negative values, very long text
+- Deep nesting (10+ levels), special characters, whitespace handling
 
 Expected output: All tests pass with green checkmarks
 
