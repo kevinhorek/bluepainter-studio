@@ -39,7 +39,11 @@ import FacilitatorDashboard from './components/FacilitatorDashboard';
 import AIGeneratePanel from './components/AIGeneratePanel';
 import RealFileLoader from './components/RealFileLoader';
 import RestoreBackupModal from './components/RestoreBackupModal';
+<<<<<<< HEAD
+import ExportConfirmationModal from './components/ExportConfirmationModal';
+=======
 import GitContextModal from './components/GitContextModal';
+>>>>>>> origin/main
 import { createNodeFromTool, canDropIntoNode } from './utils/nodeFactory';
 import { getToolByShortcut, isPlacableTool } from './data/canvasTools';
 import { applyAIUpdates, getFirstUpdateTarget } from './utils/aiApply';
@@ -97,6 +101,8 @@ export default function App() {
   const [figmaImportOpen, setFigmaImportOpen] = useState(false);
   const [realFileLoaderOpen, setRealFileLoaderOpen] = useState(false);
   const [restoreBackupOpen, setRestoreBackupOpen] = useState(false);
+  const [exportConfirmOpen, setExportConfirmOpen] = useState(false);
+  const [exportConfirmResult, setExportConfirmResult] = useState(null);
   const [realFileData, setRealFileData] = useState(null);
   const [fileViewports, setFileViewports] = useState({});
   const [activeViewportMode, setActiveViewportMode] = useState(() => {
@@ -858,7 +864,8 @@ export default function App() {
     const result = exportComponentTSX(rootId, nodesMap, existingCode);
     
     if (result.success) {
-      notify(`✓ ${result.filename} exported — ${result.linesOfCode} lines, ready for src/`);
+      setExportConfirmResult(result);
+      setExportConfirmOpen(true);
       learningLoop.log('component_exported', {
         filename: result.filename,
         componentName: result.componentName,
@@ -1100,6 +1107,11 @@ export default function App() {
         isOpen={restoreBackupOpen}
         onClose={() => setRestoreBackupOpen(false)}
         onRestore={handleRestoreBackup}
+      />
+      <ExportConfirmationModal
+        isOpen={exportConfirmOpen}
+        onClose={() => setExportConfirmOpen(false)}
+        exportResult={exportConfirmResult}
       />
       <AIGeneratePanel
         isOpen={aiPanelOpen}
