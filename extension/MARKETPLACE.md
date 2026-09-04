@@ -8,6 +8,7 @@ Before building the VSIX:
 - [x] Icon at `media/icon.png` (128×128px PNG)
 - [x] Repository, homepage, bugs, and license fields in package.json
 - [x] README.md with features, screenshots, and quick start
+- [x] Gallery screenshots in `media/` directory (3 screenshots extracted from demo)
 - [x] CHANGELOG.md with version 0.2.0 release notes
 - [x] LICENSE file (MIT)
 - [x] Categories and keywords for discoverability

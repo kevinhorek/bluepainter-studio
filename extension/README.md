@@ -4,6 +4,8 @@
 
 BluePainter brings visual editing to your existing React codebase while preserving formatting, comments, and team design policy.
 
+![BluePainter Canvas Editor](media/screenshot-canvas.png)
+
 **📖 New to BluePainter?** See [EXTENSION_PILOT.md](https://github.com/kevinhorek/bluepainter-studio/blob/main/EXTENSION_PILOT.md) for a comprehensive first-session guide (5 minutes).
 
 ## Features
@@ -19,8 +21,12 @@ BluePainter brings visual editing to your existing React codebase while preservi
 - **Formatting preserved**: Comments, spacing, and structure survive visual edits (powered by Recast/Babel)
 - **Write confirmation**: Toast shows file path when changes are written, confirming merge-ready status
 
+![Bidirectional Sync](media/screenshot-sync.png)
+
 ### ✅ Designer's Receipts
 Live policy checks that enforce team design standards:
+
+![Designer's Receipts Panel](media/screenshot-receipts.png)
 
 - **Spacing grid** (default 8px) — catches off-grid padding
 - **Border radius grid** (default 4px) — maintains consistent corner rounding
@@ -89,6 +95,8 @@ See [AST_SCOPE.md](https://github.com/kevinhorek/bluepainter-studio/blob/main/AS
 ## Live Demo
 
 Try the web version at [bluepainter-studio.vercel.app](https://bluepainter-studio.vercel.app)
+
+**Watch the demo video:** [bluepainter_demo.mp4](https://github.com/kevinhorek/bluepainter-studio/blob/main/bluepainter_demo.mp4)
 
 ## Feedback & Issues
 
