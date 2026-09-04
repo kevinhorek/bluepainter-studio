@@ -136,6 +136,7 @@ export function parseTSXWithAST(code, nodesMap) {
     return updated;
   } catch (err) {
     console.warn('[astSync] parse failed:', err.message);
+    console.warn('[astSync] Hint: Ensure valid JSX syntax and stable string-literal id attributes');
     return null;
   }
 }
@@ -173,6 +174,7 @@ export function patchTSXWithAST(code, nodesMap) {
     return recast.print(ast).code;
   } catch (err) {
     console.warn('[astSync] patch failed:', err.message);
+    console.warn('[astSync] Hint: Canvas edits only modify inline style={{}}. Tailwind/CSS Module classes are preserved but not editable on canvas.');
     return null;
   }
 }
