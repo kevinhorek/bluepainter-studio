@@ -284,7 +284,18 @@ class BluePainterController {
 
     ctx.state.lastSyncedVersion = ctx.editor.document.version + 1;
     this.persist(ctx.uri, ctx.state);
-    if (!options.quiet) vscode.window.showInformationMessage('BluePainter: wrote canvas changes to file.');
+    
+    // Log canvas→code round-trip to learning loop
+    if (!options.quiet) {
+      const nodeCount = Object.keys(ctx.state.nodesMap).length;
+      this.learningLoop.log('canvas_to_code_roundtrip', {
+        fileName: path.basename(ctx.editor.document.fileName),
+        nodeCount,
+        hadConflict: hasConflict
+      });
+      vscode.window.showInformationMessage(`BluePainter: wrote ${nodeCount} node(s) to file.`);
+    }
+    
     this.refreshViews(editor);
     setTimeout(() => { this.skipParse = false; }, 250);
     return true;
@@ -326,8 +337,15 @@ class BluePainterController {
       vscode.window.showWarningMessage('BluePainter: open a TSX/JSX file first.');
       return;
     }
+    
+    const nodeCount = Object.keys(ctx.state.nodesMap).length;
+    this.learningLoop.log('code_to_canvas_roundtrip', {
+      fileName: path.basename(ctx.editor.document.fileName),
+      nodeCount,
+      source: ctx.state.source
+    });
     vscode.window.showInformationMessage(
-      `BluePainter: synced ${Object.keys(ctx.state.nodesMap).length} node(s) from file.`
+      `BluePainter: synced ${nodeCount} node(s) from file.`
     );
     this.refreshViews(editor);
   }
