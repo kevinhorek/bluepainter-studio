@@ -11,16 +11,31 @@ Interactive validation demo for a **visual canvas ↔ code workspace** with **De
 
 BluePainter is **not** an LLM wrapper. It's a workflow bet: **AST-preserving bidirectional sync** and **team-configurable design policy** inside existing repos.
 
-This repo is the **validation prototype**. Opens straight into BluePainter — canvas, code, receipts, and page composition.
+**Use it on YOUR projects:**
+- Studio: Load .tsx/.jsx files, edit visually, download with AST preservation
+- Extension: Edit components in VS Code with receipts before merge
+- CI Gate: Block merge on error-severity receipts
+
+This repo includes the validation prototype and production-ready extension.
 
 ## Quick start
+
+### Try the Studio (web demo)
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open http://localhost:5173 — lands on `DashboardPage.tsx`.
+Open http://localhost:5173 — lands on demo `DashboardPage.tsx`.
+
+### Use on Your Own Repo
+
+**Studio:** Click **📂 Open File** button → load .tsx/.jsx → edit → **💾 Download**
+
+**Extension:** Install in VS Code → `BluePainter: Pick Component` → edit → write to file
+
+See [PILOT.md](./PILOT.md) for own-repo pilot checklist.
 
 ### Desktop app
 
