@@ -357,6 +357,37 @@ export default function App() {
     };
   }, [activeCanvasTool]);
 
+  // Facilitator keyboard shortcuts
+  useEffect(() => {
+    if (!facilitator || phase === 'landing') return;
+    
+    const handleFacilitatorShortcuts = (e) => {
+      // Cmd/Ctrl + K: Toggle session checklist
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k' && !e.shiftKey) {
+        e.preventDefault();
+        setSessionChecklistOpen(prev => !prev);
+        return;
+      }
+      
+      // Cmd/Ctrl + Shift + K: Toggle scorecard
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'K') {
+        e.preventDefault();
+        setScorecardOpen(prev => !prev);
+        return;
+      }
+      
+      // Cmd/Ctrl + E: Export validation data
+      if ((e.metaKey || e.ctrlKey) && e.key === 'e' && !e.shiftKey) {
+        e.preventDefault();
+        handleExportValidation();
+        return;
+      }
+    };
+    
+    window.addEventListener('keydown', handleFacilitatorShortcuts);
+    return () => window.removeEventListener('keydown', handleFacilitatorShortcuts);
+  }, [facilitator, phase, sessionChecklistOpen, scorecardOpen]);
+
   const handleGoHome = useCallback(() => {
     setMarketingKitOpen(false);
     setAiPanelOpen(false);
