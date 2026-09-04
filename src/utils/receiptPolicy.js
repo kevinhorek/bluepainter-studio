@@ -140,19 +140,18 @@ export function evaluateReceipts(nodesMap, component, policy, dismissedRules = n
 export function applyReceiptFix(fixKey, fixMeta, nodesMap, onUpdateNode) {
   if (!onUpdateNode || !fixMeta) return;
 
+  const node = nodesMap[fixMeta.nodeId];
+  if (!node) return;
+
   if (fixKey === 'spacing') {
-    const node = nodesMap[fixMeta.nodeId];
     onUpdateNode(fixMeta.nodeId, { style: { ...node.style, padding: fixMeta.padding } });
   } else if (fixKey === 'contrast') {
-    const node = nodesMap[fixMeta.nodeId];
     onUpdateNode(fixMeta.nodeId, { style: { ...node.style, background: fixMeta.color } });
   } else if (fixKey === 'copy') {
     onUpdateNode(fixMeta.nodeId, { text: fixMeta.text });
   } else if (fixKey === 'radius') {
-    const node = nodesMap[fixMeta.nodeId];
     onUpdateNode(fixMeta.nodeId, { style: { ...node.style, borderRadius: fixMeta.borderRadius } });
   } else if (fixKey === 'features') {
-    const node = nodesMap[fixMeta.nodeId];
     onUpdateNode(fixMeta.nodeId, { children: node.children.slice(0, fixMeta.max) });
   }
 }
