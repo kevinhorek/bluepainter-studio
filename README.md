@@ -45,6 +45,19 @@ Opens BluePainter in a native desktop window (Electron). See [desktop/README.md]
 npm run deploy:vercel
 ```
 
+## CI Receipt Gate
+
+The repo includes a **Designer's Receipts gate** for CI pipelines that blocks merge on error-severity findings (e.g., WCAG contrast failures).
+
+**Quick start:**
+```bash
+node scripts/check-receipts.mjs extension/test-fixtures/*.tsx
+```
+
+**Wire into your CI:** See [CI.md](./CI.md) for GitHub Actions, GitLab, CircleCI, and pre-commit hook examples.
+
+**Configure team policy:** Create `.bluepainter.json` in your repo root (see [CI.md](./CI.md#configuration)).
+
 ## Key features (demo)
 
 | Feature | Where |
