@@ -51,41 +51,30 @@ export default function TeamPolicyPanel({ policy, onPolicyChange, compact = fals
   return (
     <div className="team-policy-panel">
       {!compact && (
-        <div className="team-policy-header">
-          <span>Team rules</span>
-          <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
+        <>
+          <div className="team-policy-header">
+            <span>Team receipt policy</span>
+          </div>
+          <div className="team-policy-intro">
+            Configure design rules for your team. These settings control what receipts are shown and how fixes are applied. Export as <code>.bluepainter.json</code> to version-control your team policy.
+          </div>
+          <div className="team-policy-actions">
             <button 
               onClick={handleImport}
-              style={{ 
-                padding: '4px 12px', 
-                fontSize: '12px',
-                background: 'transparent',
-                border: '1px solid #cbd5e1',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                color: '#64748b'
-              }}
-              title="Import .bluepainter.json"
+              className="team-policy-action-btn team-policy-import-btn"
+              title="Import .bluepainter.json from your repository"
             >
-              Import
+              📥 Import config
             </button>
             <button 
               onClick={handleExport}
-              style={{ 
-                padding: '4px 12px', 
-                fontSize: '12px',
-                background: 'transparent',
-                border: '1px solid #cbd5e1',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                color: '#64748b'
-              }}
+              className="team-policy-action-btn team-policy-export-btn"
               title="Export as .bluepainter.json"
             >
-              Export
+              📤 Export config
             </button>
           </div>
-        </div>
+        </>
       )}
       <div className="team-policy-grid">
         <label>
