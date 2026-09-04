@@ -1,3 +1,5 @@
+const { getGitContext } = require('./gitContext');
+
 const LEARNING_LOOP_KEY = 'bluepainter.learningLoop';
 const MAX_EVENTS = 1000;
 
@@ -92,15 +94,18 @@ class LearningLoop {
     try {
       const vscode = require('vscode');
       const editor = vscode.window.activeTextEditor;
+      const filePath = editor?.document.uri.fsPath || null;
+      
+      const gitCtx = getGitContext(filePath);
       
       return {
-        userId: null, // TODO: detect from git config or auth
-        userName: null,
-        teamId: null, // TODO: detect from workspace config
-        repoUrl: null, // TODO: detect from git remote
-        filePath: editor?.document.uri.fsPath || null,
-        branch: null, // TODO: detect from git
-        commitSha: null,
+        userId: gitCtx.userEmail,
+        userName: gitCtx.userName,
+        teamId: null,
+        repoUrl: gitCtx.repoUrl,
+        filePath,
+        branch: gitCtx.branch,
+        commitSha: gitCtx.commitSha,
         surface: 'vscode-extension'
       };
     } catch {
