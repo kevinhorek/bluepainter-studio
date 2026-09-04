@@ -23,17 +23,16 @@ jobs:
         with:
           node-version: '22'
       
-      - name: Run receipt gate on test fixtures
+      - name: Run receipt gate on passing fixtures
         run: |
           node scripts/check-receipts.mjs extension/test-fixtures/PricingCard.tsx
       
-      - name: Check additional fixtures (if any)
+      - name: Verify contrast error detection
         run: |
-          if compgen -G "extension/test-fixtures/*.tsx" > /dev/null; then
-            for file in extension/test-fixtures/*.tsx; do
-              if [ "$file" != "extension/test-fixtures/BadContrastButton.tsx" ]; then
-                node scripts/check-receipts.mjs "$file" || true
-              fi
-            done
+          echo "Testing that low-contrast fixture correctly fails..."
+          if node scripts/check-receipts.mjs extension/test-fixtures/LowContrastCard.tsx; then
+            echo "❌ FAIL: LowContrastCard should have failed but passed"
+            exit 1
+          else
+            echo "✅ Contrast error correctly detected"
           fi
-        continue-on-error: false

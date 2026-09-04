@@ -17,7 +17,12 @@
 import { readFileSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join, resolve } from 'path';
+import recast from 'recast';
+import { parse } from '@babel/parser';
+import traverseModule from '@babel/traverse';
+import * as t from '@babel/types';
 
+const traverse = traverseModule.default || traverseModule;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const repoRoot = resolve(__dirname, '..');
@@ -56,7 +61,113 @@ async function loadReceiptEngine() {
   return receiptModule;
 }
 
+const babelParser = {
+  parse(source) {
+    return parse(source, {
+      sourceType: 'module',
+      plugins: ['jsx', 'typescript'],
+      tokens: true,
+      ranges: true
+    });
+  }
+};
+
+function getJsxId(openingElement) {
+  if (!openingElement?.attributes) return null;
+  for (const attr of openingElement.attributes) {
+    if (!t.isJSXAttribute(attr) || !t.isJSXIdentifier(attr.name, { name: 'id' })) continue;
+    if (t.isStringLiteral(attr.value)) return attr.value.value;
+    if (t.isJSXExpressionContainer(attr.value) && t.isStringLiteral(attr.value.expression)) {
+      return attr.value.expression.value;
+    }
+  }
+  return null;
+}
+
+function readObjectExpression(expr) {
+  if (!t.isObjectExpression(expr)) return null;
+  const out = {};
+  for (const prop of expr.properties) {
+    if (!t.isObjectProperty(prop)) continue;
+    let key;
+    if (t.isIdentifier(prop.key)) key = prop.key.name;
+    else if (t.isStringLiteral(prop.key)) key = prop.key.value;
+    else continue;
+
+    if (t.isNumericLiteral(prop.value)) out[key] = prop.value.value;
+    else if (t.isStringLiteral(prop.value)) out[key] = prop.value.value;
+  }
+  return out;
+}
+
+function readJsxText(jsxElement) {
+  for (const child of jsxElement.children || []) {
+    if (t.isJSXText(child)) return child.value.trim();
+    if (t.isJSXExpressionContainer(child) && t.isStringLiteral(child.expression)) {
+      return child.expression.value;
+    }
+  }
+  return null;
+}
+
 function parseTSXToNodes(code, filename) {
+  const nodes = {};
+  
+  try {
+    const ast = recast.parse(code, { parser: babelParser });
+    
+    traverse(ast, {
+      JSXElement(path) {
+        const opening = path.node.openingElement;
+        const id = getJsxId(opening);
+        if (!id) return;
+        
+        const tagName = t.isJSXIdentifier(opening.name) 
+          ? opening.name.name 
+          : 'div';
+        
+        const style = {};
+        const styleAttr = opening.attributes.find(
+          (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'style' })
+        );
+        
+        if (styleAttr && t.isJSXExpressionContainer(styleAttr.value)) {
+          const parsed = readObjectExpression(styleAttr.value.expression);
+          if (parsed) Object.assign(style, parsed);
+        }
+        
+        const text = readJsxText(path.node) || '';
+        
+        const type = tagName === 'button' ? 'button' :
+                     ['h1', 'h2', 'h3', 'p', 'span'].includes(tagName) ? 'text' :
+                     tagName === 'ul' ? 'list' :
+                     'frame';
+        
+        nodes[id] = {
+          id,
+          type,
+          tag: tagName,
+          style,
+          text,
+          children: []
+        };
+      }
+    });
+    
+    if (Object.keys(nodes).length === 0) {
+      throw new Error(`No elements with id attributes found in ${filename}`);
+    }
+    
+    return nodes;
+  } catch (err) {
+    // Fallback to regex parsing if AST parsing fails
+    console.log(`  ⚠️  AST parsing failed (${err.message}), falling back to regex parser`);
+    return parseTSXToNodesRegex(code, filename);
+  }
+}
+
+// Legacy regex parser fallback (clearly labeled)
+function parseTSXToNodesRegex(code, filename) {
   const idPattern = /id="([^"]+)"/g;
   const matches = [...code.matchAll(idPattern)];
   

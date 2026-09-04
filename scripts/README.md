@@ -70,21 +70,29 @@ The script auto-loads `.bluepainter.json` if present, or use `--config=path/to/c
 | Weak CTA copy | Warning | No |
 | Feature list clutter | Warning | No |
 
+### Implementation
+
+- **AST-based parser** using Babel/recast for robust TSX parsing
+- **Regex fallback** (clearly labeled) for edge cases where AST parsing fails
+- Preserves formatting and comments (Recast-powered)
+
 ### Limitations
 
 - Requires `id` attributes on elements to parse
 - Inline styles only (no Tailwind/CSS modules yet)
-- Simple regex-based parser (production should use AST)
+- Component instances (e.g., `<Button />`) are skipped
 
 ### Test Fixtures
 
 - `extension/test-fixtures/PricingCard.tsx` — Passes receipts (1 CTA copy warning)
-- `extension/test-fixtures/BadContrastButton.tsx` — Fails contrast check (demo only)
+- `extension/test-fixtures/LowContrastCard.tsx` — **Fails contrast check** (light gray button on white = 1.24:1, below 4.5:1 WCAG AA minimum)
+
+The low-contrast fixture proves the CI gate correctly blocks accessibility violations.
 
 ### Roadmap
 
-- [ ] AST-based parser for production
-- [ ] Load policy from `.bluepainter.json`
+- [x] AST-based parser for production
+- [x] Load policy from `.bluepainter.json`
 - [ ] Support Tailwind classes
 - [ ] Custom rule plugins
 - [ ] Team audit log integration
