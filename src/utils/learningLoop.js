@@ -1,3 +1,6 @@
+// eslint-disable-next-line no-unused-vars
+import { enrichEventWithContext, sendToAuditLog } from './auditLog.js';
+
 const STORAGE_KEY = 'bluepainter-learning-loop';
 const MAX_EVENTS = 1000;
 
@@ -30,6 +33,12 @@ export class LearningLoop {
     };
     events.push(event);
     this._write(events);
+    
+    // v1: Send enriched event to team audit log
+    // Disabled in v0.2 (no team backend yet)
+    // const enrichedEvent = enrichEventWithContext(event);
+    // sendToAuditLog(enrichedEvent);
+    
     return event;
   }
 
