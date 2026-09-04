@@ -3,6 +3,7 @@ import TeamPolicyPanel from './TeamPolicyPanel';
 import LearningSuggestions from './LearningSuggestions';
 import { evaluateReceipts, applyReceiptFix } from '@bluepainter/shared/receiptPolicy';
 import { isFacilitatorMode } from '../utils/facilitatorMode';
+import { saveLearningConfig } from '../data/defaultReceiptPolicy';
 
 export default function ReceiptsPanel({
   component,
@@ -18,6 +19,7 @@ export default function ReceiptsPanel({
   onFixApplied,
   learningSummary,
   learningLoop,
+  learningConfig,
   onApplySuggestion
 }) {
   const [policyOpen, setPolicyOpen] = useState(false);
@@ -77,7 +79,16 @@ export default function ReceiptsPanel({
 
       <div className="receipts-scroll">
         {policyOpen && onPolicyChange && (
-          <TeamPolicyPanel policy={policy} onPolicyChange={onPolicyChange} compact={!facilitator} />
+          <TeamPolicyPanel 
+            policy={policy} 
+            onPolicyChange={onPolicyChange} 
+            learningConfig={learningConfig}
+            onLearningConfigChange={(config) => {
+              setLearningConfig(config);
+              saveLearningConfig(config);
+            }}
+            compact={!facilitator} 
+          />
         )}
 
         {facilitator && learningSummary && learningSummary.totalEvents > 0 && (
