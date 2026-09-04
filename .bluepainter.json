@@ -1,0 +1,19 @@
+{
+  "$schema": "https://bluepainter-studio.vercel.app/schemas/config.json",
+  "receiptPolicy": {
+    "spacingGrid": 8,
+    "radiusGrid": 4,
+    "minContrastRatio": 4.5,
+    "maxFeatureCount": 5,
+    "weakCtaWords": [
+      "submit",
+      "click here",
+      "send",
+      "button",
+      "ok",
+      "enter"
+    ],
+    "suggestedCta": "Start free trial",
+    "contrastFixColor": "#1e40af"
+  }
+}

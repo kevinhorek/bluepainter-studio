@@ -30,3 +30,6 @@ site/drafts/*.json
 site/drafts/*.txt
 site/drafts/*.md
 !site/drafts/.gitkeep
+
+# Team-specific config (commit example, ignore overrides)
+.bluepainter.local.json
