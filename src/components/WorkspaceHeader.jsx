@@ -180,6 +180,9 @@ export default function WorkspaceHeader({
                 <>
                   <div className="workspace-dropdown-divider" />
                   <span className="workspace-dropdown-heading">Facilitator</span>
+                  <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { facilitatorActions.onOpenDashboard?.(); setMenuOpen(false); }}>
+                    Dashboard
+                  </button>
                   <button type="button" className="workspace-dropdown-item" onClick={() => { facilitatorActions.onRunPresenter(); setMenuOpen(false); }} disabled={facilitatorActions.presenterRunning}>
                     {facilitatorActions.presenterRunning ? 'Presenting…' : 'Auto-present'}
                   </button>

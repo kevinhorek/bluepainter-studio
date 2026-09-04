@@ -33,6 +33,7 @@ import ExportDeployModal from './components/ExportDeployModal';
 import MarketingKitModal from './components/MarketingKitModal';
 import { getEmptyFigmaImportNodes } from './utils/figmaImport';
 import FigmaImportModal from './components/FigmaImportModal';
+import FacilitatorDashboard from './components/FacilitatorDashboard';
 import AIGeneratePanel from './components/AIGeneratePanel';
 import RealFileLoader from './components/RealFileLoader';
 import { createNodeFromTool, canDropIntoNode } from './utils/nodeFactory';
@@ -80,6 +81,7 @@ export default function App() {
   const [validationScriptOpen, setValidationScriptOpen] = useState(false);
   const [scorecardOpen, setScorecardOpen] = useState(false);
   const [sessionChecklistOpen, setSessionChecklistOpen] = useState(false);
+  const [facilitatorDashboardOpen, setFacilitatorDashboardOpen] = useState(false);
   const [exportDeployOpen, setExportDeployOpen] = useState(false);
   const [marketingKitOpen, setMarketingKitOpen] = useState(false);
   const [marketingActiveFieldId, setMarketingActiveFieldId] = useState(null);
@@ -849,6 +851,7 @@ export default function App() {
           onRunPresenter: handleRunPresenter,
           onOpenScript: () => setScriptOpen(true),
           onOpenSpec: () => setSpecOpen(true),
+          onOpenDashboard: () => setFacilitatorDashboardOpen(true),
           onOpenScorecard: () => setScorecardOpen(true),
           onOpenSessionChecklist: () => setSessionChecklistOpen(true),
           onExportFeedback: handleExportFeedback,
@@ -895,6 +898,7 @@ export default function App() {
       <ValidationScriptModal isOpen={validationScriptOpen} onClose={() => setValidationScriptOpen(false)} />
       <ValidationScorecardModal isOpen={scorecardOpen} onClose={() => setScorecardOpen(false)} />
       <SessionChecklistModal isOpen={sessionChecklistOpen} onClose={() => setSessionChecklistOpen(false)} />
+      {facilitator && <FacilitatorDashboard isOpen={facilitatorDashboardOpen} onClose={() => setFacilitatorDashboardOpen(false)} learningLoop={learningLoop} />}
       <ExportDeployModal
         isOpen={exportDeployOpen}
         onClose={() => setExportDeployOpen(false)}
