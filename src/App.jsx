@@ -455,9 +455,14 @@ export default function App() {
   };
 
   const handleUpdateNode = (nodeId, updatedFields) => {
-    // Conflict detection: check if code has changed since last sync (CONFLICT_MODEL.md)
+    // Conflict detection: check if code has changed since last sync (CONFLICT_MODEL.md v2)
     if (lastSyncedCode && code !== lastSyncedCode) {
-      setPendingCanvasUpdate({ nodeId, updatedFields });
+      setPendingCanvasUpdate({ 
+        nodeId, 
+        updatedFields,
+        lastSyncedCode,
+        currentCode: code 
+      });
       setConflictDialogOpen(true);
       return;
     }
@@ -488,7 +493,8 @@ export default function App() {
     if (resolution === 'overwrite_with_canvas' && pendingCanvasUpdate) {
       learningLoop.log('conflict_resolved', {
         resolution: 'overwrite_with_canvas',
-        fileName: activeFile
+        fileName: activeFile,
+        nodeId: pendingCanvasUpdate.nodeId
       });
       applyNodeUpdate(pendingCanvasUpdate.nodeId, pendingCanvasUpdate.updatedFields);
     } else if (resolution === 'discard_canvas') {
@@ -500,6 +506,18 @@ export default function App() {
       const updatedNodes = parseTSX(code, activeNodesMap);
       setActiveNodesMap(updatedNodes);
       setLastSyncedCode(code);
+    } else if (resolution === 'show_both') {
+      learningLoop.log('conflict_resolved', {
+        resolution: 'show_both_manual_fix',
+        fileName: activeFile,
+        nodeId: pendingCanvasUpdate?.nodeId
+      });
+      setToast({
+        message: 'Review the diff and manually resolve the conflict in the code editor.',
+        type: 'info',
+        duration: 5000
+      });
+      // Don't apply either change - user must manually resolve
     }
     // 'cancel' - do nothing
 
@@ -945,6 +963,12 @@ export default function App() {
       <ConflictDialog
         isOpen={conflictDialogOpen}
         onResolve={handleConflictResolve}
+        conflictContext={{
+          lastSyncedCode: pendingCanvasUpdate?.lastSyncedCode,
+          currentCode: pendingCanvasUpdate?.currentCode,
+          pendingUpdate: pendingCanvasUpdate?.updatedFields,
+          nodeId: pendingCanvasUpdate?.nodeId
+        }}
       />
       
       <AppToast message={toast} onDismiss={() => setToast(null)} />

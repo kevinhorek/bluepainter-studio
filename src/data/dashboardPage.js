@@ -320,7 +320,7 @@ export const initialDashboardNodes = {
     name: 'Revenue Value',
     tag: 'span',
     style: { fontSize: 28, fontWeight: 800, color: '#0f172a' },
-    text: '$48,290'
+    text: '$70,000'
   },
   'stat-delta-revenue': {
     id: 'stat-delta-revenue',

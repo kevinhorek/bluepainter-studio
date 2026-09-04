@@ -1,6 +1,6 @@
-# Conflict Model — BluePainter v1
+# Conflict Model — BluePainter v2
 
-This document defines how BluePainter handles conflicts between canvas edits, manual code edits, and git operations (SPEC.md §5 requirement).
+This document defines how BluePainter handles conflicts between canvas edits, manual code edits, and git operations (SPEC.md §10 requirement).
 
 ## Overview
 
@@ -63,21 +63,40 @@ Conflicts arise when these sources diverge. This document describes how BluePain
 - VS Code: Document version mismatch or dirty state
 - Web app: User manually edited code panel while canvas state is dirty
 
-**v1 Resolution: Last-Write-Wins with User Prompt**
+**v2 Resolution: Three-Way Diff with Clear Choices**
 
 1. **Canvas edit triggers write-back**:
    - BluePainter detects the file has changed since the last canvas sync
-   - **Prompt user**:
-     ```
-     The file has been modified externally.
+   - **Show conflict dialog with:**
+     - Summary of canvas changes (e.g., "text: 'Buy Now' | style: color, background")
+     - Summary of code changes (e.g., "5 lines modified")
+     - Interactive diff viewer (show/hide)
+     - Three clear resolution options:
 
-     [Overwrite with canvas] [Discard canvas changes] [Cancel]
-     ```
+2. **Resolution options:**
 
-2. **User choice:**
-   - **Overwrite with canvas**: Canvas state wins, code changes are lost
-   - **Discard canvas changes**: Re-sync canvas from code, canvas changes are lost
-   - **Cancel**: No action, user manually resolves (e.g., save code first, then apply canvas edits)
+   **A. Keep Canvas Changes** (overwrite_with_canvas)
+   - Canvas state wins, code changes are lost
+   - Best when: Canvas edits represent the desired state and code changes were exploratory
+
+   **B. Keep Code Changes** (discard_canvas)
+   - Re-sync canvas from current code, canvas changes are lost
+   - Best when: Code edits are more important and canvas edits were experimental
+
+   **C. Review Both (Manual Fix)** (show_both)
+   - NEW in v2: Don't apply either change automatically
+   - User manually resolves the conflict in the code editor
+   - Toast message: "Review the diff and manually resolve the conflict in the code editor"
+   - Best when: Both changes contain important work that needs merging
+
+   **D. Cancel**
+   - No action, user can manually resolve later
+
+**Diff Display:**
+- Inline diff viewer showing line-by-line changes
+- Color-coded: removed (red), added (green)
+- Shows up to 10 changed lines, with "... and N more changes" for longer diffs
+- Can be shown/hidden with "Show diff" button
 
 **Logging:** All conflict resolutions are logged to the learning loop:
 ```json
@@ -85,7 +104,7 @@ Conflicts arise when these sources diverge. This document describes how BluePain
   "type": "conflict_resolved",
   "timestamp": 1693881234567,
   "data": {
-    "resolution": "overwrite_with_canvas",
+    "resolution": "show_both_manual_fix",
     "fileName": "PricingCard.tsx",
     "nodeId": "cta-button"
   }
@@ -140,12 +159,12 @@ Conflicts arise when these sources diverge. This document describes how BluePain
 
 ---
 
-## Future Enhancements (v2+)
+## Future Enhancements (v3+)
 
-### Planned for v2
-- **Three-way merge**: Compare canvas state, current code, and last-synced code to intelligently merge changes
-- **Diff view**: Show side-by-side canvas vs. code changes before applying
-- **Conflict annotations**: Highlight conflicting nodes on canvas with visual indicators
+### Planned for v3
+- **Intelligent three-way merge**: Use AST-level diffing to automatically merge non-overlapping changes
+- **Per-node conflict resolution**: Show conflicts at the node level, not file level
+- **Conflict preview**: Highlight conflicting nodes on canvas with visual indicators
 
 ### Explicitly Deferred
 - **Operational transform** (real-time collaborative editing) — not in scope for single-user v1
@@ -175,11 +194,11 @@ Conflicts arise when these sources diverge. This document describes how BluePain
 
 ## Summary Table
 
-| Conflict Type | v1 Resolution | User Action Required |
+| Conflict Type | v2 Resolution | User Action Required |
 |---------------|---------------|----------------------|
 | Canvas → Code (clean) | Canvas wins | None |
 | Code → Canvas (clean) | Code wins | None |
-| Simultaneous edits | Last-write-wins with prompt | Choose which version to keep |
+| Simultaneous edits | Three-way choice with diff | Choose: Keep Canvas / Keep Code / Manual Fix |
 | Git merge conflict | Manual resolution required | Resolve conflict markers in code |
 | AST patch fails | Fail-loud (error message) | Fix code or simplify structure |
 
