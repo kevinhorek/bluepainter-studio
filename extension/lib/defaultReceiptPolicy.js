@@ -25,7 +25,7 @@ function loadWorkspaceConfig() {
     if (fs.existsSync(configPath)) {
       const content = fs.readFileSync(configPath, 'utf-8');
       const config = JSON.parse(content);
-      return config.receiptPolicy || null;
+      return config;
     }
   } catch (err) {
     console.error(`Failed to load .bluepainter.json: ${err.message}`);
@@ -35,7 +35,8 @@ function loadWorkspaceConfig() {
 }
 
 function loadReceiptPolicyFromConfig(vscodeConfig) {
-  const workspacePolicy = loadWorkspaceConfig();
+  const workspaceConfig = loadWorkspaceConfig();
+  const workspacePolicy = workspaceConfig?.receiptPolicy || null;
   const settingsPolicy = vscodeConfig ? {
     spacingGrid: vscodeConfig.get('spacingGrid', DEFAULT_RECEIPT_POLICY.spacingGrid),
     radiusGrid: vscodeConfig.get('radiusGrid', DEFAULT_RECEIPT_POLICY.radiusGrid),
@@ -53,4 +54,26 @@ function loadReceiptPolicyFromConfig(vscodeConfig) {
   return settingsPolicy;
 }
 
-module.exports = { DEFAULT_RECEIPT_POLICY, loadReceiptPolicyFromConfig, loadWorkspaceConfig };
+const DEFAULT_LEARNING_LOOP_OPTIONS = {
+  minEvents: 3,
+  dismissThreshold: 0.7
+};
+
+function loadLearningLoopOverrides() {
+  const workspaceConfig = loadWorkspaceConfig();
+  const overrides = workspaceConfig?.learningLoopOverrides || null;
+  
+  if (overrides) {
+    return { ...DEFAULT_LEARNING_LOOP_OPTIONS, ...overrides };
+  }
+  
+  return DEFAULT_LEARNING_LOOP_OPTIONS;
+}
+
+module.exports = { 
+  DEFAULT_RECEIPT_POLICY, 
+  DEFAULT_LEARNING_LOOP_OPTIONS,
+  loadReceiptPolicyFromConfig, 
+  loadWorkspaceConfig,
+  loadLearningLoopOverrides
+};

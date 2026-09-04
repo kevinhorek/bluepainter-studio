@@ -5,7 +5,7 @@ const traverseModule = require('@babel/traverse');
 const { bootstrapFromFile, mergeNodeUpdate } = require('./lib/bootstrap');
 const { parseTSX, generateTSX } = require('./lib/syncEngine');
 const { evaluateReceipts, applyReceiptFix } = require('@bluepainter/shared/receiptPolicy');
-const { loadReceiptPolicyFromConfig } = require('./lib/defaultReceiptPolicy');
+const { loadReceiptPolicyFromConfig, loadLearningLoopOverrides } = require('./lib/defaultReceiptPolicy');
 const { SessionStore } = require('./lib/sessionStore');
 const { LearningLoop } = require('./lib/learningLoop');
 const { detectWorkspaceType, getWorkspaceRecommendations } = require('./lib/designSystemDetection');
@@ -189,7 +189,8 @@ class BluePainterController {
       ? evaluateReceipts(ctx.state.nodesMap, selected, policy, dismissedRules)
       : { rules: [], scores: { design: 100, accessibility: 100, buildability: 100, total: 100 } };
 
-    const suggestions = this.learningLoop.getSuggestions();
+    const loopOptions = loadLearningLoopOverrides();
+    const suggestions = this.learningLoop.getSuggestions(loopOptions);
     const showFirstRunTip = !this.context.globalState.get('bluepainter.firstRunTipDismissed', false);
 
     return {
