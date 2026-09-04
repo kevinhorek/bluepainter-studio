@@ -304,11 +304,7 @@ function detectStyleSources(code) {
   }
 }
 
-<<<<<<< HEAD
 export {
-=======
-module.exports = {
->>>>>>> c43ed02 (feat(ast): expand AST support for real codebase patterns)
   parseTSXWithAST,
   patchTSXWithAST,
   getJsxId,
