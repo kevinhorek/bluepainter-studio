@@ -50,6 +50,16 @@ function getWebviewHtml(webview, extensionUri, mode = 'sidebar') {
 </head>
 <body class="${mode === 'editor' ? 'bp-editor' : ''}">
   <div class="bp-shell">
+    <div class="bp-first-run-tip" id="bp-first-run-tip" hidden>
+      <div class="bp-tip-header">
+        <span class="bp-tip-icon">👋</span>
+        <div class="bp-tip-content">
+          <strong>Welcome to BluePainter!</strong>
+          <p>Try <code>BluePainter: Pick Component</code> from the command palette (Cmd/Ctrl+Shift+P) to quickly open TSX/JSX files. Check receipts before merging to catch policy issues.</p>
+        </div>
+        <button class="bp-tip-dismiss" id="bp-tip-dismiss" title="Dismiss">×</button>
+      </div>
+    </div>
     <header class="bp-header">
       <h1>BluePainter</h1>
       <p id="bp-file-name">No file open</p>
@@ -180,6 +190,7 @@ class BluePainterController {
       : { rules: [], scores: { design: 100, accessibility: 100, buildability: 100, total: 100 } };
 
     const suggestions = this.learningLoop.getSuggestions();
+    const showFirstRunTip = !this.context.globalState.get('bluepainter.firstRunTipDismissed', false);
 
     return {
       fileName: path.basename(ctx.editor.document.fileName),
@@ -193,7 +204,8 @@ class BluePainterController {
       source: ctx.state.source,
       mode: 'sidebar',
       status: '',
-      suggestions
+      suggestions,
+      showFirstRunTip
     };
   }
 
@@ -538,6 +550,10 @@ class BluePainterController {
         vscode.window.showInformationMessage(`Learning loop: ${loopData.stats.total} events`);
         break;
       }
+      case 'dismissFirstRunTip':
+        this.context.globalState.update('bluepainter.firstRunTipDismissed', true);
+        this.refreshViews(editor);
+        break;
       case 'syncFromFile':
         this.syncFromFile(editor);
         break;
