@@ -304,10 +304,4 @@ function detectStyleSources(code) {
   }
 }
 
-module.exports = {
-  parseTSXWithAST,
-  patchTSXWithAST,
-  getJsxId,
-  astSyncAvailable,
-  detectStyleSources
-};
+export { parseTSXWithAST, patchTSXWithAST, getJsxId, astSyncAvailable, detectStyleSources };

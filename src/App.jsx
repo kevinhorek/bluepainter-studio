@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { generateTSX, parseTSX } from './utils/syncEngine';
 import { exportComponentTSX } from './utils/componentExport';
+import { batchExportComponents } from './utils/batchComponentExport';
 import { applyBrokenDesignScenario, applyFixedDesignScenario, getFreshHeroNodes, getFreshPricingNodes, getFreshDashboardNodes } from './utils/demoScenarios';
 import { getFreshMarketingNodes } from './data/marketingPage';
 import { captureCanvasPageFrame } from './utils/canvasCapture';
@@ -356,6 +357,30 @@ export default function App() {
       window.removeEventListener('keyup', onKeyUp);
     };
   }, [activeCanvasTool]);
+
+  // Facilitator keyboard shortcuts
+  useEffect(() => {
+    if (!facilitator || phase === 'landing') return;
+    
+    const handleFacilitatorShortcuts = (e) => {
+      // Cmd/Ctrl + K: Toggle session checklist
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k' && !e.shiftKey) {
+        e.preventDefault();
+        setSessionChecklistOpen(prev => !prev);
+        return;
+      }
+      
+      // Cmd/Ctrl + Shift + K: Toggle scorecard
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'K') {
+        e.preventDefault();
+        setScorecardOpen(prev => !prev);
+        return;
+      }
+    };
+    
+    window.addEventListener('keydown', handleFacilitatorShortcuts);
+    return () => window.removeEventListener('keydown', handleFacilitatorShortcuts);
+  }, [facilitator, phase, sessionChecklistOpen, scorecardOpen]);
 
   const handleGoHome = useCallback(() => {
     setMarketingKitOpen(false);
@@ -780,6 +805,22 @@ export default function App() {
       notify(`❌ Export failed: ${result.error}`);
     }
   };
+  
+  const handleBatchExportComponents = async () => {
+    const result = await batchExportComponents(nodesByFile);
+    
+    if (result.success) {
+      notify(`✓ Batch export complete — ${result.exported} component(s) in ${result.filename}`);
+      learningLoop.log('batch_export', {
+        exported: result.exported,
+        failed: result.failed,
+        components: result.components.map(c => c.componentName)
+      });
+      refreshLearningSummary();
+    } else {
+      notify(`❌ Batch export failed: ${result.error}`);
+    }
+  };
 
   const handleRunPresenter = () => {
     if (presenterRunning) return;
@@ -890,6 +931,7 @@ export default function App() {
         onOpenInterviewGuide={() => setValidationScriptOpen(true)}
         onOpenExportDeploy={() => setExportDeployOpen(true)}
         onExportComponent={handleExportComponent}
+        onBatchExport={handleBatchExportComponents}
         onOpenMarketingKit={handleOpenMarketingKit}
         onOpenFigmaImport={() => setFigmaImportOpen(true)}
         onOpenRealFile={() => setRealFileLoaderOpen(true)}
