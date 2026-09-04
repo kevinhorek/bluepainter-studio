@@ -6714,3 +6714,18 @@ input:checked + .slider-round:before {
   background: rgba(239, 68, 68, 0.05);
   border: 1px solid rgba(239, 68, 68, 0.2);
 }
+
+/* Conflict Dialog v2 Styles */
+.conflict-v2 {
+  max-width: 650px;
+}
+
+.conflict-v2 .modal-body {
+  max-height: 500px;
+  overflow-y: auto;
+
+.conflict-v2 .modal-body {
+  max-height: 500px;
+  overflow-y: auto;
+>>>>>>> 28c6a6d (feat: implement conflict model v2 with three-way diff UI)
+}
