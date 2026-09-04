@@ -86,6 +86,26 @@ The extension will:
 3. Extension updates your `.tsx` file with changes
 4. Check git diff to verify formatting preserved
 
+**Conflict Resolution (NEW in v0.3):**
+
+If the code file changed while you were editing on canvas, BluePainter detects the conflict and shows a dialog with three choices:
+
+- **Keep Canvas Changes** — Your canvas edits win, code changes are overwritten
+- **Keep Code Changes** — Re-sync canvas from code, canvas edits are lost
+- **Review Both (Manual Fix)** — Inspect the diff and manually resolve
+
+The dialog shows:
+- Canvas changes summary (e.g., "text: 'Buy Now' | style: color, background")
+- Code changes summary (e.g., "3 lines modified")
+- Interactive diff viewer (click "Show diff" to see line-by-line changes)
+
+**Best practices:**
+- Commit canvas changes frequently to avoid conflicts
+- Pull latest code before starting canvas edits
+- Use "Review Both" when both changes contain important work
+
+See `CONFLICT_MODEL.md` for detailed conflict resolution behavior.
+
 **Important:** Text edits round-trip reliably. Some style edits (e.g., text color via inline style) may require manual verification. See [AST_SCOPE.md](./AST_SCOPE.md) for full scope.
 
 ## 4. Review Receipts (Designer's Policy Checks)
@@ -124,6 +144,10 @@ Create `.bluepainter.json` in repo root:
     "ruleSeverities": {
       "copy": "info"
     }
+  },
+  "learningLoopOverrides": {
+    "hiddenRules": [],
+    "preferredFixes": {}
   }
 }
 ```
@@ -132,6 +156,20 @@ Create `.bluepainter.json` in repo root:
 - `error` — blocks CI (contrast only by default)
 - `warning` — logged, does not block
 - `info` — hidden from receipts
+
+**Learning overrides** (NEW in v0.3):
+- `hiddenRules` — Array of rule IDs to hide (e.g., `["cta-weak-word", "feature-count"]`)
+- `preferredFixes` — Object of fix keys with priority metadata
+- Persists team's dismiss/fix patterns from learning loop
+- Web app and extension both respect these overrides
+
+**How learning overrides work:**
+1. Team uses BluePainter during validation sessions
+2. Learning loop tracks which rules are dismissed often (e.g., 7 out of 10 times)
+3. Facilitator sees learning suggestions in receipts panel
+4. Click "Apply" to add rule to `hiddenRules[]`
+5. Export `.bluepainter.json` and commit to repo
+6. All team members get updated policy automatically
 
 ---
 
@@ -197,17 +235,20 @@ Share exported JSON with Kevin for go/no-go review.
 
 ## 8. Expected Behavior (v0.2)
 
-**✓ What works (v0.2):**
+**✓ What works (v0.3):**
 - Parse React/TSX files with Babel AST
 - Evaluate receipts (spacing, contrast, copy, radius, features)
 - One-click fixes update component code
 - Canvas ↔ code sync preserves formatting (Recast)
-- Learning loop tracks fixes/dismisses
+- **Three-way conflict resolution** (Keep Canvas / Keep Code / Review Both)
+- **Learning loop with team overrides** (hidden rules, preferred fixes)
+- Learning suggestions from dismiss/fix patterns
 - CI gate blocks on error-severity receipts
 
 **⚠️ Known limitations (prototype):**
 - Text edits round-trip reliably; some style edits (e.g. text color) may not write back
 - Canvas sync is AST-first with regex fallback
+- Conflict detection in extension is basic (v1 prompt only, web app has v2 three-way)
 - No Figma bidirectional sync yet (v2)
 - No multi-viewport canvas (v3)
 
