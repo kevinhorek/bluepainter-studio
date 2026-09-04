@@ -137,7 +137,6 @@ export default function ValidationScorecardModal({ isOpen, onClose }) {
               <span className="validation-scorecard-stat-value">{scorecard.learning.roundTripsCanvas + scorecard.learning.roundTripsCode}</span>
               <span className="validation-scorecard-stat-label">Round-trips</span>
             </div>
-<<<<<<< HEAD
             {conflictStats && conflictStats.total > 0 && (
               <div className="validation-scorecard-stat">
                 <span className="validation-scorecard-stat-value">{conflictStats.total}</span>
@@ -150,12 +149,10 @@ export default function ValidationScorecardModal({ isOpen, onClose }) {
                 <span className="validation-scorecard-stat-label">Receipt compliance</span>
               </div>
             )}
-=======
             <div className="validation-scorecard-stat" title={`${scorecard.receipts.fixesApplied} fixes, ${scorecard.receipts.rulesDismissed} dismissals`}>
               <span className="validation-scorecard-stat-value">{Math.round(scorecard.receipts.fixDismissRatio * 100)}%</span>
               <span className="validation-scorecard-stat-label">Fix ratio</span>
             </div>
->>>>>>> de7fbaa (Add fix/dismiss ratio metric to validation scorecard)
           </div>
 
           {learningSuggestions.length > 0 && (
@@ -242,67 +239,53 @@ export default function ValidationScorecardModal({ isOpen, onClose }) {
 
           {showSessions && sessions.length > 0 && (
             <div className="validation-sessions-list">
-              {sessions.map((session, idx) => {
-                const metrics = session.sessionMetrics;
-                const engagementScore = metrics ? (
-                  (metrics.receiptActions?.total || 0) * 2 +
-                  (metrics.activation?.complete ? 10 : 0) +
-                  (metrics.activation?.roundTripCanvas ? 3 : 0) +
-                  (metrics.activation?.roundTripCode ? 3 : 0)
-                ) : 0;
-                const engagementLevel = engagementScore >= 15 ? 'high' : engagementScore >= 8 ? 'medium' : 'low';
-                
-                return (
-                  <div key={idx} className="validation-session-card">
-                    <div className="validation-session-header">
-                      <span className="validation-session-number">Session {idx + 1}</span>
-                      <span className={`validation-session-engagement validation-session-engagement-${engagementLevel}`}>
-                        {engagementLevel === 'high' ? '🔥 High' : engagementLevel === 'medium' ? '✓ Medium' : '○ Low'} engagement
-                      </span>
-                      <span className="validation-session-date">
-                        {new Date(session.timestamp).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <div className="validation-session-details">
-                      <div className="validation-session-field">
-                        <strong>Interest:</strong> {interestLabels[session.interest] || session.interest || 'not recorded'}
-                      </div>
-                      <div className="validation-session-field">
-                        <strong>Pilot:</strong> {pilotLabels[session.pilot] || session.pilot || 'not recorded'}
-                      </div>
-                      {session.role && (
-                        <div className="validation-session-field">
-                          <strong>Role:</strong> {session.role}
-                        </div>
-                      )}
-                      {metrics && (
-                        <>
-                          <div className="validation-session-field">
-                            <strong>Activation:</strong>{' '}
-                            {metrics.activation?.complete ? (
-                              <span className="validation-session-success">✓ Complete</span>
-                            ) : (
-                              <span className="validation-session-incomplete">
-                                Canvas: {metrics.activation?.roundTripCanvas ? '✓' : '○'}{' '}
-                                Code: {metrics.activation?.roundTripCode ? '✓' : '○'}
-                              </span>
-                            )}
-                          </div>
-                          <div className="validation-session-field">
-                            <strong>Receipt actions:</strong> {metrics.receiptActions?.total || 0}
-                            {' '}({metrics.receiptActions?.fixesApplied || 0} fixed, {metrics.receiptActions?.rulesDismissed || 0} dismissed)
-                          </div>
-                        </>
-                      )}
-                      {session.comment && (
-                        <div className="validation-session-field">
-                          <strong>Notes:</strong> {session.comment}
-                        </div>
-                      )}
-                    </div>
+              {sessions.map((session, idx) => (
+                <div key={idx} className="validation-session-card">
+                  <div className="validation-session-header">
+                    <span className="validation-session-number">Session {idx + 1}</span>
+                    <span className="validation-session-date">
+                      {new Date(session.timestamp).toLocaleDateString()}
+                    </span>
                   </div>
-                );
-              })}
+                  <div className="validation-session-details">
+                    <div className="validation-session-field">
+                      <strong>Interest:</strong> {interestLabels[session.interest] || session.interest || 'not recorded'}
+                    </div>
+                    <div className="validation-session-field">
+                      <strong>Pilot:</strong> {pilotLabels[session.pilot] || session.pilot || 'not recorded'}
+                    </div>
+                    {session.role && (
+                      <div className="validation-session-field">
+                        <strong>Role:</strong> {session.role}
+                      </div>
+                    )}
+                    {session.sessionMetrics && (
+                      <>
+                        <div className="validation-session-field">
+                          <strong>Activation:</strong>{' '}
+                          {session.sessionMetrics.activation?.complete ? (
+                            <span className="validation-session-success">✓ Complete</span>
+                          ) : (
+                            <span className="validation-session-incomplete">
+                              Canvas: {session.sessionMetrics.activation?.roundTripCanvas ? '✓' : '○'}{' '}
+                              Code: {session.sessionMetrics.activation?.roundTripCode ? '✓' : '○'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="validation-session-field">
+                          <strong>Receipt actions:</strong> {session.sessionMetrics.receiptActions?.total || 0}
+                          {' '}({session.sessionMetrics.receiptActions?.fixesApplied || 0} fixed, {session.sessionMetrics.receiptActions?.rulesDismissed || 0} dismissed)
+                        </div>
+                      </>
+                    )}
+                    {session.comment && (
+                      <div className="validation-session-field">
+                        <strong>Notes:</strong> {session.comment}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 

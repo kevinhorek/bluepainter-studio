@@ -160,7 +160,6 @@ export default function TeamPolicyPanel({ policy, onPolicyChange, learningConfig
           />
         </label>
       </div>
-<<<<<<< HEAD
       
       {!compact && (
         <>
@@ -186,9 +185,7 @@ export default function TeamPolicyPanel({ policy, onPolicyChange, learningConfig
                 </div>
               );
             })}
-=======
-      {!compact && (
-        <>
+          </div>
           <div className="team-policy-divider" />
           <div className="team-policy-section-label">Design Tokens</div>
           <div className="team-policy-grid">
@@ -219,7 +216,6 @@ export default function TeamPolicyPanel({ policy, onPolicyChange, learningConfig
                 title="Default text color"
               />
             </label>
->>>>>>> 63de0e5 (feat: add design tokens to policy config with receipt integration)
           </div>
           <div className="team-policy-divider" />
           <div className="team-policy-section-label">Design Tokens</div>
