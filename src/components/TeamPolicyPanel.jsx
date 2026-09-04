@@ -1,12 +1,12 @@
-export default function TeamPolicyPanel({ policy, onPolicyChange, compact = false }) {
+import { exportFullConfig, importFullConfig } from '../data/defaultReceiptPolicy';
+
+export default function TeamPolicyPanel({ policy, onPolicyChange, learningConfig, onLearningConfigChange, compact = false }) {
   const update = (key, value) => {
     onPolicyChange({ ...policy, [key]: value });
   };
 
   const handleExport = () => {
-    const config = {
-      receiptPolicy: policy
-    };
+    const config = exportFullConfig(policy, learningConfig || { hiddenRules: [], preferredFixes: {} });
     const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -29,10 +29,19 @@ export default function TeamPolicyPanel({ policy, onPolicyChange, compact = fals
         try {
           const content = evt.target?.result;
           const config = JSON.parse(content);
-          if (config.receiptPolicy) {
-            onPolicyChange({ ...policy, ...config.receiptPolicy });
+          const result = importFullConfig(config);
+          
+          if (result.receiptPolicy) {
+            onPolicyChange(result.receiptPolicy);
+          }
+          if (result.learningConfig && onLearningConfigChange) {
+            onLearningConfigChange(result.learningConfig);
+          }
+          
+          if (result.receiptPolicy || result.learningConfig) {
+            alert('Config imported successfully!');
           } else {
-            alert('Invalid .bluepainter.json format. Expected { "receiptPolicy": {...} }');
+            alert('Invalid .bluepainter.json format. Expected { "receiptPolicy": {...}, "learningLoopOverrides": {...} }');
           }
         } catch (err) {
           alert(`Failed to import config: ${err.message}`);
