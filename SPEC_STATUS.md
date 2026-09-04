@@ -3,7 +3,7 @@
 Track progress toward SPEC.md §5 (v1 scope) completion.
 
 **Last updated:** 2026-09-04  
-**Status:** MOSTLY COMPLETE - own-repo workflow ready for pilot
+**Status:** V1 COMPLETE - awaiting pilot validation (SPEC §8)
 
 ---
 
@@ -71,6 +71,14 @@ Track progress toward SPEC.md §5 (v1 scope) completion.
 - ✅ **CI.md** - GitHub Actions, GitLab, CircleCI examples
 - ✅ **Error-severity blocks** - Contrast failures block merge
 - ✅ **Warnings non-blocking** - Info/warning severity allowed
+- ✅ **Hardened gate logic** - Full CI workflow validation (#122, #123)
+
+### Extension Polish (Shipped)
+- ✅ **Restore-from-backup UI** - localStorage recovery panel (#118)
+- ✅ **Settings UI** - Dedicated config panel in extension (#119)
+- ✅ **Git context learning** - Repo metadata in learning loop (#115)
+- ✅ **Facilitator onboarding** - Validation tooling improvements (#120)
+- ✅ **Timestamp parity** - Consistent event timestamps (#121)
 
 ---
 
@@ -117,17 +125,16 @@ Per SPEC, these are vision-only and NOT v1 scope:
 
 ## 🎯 Next Steps for v1 Launch
 
-### 1. Pilot Validation (SPEC §8)
+### 1. Pilot Validation (SPEC §8) — REMAINING GATE
 - [ ] Run 5-10 validation sessions with target users
 - [ ] Export session JSON via scorecard
 - [ ] Decision gate: 3+ "very interested" → ship v1
 
-### 2. Extension Polish (If pilot validates)
-- [ ] Publish to VS Code Marketplace
-- [ ] Add restore-from-backup UI
-- [ ] Extension settings UI improvements
+### 2. Marketplace Publish (Blocked on pilots)
+- [ ] Publish to VS Code Marketplace after pilot validation
+- [ ] Package ready: `bluepainter-0.2.0.vsix` builds successfully
 
-### 3. Documentation Final Pass
+### 3. Documentation Final Pass (After pilots)
 - [ ] Update SPEC.md status (mark v1 complete)
 - [ ] Add real user testimonials/case studies
 - [ ] Create video walkthrough for PILOT.md
@@ -136,12 +143,14 @@ Per SPEC, these are vision-only and NOT v1 scope:
 
 ## Summary
 
-**Own-repo workflow is READY for pilot usage:**
-- Studio: Load .tsx/.jsx → edit → download
-- Extension: pickComponent → edit → write to file
-- CI Gate: Block merge on policy violations
-- Docs: Complete guides for first-session usage
-
 **v1 SPEC §5 requirements:** ✅ 7/7 complete
 
-**Blocker for v1 launch:** Pilot validation (SPEC §8) - need sessions to hit go/no-go gate.
+**All engineering shipped (#115–#123):**
+- Own-repo workflow: Studio + Extension
+- CI gate: Hardened receipt validation  
+- Extension polish: Restore UI, settings panel
+- Learning loop: Git context, timestamps, facilitator tools
+
+**Single remaining gate:** SPEC §8 pilot validation (5–10 sessions)
+
+**Marketplace publish:** Blocked on pilot validation only
