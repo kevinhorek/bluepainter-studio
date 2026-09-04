@@ -363,7 +363,7 @@ export default function App() {
       const nextCode = generateTSX(activeRootId, activeNodesMap, codeRef.current);
       if (nextCode === null) {
         // AST patch failed - show error and keep existing code (fail-loud behavior)
-        notify('AST sync failed. Code unchanged. Ensure elements have stable id attributes.');
+        notify('AST sync failed. Ensure elements have stable id attributes. For Tailwind/CSS-only components, add inline style={{}} for canvas editability.');
         return;
       }
       setCode(nextCode);
