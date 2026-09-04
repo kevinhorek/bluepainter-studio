@@ -15,5 +15,9 @@
     ],
     "suggestedCta": "Start free trial",
     "contrastFixColor": "#1e40af"
+  },
+  "learningLoopOverrides": {
+    "minEvents": 3,
+    "dismissThreshold": 0.7
   }
 }
