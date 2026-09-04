@@ -39,12 +39,7 @@ export class LearningLoop {
     
     // v1: Send enriched event to team audit log
     // Enabled when VITE_AUDIT_API_URL is configured
-<<<<<<< HEAD
     if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_AUDIT_API_URL) {
-=======
-    if (true) { // Temporarily enabled for testing
-      const enrichedEvent = enrichEventWithContext(event);
->>>>>>> 156ae73 (feat(audit): enhance soft-fail UX and environment docs)
       sendToAuditLog(enrichedEvent).catch(err => {
         console.warn('[LearningLoop] Failed to send to audit log:', err);
       });
