@@ -252,6 +252,57 @@ html {
   padding: 4px 6px;
 }
 
+.team-policy-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 16px 0 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+}
+
+.team-policy-section-hint {
+  font-size: 0.6rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  color: #64748b;
+}
+
+.team-policy-severities-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.team-policy-severity-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.team-policy-severity-label {
+  font-size: 0.7rem;
+  color: #cbd5e1;
+}
+
+.team-policy-severity-select {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  color: #e2e8f0;
+  font-size: 0.65rem;
+  padding: 3px 6px;
+  cursor: pointer;
+}
+
 .team-policy-note {
   font-size: 0.6rem;
   color: #64748b;
@@ -421,6 +472,21 @@ html {
 
 .receipts-light .team-policy-grid select,
 .receipts-light .team-policy-grid input {
+  background: #ffffff;
+  border-color: var(--tauri-border);
+  color: var(--tauri-text-dark);
+}
+
+.receipts-light .team-policy-severity-row {
+  background: rgba(0, 0, 0, 0.02);
+  border-color: var(--tauri-border);
+}
+
+.receipts-light .team-policy-severity-label {
+  color: var(--tauri-text-dark);
+}
+
+.receipts-light .team-policy-severity-select {
   background: #ffffff;
   border-color: var(--tauri-border);
   color: var(--tauri-text-dark);

@@ -48,6 +48,19 @@ export default function TeamPolicyPanel({ policy, onPolicyChange, compact = fals
     update('weakCtaWords', words);
   };
 
+  const handleRuleSeverityChange = (ruleId, severity) => {
+    const severities = policy.ruleSeverities || {};
+    update('ruleSeverities', { ...severities, [ruleId]: severity });
+  };
+
+  const RECEIPT_RULES = [
+    { id: 'spacing', label: 'Spacing grid', default: 'warning' },
+    { id: 'radius', label: 'Border radius', default: 'warning' },
+    { id: 'contrast', label: 'Contrast', default: 'error' },
+    { id: 'copy', label: 'CTA copy', default: 'warning' },
+    { id: 'features', label: 'Feature count', default: 'warning' }
+  ];
+
   return (
     <div className="team-policy-panel">
       {!compact && (
@@ -138,6 +151,34 @@ export default function TeamPolicyPanel({ policy, onPolicyChange, compact = fals
           />
         </label>
       </div>
+      
+      {!compact && (
+        <>
+          <div className="team-policy-section-header">
+            <span>Rule severities</span>
+            <span className="team-policy-section-hint">error = blocks CI | warning = logged | info = hidden</span>
+          </div>
+          <div className="team-policy-severities-grid">
+            {RECEIPT_RULES.map((rule) => {
+              const currentSeverity = policy.ruleSeverities?.[rule.id] || rule.default;
+              return (
+                <div key={rule.id} className="team-policy-severity-row">
+                  <span className="team-policy-severity-label">{rule.label}</span>
+                  <select 
+                    value={currentSeverity}
+                    onChange={(e) => handleRuleSeverityChange(rule.id, e.target.value)}
+                    className="team-policy-severity-select"
+                  >
+                    <option value="error">Error</option>
+                    <option value="warning">Warning</option>
+                    <option value="info">Info (hidden)</option>
+                  </select>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }
