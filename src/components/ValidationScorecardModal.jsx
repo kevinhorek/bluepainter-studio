@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { buildSessionScorecard, getScorecardChecks } from '../utils/sessionScorecard';
 import { getStoredFeedback } from '../utils/feedbackStorage';
-import { downloadValidationExport } from '../utils/validationExport';
+import { downloadValidationExport, downloadPilotPackExport } from '../utils/validationExport';
 import { LearningLoop } from '../utils/learningLoop';
 import {
   buildScorecardSharePayload,
@@ -189,9 +189,17 @@ export default function ValidationScorecardModal({ isOpen, onClose }) {
           )}
 
           {sessions.length === 0 && (
-            <p className="validation-script-intro">
-              No validation sessions recorded yet. Run facilitator mode with users and collect feedback.
-            </p>
+            <div className="validation-empty-state">
+              <div className="validation-empty-state-icon">📊</div>
+              <h4 className="validation-empty-state-title">No validation sessions yet</h4>
+              <p className="validation-empty-state-text">
+                Run facilitator mode (`?facilitator=1`) with users to collect feedback. 
+                Target 8–10 sessions to reach kill criteria (SPEC §8).
+              </p>
+              <p className="validation-empty-state-hint">
+                <strong>Quick start:</strong> Share bluepainter-studio.vercel.app → collect feedback (··· → Share feedback) → export results here
+              </p>
+            </div>
           )}
 
           <h3 className="validation-scorecard-heading">Kill criteria check (SPEC §8)</h3>
@@ -223,6 +231,21 @@ export default function ValidationScorecardModal({ isOpen, onClose }) {
         </div>
 
         <div className="demo-script-actions">
+          <button 
+            type="button" 
+            className="feedback-cancel-btn"
+            onClick={() => {
+              const result = downloadPilotPackExport();
+              if (result.success) {
+                setShareStatus(`✓ Exported pilot pack with ${result.sessionCount} session(s)`);
+              } else {
+                setShareStatus(`Error: ${result.error}`);
+              }
+            }}
+            title="Export comprehensive pilot pack with all metrics and next steps"
+          >
+            📦 Export pilot pack
+          </button>
           <button type="button" className="feedback-cancel-btn" onClick={() => downloadValidationExport()}>
             Export session JSON
           </button>
