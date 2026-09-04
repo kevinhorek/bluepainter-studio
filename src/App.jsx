@@ -399,6 +399,20 @@ export default function App() {
         return;
       }
       
+      // Cmd/Ctrl + E: Quick export pilot pack
+      if ((e.metaKey || e.ctrlKey) && e.key === 'e' && !e.shiftKey) {
+        e.preventDefault();
+        handleExportPilotPack();
+        return;
+      }
+      
+      // Cmd/Ctrl + Shift + L: Export learning loop
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'L') {
+        e.preventDefault();
+        handleExportLearningLoop();
+        return;
+      }
+      
       // Cmd/Ctrl + Shift + K: Toggle scorecard
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'K') {
         e.preventDefault();
@@ -409,7 +423,7 @@ export default function App() {
     
     window.addEventListener('keydown', handleFacilitatorShortcuts);
     return () => window.removeEventListener('keydown', handleFacilitatorShortcuts);
-  }, [facilitator, phase, sessionChecklistOpen, scorecardOpen]);
+  }, [facilitator, phase, sessionChecklistOpen, scorecardOpen, handleExportPilotPack, handleExportLearningLoop]);
 
   const handleGoHome = useCallback(() => {
     setMarketingKitOpen(false);
