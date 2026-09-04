@@ -88,6 +88,17 @@ export default function CodeEditor({ code, onChange, onFocus, activeFile, onColl
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getFileLabel(activeFile)}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigator.clipboard.writeText(code);
+            }}
+            title="Copy code"
+            className="studio-pane-bar-btn"
+          >
+            📋
+          </button>
           {onToggleExpand && (
             <button
               type="button"
