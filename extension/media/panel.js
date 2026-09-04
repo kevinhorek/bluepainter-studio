@@ -92,9 +92,11 @@
     const ids = Object.keys(state.nodesMap || {});
     if (!state.rootNodeId || !ids.length) {
       els.canvasEmpty.hidden = false;
+      els.canvasEmpty.style.display = 'block';
       return;
     }
     els.canvasEmpty.hidden = true;
+    els.canvasEmpty.style.display = 'none';
     const rootEl = renderNode(state.rootNodeId);
     if (rootEl) els.canvas.appendChild(rootEl);
   }
@@ -337,6 +339,35 @@
   if (els.tipDismiss) {
     els.tipDismiss.addEventListener('click', () => {
       vscode.postMessage({ type: 'dismissFirstRunTip' });
+    });
+  }
+
+  const pilotGuideBtn = document.getElementById('bp-open-pilot-guide');
+  if (pilotGuideBtn) {
+    pilotGuideBtn.addEventListener('click', () => {
+      vscode.postMessage({ type: 'openPilotGuide' });
+    });
+  }
+
+  const configFromTipBtn = document.getElementById('bp-open-config-from-tip');
+  if (configFromTipBtn) {
+    configFromTipBtn.addEventListener('click', () => {
+      vscode.postMessage({ type: 'openConfigFile' });
+    });
+  }
+
+  const pickComponentBtn = document.getElementById('bp-pick-component-btn');
+  if (pickComponentBtn) {
+    pickComponentBtn.addEventListener('click', () => {
+      vscode.postMessage({ type: 'pickComponent' });
+    });
+  }
+
+  const emptyPilotLink = document.getElementById('bp-empty-pilot-link');
+  if (emptyPilotLink) {
+    emptyPilotLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      vscode.postMessage({ type: 'openPilotGuide' });
     });
   }
 
