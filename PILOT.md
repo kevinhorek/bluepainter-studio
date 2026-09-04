@@ -2,6 +2,8 @@
 
 Quick-start guide for pilot teams evaluating BluePainter in your real codebase.
 
+**For IDE pilots:** See [EXTENSION_PILOT.md](./EXTENSION_PILOT.md) for a comprehensive first-session guide with the VS Code extension.
+
 ---
 
 ## Prerequisites
