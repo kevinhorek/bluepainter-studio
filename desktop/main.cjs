@@ -6,6 +6,7 @@ const { app, BrowserWindow, shell } = require('electron');
 const path = require('path');
 
 const DEV_URL = process.env.BLUEPAINTER_DEV_URL || 'http://127.0.0.1:5173';
+const START_ROUTE = process.env.BLUEPAINTER_START_ROUTE || 'app';
 const isDev = !app.isPackaged && process.env.BLUEPAINTER_DESKTOP_PROD !== '1';
 
 // Cloud / container Linux often lacks a full GPU + DBus stack.
@@ -20,7 +21,7 @@ function createWindow() {
     height: 900,
     minWidth: 1100,
     minHeight: 700,
-    title: 'BluePainter',
+    title: 'BluePainter Studio',
     backgroundColor: '#0f172a',
     webPreferences: {
       contextIsolation: true,
@@ -37,11 +38,17 @@ function createWindow() {
     return { action: 'deny' };
   });
 
+  const startHash = START_ROUTE === 'home' ? '/home' : '/app';
+
   if (isDev) {
-    win.loadURL(`${DEV_URL}/#/app`);
+    win.loadURL(`${DEV_URL}/#${startHash}`);
   } else {
-    win.loadFile(path.join(__dirname, '../dist/index.html'), { hash: '/app' });
+    win.loadFile(path.join(__dirname, '../dist/index.html'), { hash: startHash });
   }
+
+  win.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+    console.error(`Failed to load: ${errorDescription} (${errorCode})`);
+  });
 
   return win;
 }
