@@ -1,10 +1,8 @@
 import { useMemo } from 'react';
 import { buildSessionScorecard } from '../utils/sessionScorecard';
-import { getLearningSummary } from '../utils/learningLoop';
 
 export default function FacilitatorDashboard({ isOpen, onClose, learningLoop }) {
   const scorecard = useMemo(() => (isOpen ? buildSessionScorecard() : null), [isOpen]);
-  const learningSummary = useMemo(() => getLearningSummary(), [isOpen]);
   const learningStats = useMemo(() => {
     if (!learningLoop || !isOpen) return null;
     return learningLoop.getStatistics();
