@@ -13,7 +13,7 @@
     "dev:full": "vercel dev",
     "build": "vite build",
     "lint": "eslint .",
-    "test:ast": "node scripts/test-ast-sync.mjs",
+    "test:ast": "node scripts/test-ast-sync.mjs && node scripts/test-ast-sync-advanced.mjs && node scripts/test-ast-sync-expanded.mjs && node scripts/test-ast-sync-forms-links.mjs && node scripts/test-ast-sync-card-patterns.mjs && node scripts/test-ast-sync-hero-form-nav.mjs && node scripts/test-ast-sync-edge-cases.mjs && node scripts/test-ast-sync-app-ui.mjs",
     "preview": "vite preview",
     "deploy:vercel": "npm run build && npx vercel --prod",
     "deploy:netlify": "npm run build && npx netlify deploy --prod --dir=dist",
