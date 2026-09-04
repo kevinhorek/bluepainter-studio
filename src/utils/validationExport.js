@@ -12,8 +12,14 @@ export function downloadValidationExport() {
     const learningEvents = getLearningEvents();
     
     const payload = {
+      exportType: 'validation-session',
       exportedAt: new Date().toISOString(),
       specVersion: '2026-07',
+      surface: 'web-studio',
+      context: {
+        facilitatorMode: new URLSearchParams(window.location.search).get('facilitator') === '1',
+        sessionUrl: window.location.href
+      },
       scorecard,
       feedback: {
         summary: feedback,
@@ -140,6 +146,12 @@ export function downloadPilotPackExport() {
       exportType: 'pilot-pack',
       exportedAt: new Date().toISOString(),
       specVersion: '2026-07-SPEC-§8',
+      surface: 'web-studio',
+      context: {
+        facilitatorMode: new URLSearchParams(window.location.search).get('facilitator') === '1',
+        sessionUrl: window.location.href,
+        userAgent: navigator.userAgent
+      },
       
       executiveSummary: {
         totalSessions: scorecard.sessions.completed,
@@ -189,7 +201,8 @@ export function downloadPilotPackExport() {
       learningLoop: {
         totalEvents: learningSummary.totalEvents,
         summary: learningSummary,
-        top10Events: learningEvents.slice(0, 10)
+        top10Events: learningEvents.slice(0, 10),
+        exportedAt: learningSummary.exportedAt || null
       },
       
       teamPolicy: loadReceiptPolicy(),
@@ -199,7 +212,9 @@ export function downloadPilotPackExport() {
       references: {
         spec: 'SPEC.md §8 — Success metrics & kill criteria',
         validation: 'VALIDATION.md — Full validation checklist',
-        pilot: 'PILOT.md — Pilot team quick-start guide'
+        pilot: 'PILOT.md — Pilot team quick-start guide',
+        selfPilot: 'SELF_PILOT.md — 30-45 min self-guided pilot walkthrough',
+        facilitatorChecklist: 'scripts/pilot-dry-run.md — Printable facilitator session checklist'
       }
     };
 
