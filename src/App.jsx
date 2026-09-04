@@ -27,6 +27,7 @@ import FeedbackModal from './components/FeedbackModal';
 import DemoScriptModal from './components/DemoScriptModal';
 import PresenterToast from './components/PresenterToast';
 import SpecModal from './components/SpecModal';
+import ConflictDialog from './components/ConflictDialog';
 import ExportDeployModal from './components/ExportDeployModal';
 import MarketingKitModal from './components/MarketingKitModal';
 import { getEmptyFigmaImportNodes } from './utils/figmaImport';
@@ -99,6 +100,9 @@ export default function App() {
     figma: getEmptyFigmaImportNodes()
   }));
   const [code, setCode] = useState('');
+  const [lastSyncedCode, setLastSyncedCode] = useState('');
+  const [conflictDialogOpen, setConflictDialogOpen] = useState(false);
+  const [pendingCanvasUpdate, setPendingCanvasUpdate] = useState(null);
 
   const [tourActive, setTourActive] = useState(initialRoute.startTour);
   const [tourStep, setTourStep] = useState(0);
@@ -363,6 +367,7 @@ export default function App() {
         return;
       }
       setCode(nextCode);
+      setLastSyncedCode(nextCode);
       // Log canvas-to-code sync when code is actually updated
       if (codeRef.current) {
         learningLoop.logCanvasToCodeSync(activeRootId, activeFile, codeRef.current ? 'patch' : 'generate');
@@ -388,6 +393,7 @@ export default function App() {
   const handleCodeChange = (newCode) => {
     skipCodegenRef.current = true;
     setCode(newCode);
+    setLastSyncedCode(newCode);
     const updatedNodes = parseTSX(newCode, activeNodesMap);
     setActiveNodesMap(updatedNodes);
     learningLoop.logCodeToCanvasSync(activeFile, Object.keys(updatedNodes).length);
@@ -395,6 +401,17 @@ export default function App() {
   };
 
   const handleUpdateNode = (nodeId, updatedFields) => {
+    // Conflict detection: check if code has changed since last sync (CONFLICT_MODEL.md)
+    if (lastSyncedCode && code !== lastSyncedCode) {
+      setPendingCanvasUpdate({ nodeId, updatedFields });
+      setConflictDialogOpen(true);
+      return;
+    }
+
+    applyNodeUpdate(nodeId, updatedFields);
+  };
+
+  const applyNodeUpdate = (nodeId, updatedFields) => {
     setActiveNodesMap(prev => {
       const node = prev[nodeId];
       if (!node) return prev;
@@ -408,6 +425,31 @@ export default function App() {
       };
     });
     learningLoop.logCanvasToCodeSync(nodeId, activeFile, 'node_update');
+    refreshLearningSummary();
+  };
+
+  const handleConflictResolve = (resolution) => {
+    setConflictDialogOpen(false);
+
+    if (resolution === 'overwrite_with_canvas' && pendingCanvasUpdate) {
+      learningLoop.log('conflict_resolved', {
+        resolution: 'overwrite_with_canvas',
+        fileName: activeFile
+      });
+      applyNodeUpdate(pendingCanvasUpdate.nodeId, pendingCanvasUpdate.updatedFields);
+    } else if (resolution === 'discard_canvas') {
+      learningLoop.log('conflict_resolved', {
+        resolution: 'discard_canvas',
+        fileName: activeFile
+      });
+      // Re-sync canvas from current code
+      const updatedNodes = parseTSX(code, activeNodesMap);
+      setActiveNodesMap(updatedNodes);
+      setLastSyncedCode(code);
+    }
+    // 'cancel' - do nothing
+
+    setPendingCanvasUpdate(null);
     refreshLearningSummary();
   };
 
@@ -763,6 +805,13 @@ export default function App() {
       {facilitator && <DemoScriptModal isOpen={scriptOpen} onClose={() => setScriptOpen(false)} />}
       {facilitator && <SpecModal isOpen={specOpen} onClose={() => setSpecOpen(false)} />}
       {facilitator && <PresenterToast message={presenterMessage} />}
+      
+      <ConflictDialog
+        isOpen={conflictDialogOpen}
+        onResolve={handleConflictResolve}
+      />
+      
+      <AppToast message={toast} onDismiss={() => setToast(null)} />
     </div>
   );
 }
