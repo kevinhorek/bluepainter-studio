@@ -158,4 +158,4 @@ function applyReceiptFix(fixKey, fixMeta, nodesMap, onUpdateNode) {
   }
 }
 
-module.exports = { evaluateReceipts, applyReceiptFix };
+export { evaluateReceipts, applyReceiptFix };

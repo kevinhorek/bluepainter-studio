@@ -1,7 +1,7 @@
-const recast = require('recast');
-const { parse } = require('@babel/parser');
-const traverseModule = require('@babel/traverse');
-const t = require('@babel/types');
+import * as recast from 'recast';
+import { parse } from '@babel/parser';
+import * as traverseModule from '@babel/traverse';
+import * as t from '@babel/types';
 
 const traverse = traverseModule.default || traverseModule;
 
@@ -176,7 +176,7 @@ function astSyncAvailable() {
   return true;
 }
 
-module.exports = {
+export {
   parseTSXWithAST,
   patchTSXWithAST,
   getJsxId,
