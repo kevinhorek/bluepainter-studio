@@ -2,7 +2,9 @@
 
 Quick-start guide for pilot teams evaluating BluePainter in your real codebase.
 
-**For IDE pilots:** See [EXTENSION_PILOT.md](./EXTENSION_PILOT.md) for a comprehensive first-session guide with the VS Code extension.
+**For self-guided web pilots:** See [SELF_PILOT.md](./SELF_PILOT.md) for a 30-45 minute validation session on your own project.  
+**For IDE pilots:** See [EXTENSION_PILOT.md](./EXTENSION_PILOT.md) for a comprehensive first-session guide with the VS Code extension.  
+**For facilitators:** See [scripts/pilot-dry-run.md](./scripts/pilot-dry-run.md) for a printable session checklist.
 
 ---
 
