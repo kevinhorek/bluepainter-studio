@@ -1,6 +1,6 @@
 // syncEngine.js - Canvas ↔ TSX sync (AST-first with regex fallback)
 import { getComponentName, getWorkspaceFile, getImportPath, collectComponentRefs } from '../data/workspaceFiles';
-import { parseTSXWithAST, patchTSXWithAST } from './astSyncEngine';
+import { parseTSXWithAST, patchTSXWithAST } from '@bluepainter/shared/astSyncEngine';
 
 function formatStyleAttr(styleObj) {
   const styleEntries = Object.entries(styleObj || {})

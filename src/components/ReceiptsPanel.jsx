@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import TeamPolicyPanel from './TeamPolicyPanel';
 import LearningSuggestions from './LearningSuggestions';
-import { evaluateReceipts, applyReceiptFix } from '../utils/receiptPolicy';
+import { evaluateReceipts, applyReceiptFix } from '@bluepainter/shared/receiptPolicy';
 import { isFacilitatorMode } from '../utils/facilitatorMode';
 
 export default function ReceiptsPanel({

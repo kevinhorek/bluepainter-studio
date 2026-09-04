@@ -3,8 +3,8 @@
  * Run: npm run test:features
  */
 import assert from 'assert';
+import { createRequire } from 'module';
 import { generateTSX, parseTSX } from '../src/utils/syncEngine.js';
-import { parseTSXWithAST, patchTSXWithAST } from '../src/utils/astSyncEngine.js';
 import {
   getFreshPricingNodes,
   getFreshHeroNodes,
@@ -12,7 +12,6 @@ import {
   applyBrokenDesignScenario,
   applyFixedDesignScenario
 } from '../src/utils/demoScenarios.js';
-import { evaluateReceipts, applyReceiptFix } from '../src/utils/receiptPolicy.js';
 import { DEFAULT_RECEIPT_POLICY } from '../src/data/defaultReceiptPolicy.js';
 import { applyAIUpdates, getFirstUpdateTarget, buildAIContext } from '../src/utils/aiApply.js';
 import { createNodeFromTool, canDropIntoNode, isLeafNode } from '../src/utils/nodeFactory.js';
@@ -24,6 +23,10 @@ import { getEmptyFigmaImportNodes, figmaFileToNodes } from '../src/utils/figmaIm
 import { getAllowedNodeKeys } from '../src/utils/aiPrompts.js';
 import { buildSessionScorecard } from '../src/utils/sessionScorecard.js';
 import { getLearningSummary, logLearningEvent, clearLearningEvents } from '../src/utils/learningLoop.js';
+
+const require = createRequire(import.meta.url);
+const { parseTSXWithAST, patchTSXWithAST } = require('@bluepainter/shared/astSyncEngine');
+const { evaluateReceipts, applyReceiptFix } = require('@bluepainter/shared/receiptPolicy');
 
 if (typeof globalThis.localStorage === 'undefined') {
   const store = new Map();

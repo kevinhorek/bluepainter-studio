@@ -2,7 +2,7 @@ const { parse } = require('@babel/parser');
 const traverseModule = require('@babel/traverse');
 const generateModule = require('@babel/generator');
 const t = require('@babel/types');
-const { getJsxId } = require('./astSyncEngine');
+const { getJsxId } = require('@bluepainter/shared/astSyncEngine');
 
 const traverse = traverseModule.default || traverseModule;
 const generate = generateModule.default || generateModule;

@@ -3,7 +3,7 @@ const traverseModule = require('@babel/traverse');
 const t = require('@babel/types');
 const pricingNodes = require('../data/pricingNodes.json');
 const heroNodes = require('../data/heroNodes.json');
-const { getJsxId } = require('./astSyncEngine');
+const { getJsxId } = require('@bluepainter/shared/astSyncEngine');
 const { parseTSX } = require('./syncEngine');
 
 const traverse = traverseModule.default || traverseModule;

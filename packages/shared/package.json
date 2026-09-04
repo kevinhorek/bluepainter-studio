@@ -1,0 +1,24 @@
+{
+  "name": "@bluepainter/shared",
+  "version": "0.1.0",
+  "description": "Shared AST sync and receipt policy logic for BluePainter Studio and VS Code extension",
+  "type": "commonjs",
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./receiptPolicy": "./lib/receiptPolicy.js",
+    "./astSyncEngine": "./lib/astSyncEngine.js"
+  },
+  "keywords": [
+    "bluepainter",
+    "ast",
+    "receipt-policy"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@babel/parser": "^8.0.0",
+    "@babel/traverse": "^8.0.0",
+    "@babel/types": "^8.0.0",
+    "recast": "^0.23.12"
+  }
+}
