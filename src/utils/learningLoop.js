@@ -149,19 +149,20 @@ export class LearningLoop {
   exportJSON() {
     const events = this._readAll();
     const stats = this.getStatistics();
+    const gitContext = enrichEventWithContext({}).context || {};
     
     return {
       version: '1.0',
       exportedAt: Date.now(),
       surface: 'web-studio',
       context: {
-        userId: null,
-        userName: null,
-        teamId: null,
-        repoUrl: null,
-        branch: null,
-        commitSha: null,
-        filePath: null
+        userId: gitContext.userId || null,
+        userName: gitContext.userName || null,
+        teamId: gitContext.teamId || null,
+        repoUrl: gitContext.repoUrl || null,
+        branch: gitContext.branch || null,
+        commitSha: gitContext.commitSha || null,
+        filePath: gitContext.filePath || null
       },
       stats,
       events
