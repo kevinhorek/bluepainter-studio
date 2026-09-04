@@ -72,6 +72,7 @@ export default function SessionChecklistModal({ isOpen, onClose }) {
   const [elapsedMinutes, setElapsedMinutes] = useState(0);
   const [currentPhase, setCurrentPhase] = useState('setup');
   const [phaseChecks, setPhaseChecks] = useState({});
+  const [exportStatus, setExportStatus] = useState('');
 
   const metrics = useMemo(() => {
     if (!isOpen) return null;
@@ -101,6 +102,7 @@ export default function SessionChecklistModal({ isOpen, onClose }) {
     setElapsedMinutes(0);
     setCurrentPhase('setup');
     setPhaseChecks({});
+    setExportStatus('');
   };
 
   const handleTogglePhaseCheck = (phaseId, itemIndex) => {
@@ -140,6 +142,22 @@ export default function SessionChecklistModal({ isOpen, onClose }) {
                 Track SPEC §8 activation metrics during each validation session.
                 Start the timer when the participant opens the demo.
               </p>
+
+              <div style={{
+                background: '#f0f9ff',
+                border: '1px solid #3b82f6',
+                borderRadius: '8px',
+                padding: '12px',
+                marginBottom: '16px',
+                fontSize: '0.85rem',
+                lineHeight: 1.5
+              }}>
+                <strong style={{ color: '#1e40af' }}>💡 Tip:</strong>
+                <span style={{ color: '#1e3a8a', marginLeft: '6px' }}>
+                  This checklist runs live during your session. Metrics update automatically as participants interact with the demo. 
+                  After collecting feedback via <strong>··· → Share feedback</strong>, export session data below.
+                </span>
+              </div>
 
               <h3 className="validation-scorecard-heading">Target activation metrics</h3>
               <ul className="validation-scorecard-checks">
@@ -225,6 +243,20 @@ export default function SessionChecklistModal({ isOpen, onClose }) {
                 </div>
               ))}
 
+              {exportStatus && (
+                <div style={{
+                  background: '#ecfdf5',
+                  border: '1px solid #10b981',
+                  borderRadius: '8px',
+                  padding: '12px',
+                  marginBottom: '16px',
+                  fontSize: '0.85rem',
+                  color: '#065f46'
+                }}>
+                  {exportStatus}
+                </div>
+              )}
+
               <div className="demo-script-actions">
                 <button type="button" className="landing-cta-primary" onClick={handleEndSession}>
                   End session
@@ -235,7 +267,11 @@ export default function SessionChecklistModal({ isOpen, onClose }) {
                   onClick={() => {
                     const result = downloadValidationExport();
                     if (result.success) {
-                      alert(`✓ Exported ${result.sessionCount} session(s) with ${result.eventCount} learning events`);
+                      setExportStatus(`✓ Exported ${result.sessionCount} session(s) with ${result.eventCount} learning events`);
+                      setTimeout(() => setExportStatus(''), 5000);
+                    } else {
+                      setExportStatus(`⚠ Export failed: ${result.error || 'Unknown error'}`);
+                      setTimeout(() => setExportStatus(''), 5000);
                     }
                   }}
                   title="Export session data as JSON"
