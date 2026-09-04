@@ -1,12 +1,54 @@
-# CI Receipt Gate — Wiring Guide
+# CI — Wiring Guide
 
 ## Overview
 
-The **Designer's Receipts gate** runs automated policy checks on TSX/JSX components before merge. This guide shows pilots how to wire the gate into their CI pipeline to enforce team design standards.
+BluePainter Studio uses GitHub Actions for continuous integration:
+
+1. **Main CI workflow** (`ci.yml`): Lint, build, and test checks on every PR
+2. **Receipt gate** (`receipt-gate.yml`): Design policy checks on TSX/JSX components
+
+This guide covers both workflows.
 
 ---
 
-## What it does
+## Main CI Workflow
+
+The main CI workflow (`.github/workflows/ci.yml`) runs on every PR and push to `main`:
+
+### Jobs
+
+1. **Lint**: Runs ESLint on the codebase
+   - Currently continues on error (pre-existing lint errors allowed per AGENTS.md)
+   - Helps track new lint issues
+
+2. **Build**: Builds the Vite app
+   - Ensures code compiles successfully
+   - Verifies `dist/` directory is created
+   - Shows build artifact sizes in summary
+
+3. **Test**: Runs all test suites
+   - AST sync tests (`test:ast`)
+   - Feature tests (`test:features`)
+   - Integration tests (`test:integration`)
+
+### Local Testing
+
+```bash
+# Run all CI checks locally
+npm run lint
+npm run build
+npm run test:ast
+npm run test:features
+npm run test:integration
+```
+
+---
+
+## Receipt Gate
+
+The **Designer's Receipts gate** runs automated policy checks on TSX/JSX components before merge.
+
+### What it does
 
 The receipt gate:
 
