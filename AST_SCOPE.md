@@ -169,9 +169,10 @@ npm run test:ast
 - Advanced patterns: button lists, nested containers, feature lists
 - Expanded patterns: deep nesting, arrays of elements, grid layouts, boolean/null values
 - Card patterns: pricing cards, feature cards, testimonial cards, product cards with badges and icons
+- Hero/Form/Nav patterns: hero sections, contact forms with labels/inputs/textareas, navigation bars, footers, stats sections
 - Style source detection: Tailwind, CSS modules, inline styles, mixed
 
-**Total:** 25 tests covering real-world component patterns including e-commerce and marketing card layouts
+**Total:** 30 tests covering production-ready component patterns for landing pages, e-commerce, and app UIs
 
 Expected output: All tests pass with green checkmarks
 
