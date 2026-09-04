@@ -4960,6 +4960,39 @@ input:checked + .slider-round:before {
   font-weight: 500;
 }
 
+.session-metrics-complete-box {
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 8px;
+}
+
+.session-metrics-complete-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.session-metrics-complete-icon {
+  font-size: 1.1rem;
+  color: #10b981;
+}
+
+.session-metrics-complete-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #059669;
+}
+
+.session-metrics-complete-text {
+  font-size: 0.7rem;
+  color: #047857;
+  line-height: 1.5;
+  margin: 0;
+}
+
 .session-phase {
   margin-bottom: 16px;
 }
