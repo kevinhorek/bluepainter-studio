@@ -11,7 +11,9 @@
     syncableCount: 0,
     parseError: false,
     source: '',
-    mode: 'sidebar'
+    mode: 'sidebar',
+    suggestions: [],
+    appliedSuggestions: new Set()
   };
 
   const els = {
@@ -105,8 +107,74 @@
       </div>`;
   }
 
+  function renderSuggestions() {
+    const container = document.getElementById('bp-suggestions');
+    if (!container) {
+      const suggestionsEl = document.createElement('div');
+      suggestionsEl.id = 'bp-suggestions';
+      suggestionsEl.className = 'bp-suggestions';
+      els.receipts.parentElement.insertBefore(suggestionsEl, els.receipts);
+    }
+
+    const suggestionsContainer = document.getElementById('bp-suggestions');
+    const suggestions = (state.suggestions || []).slice(0, 3);
+    
+    if (!suggestions.length) {
+      suggestionsContainer.innerHTML = '';
+      return;
+    }
+
+    suggestionsContainer.innerHTML = `
+      <div class="bp-suggestions-header">
+        <span style="font-size: 1rem;">💡</span>
+        <strong>Learning Suggestions</strong>
+      </div>
+      <div class="bp-suggestions-list">
+        ${suggestions.map((suggestion) => {
+          const key = `${suggestion.type}-${suggestion.ruleId || suggestion.fixKey}`;
+          const isApplied = state.appliedSuggestions.has(key);
+          const icon = isApplied ? '✓' : (suggestion.type === 'downgrade_rule' ? '📉' : '⚡');
+          
+          return `
+            <div class="bp-suggestion-card ${isApplied ? 'applied' : ''}">
+              <div class="bp-suggestion-icon">${icon}</div>
+              <div class="bp-suggestion-content">
+                <div class="bp-suggestion-reason">${escapeHtml(suggestion.reason)}</div>
+                <div class="bp-suggestion-action">${escapeHtml(suggestion.action)}</div>
+                ${suggestion.type === 'downgrade_rule' ? `<div class="bp-suggestion-meta">Rule: <code>${escapeHtml(suggestion.ruleId)}</code></div>` : ''}
+                ${suggestion.type === 'prefer_quick_fix' ? `<div class="bp-suggestion-meta">Fix: <code>${escapeHtml(suggestion.fixKey)}</code></div>` : ''}
+                ${!isApplied ? `<button class="bp-btn small" data-apply-suggestion='${escapeAttr(JSON.stringify(suggestion))}'>Apply</button>` : '<div class="bp-suggestion-applied">Applied</div>'}
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+
+    suggestionsContainer.querySelectorAll('[data-apply-suggestion]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const suggestion = JSON.parse(btn.dataset.applySuggestion);
+        const confirmMessage = suggestion.type === 'downgrade_rule'
+          ? `Hide rule "${suggestion.ruleId}" from receipts? This will update your policy.`
+          : `Remember to prefer quick-fix for "${suggestion.fixKey}"? This will make the fix more prominent.`;
+        
+        if (confirm(confirmMessage)) {
+          const key = `${suggestion.type}-${suggestion.ruleId || suggestion.fixKey}`;
+          state.appliedSuggestions.add(key);
+          vscode.postMessage({
+            type: 'applySuggestion',
+            suggestion
+          });
+          renderSuggestions();
+        }
+      });
+    });
+  }
+
   function renderReceipts() {
     renderScores();
+    renderSuggestions();
+    
     if (!state.rules.length) {
       els.receipts.innerHTML = '<p class="bp-empty">Select a node with policy rules to see receipts.</p>';
       return;

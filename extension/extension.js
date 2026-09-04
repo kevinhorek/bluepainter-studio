@@ -179,6 +179,8 @@ class BluePainterController {
       ? evaluateReceipts(ctx.state.nodesMap, selected, policy, dismissedRules)
       : { rules: [], scores: { design: 100, accessibility: 100, buildability: 100, total: 100 } };
 
+    const suggestions = this.learningLoop.getSuggestions();
+
     return {
       fileName: path.basename(ctx.editor.document.fileName),
       rootNodeId: ctx.state.rootNodeId,
@@ -190,7 +192,8 @@ class BluePainterController {
       parseError: syncInfo.error,
       source: ctx.state.source,
       mode: 'sidebar',
-      status: ''
+      status: '',
+      suggestions
     };
   }
 
@@ -492,6 +495,41 @@ class BluePainterController {
             this.persist(ctx.uri, ctx.state);
             this.learningLoop.logReceiptDismissed(msg.ruleId, msg.nodeId, path.basename(editor.document.fileName));
             this.refreshViews(editor);
+          }
+        }
+        break;
+      case 'applySuggestion':
+        if (editor && msg.suggestion) {
+          const ctx = this.getEditorState(editor);
+          if (ctx) {
+            const suggestion = msg.suggestion;
+            
+            if (suggestion.type === 'downgrade_rule') {
+              ctx.state.dismissedRules.add(suggestion.ruleId);
+              this.persist(ctx.uri, ctx.state);
+              this.learningLoop.log('learning_suggestion_applied', {
+                type: 'downgrade_rule',
+                ruleId: suggestion.ruleId,
+                weight: suggestion.weight
+              });
+              vscode.window.showInformationMessage(`BluePainter: Rule "${suggestion.ruleId}" hidden from receipts.`);
+              this.refreshViews(editor);
+            } else if (suggestion.type === 'prefer_quick_fix') {
+              const prefKey = 'bluepainter.quickFixPrefs';
+              const prefs = this.context.globalState.get(prefKey, {});
+              prefs[suggestion.fixKey] = {
+                preferred: true,
+                appliedAt: Date.now(),
+                weight: suggestion.weight
+              };
+              this.context.globalState.update(prefKey, prefs);
+              this.learningLoop.log('learning_suggestion_applied', {
+                type: 'prefer_quick_fix',
+                fixKey: suggestion.fixKey,
+                weight: suggestion.weight
+              });
+              vscode.window.showInformationMessage(`BluePainter: Quick-fix preference saved for "${suggestion.fixKey}".`);
+            }
           }
         }
         break;

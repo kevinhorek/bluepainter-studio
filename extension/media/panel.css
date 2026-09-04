@@ -235,3 +235,87 @@ body {
 .bp-editor .bp-canvas {
   min-height: 360px;
 }
+
+.bp-suggestions {
+  margin: 12px;
+  padding: 12px;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 6px;
+}
+
+.bp-suggestions-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+  color: var(--vscode-textLink-foreground);
+}
+
+.bp-suggestions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bp-suggestion-card {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.bp-suggestion-card.applied {
+  opacity: 0.6;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.bp-suggestion-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.bp-suggestion-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bp-suggestion-reason {
+  font-weight: 500;
+  color: var(--vscode-editor-foreground);
+}
+
+.bp-suggestion-action {
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.8rem;
+}
+
+.bp-suggestion-meta {
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: var(--vscode-descriptionForeground);
+}
+
+.bp-suggestion-meta code {
+  padding: 2px 4px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.75rem;
+}
+
+.bp-suggestion-applied {
+  margin-top: 6px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #10b981;
+  border: 1px solid #10b981;
+  border-radius: 4px;
+  text-align: center;
+}
