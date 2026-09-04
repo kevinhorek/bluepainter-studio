@@ -29,8 +29,11 @@ function getJsxId(openingElement) {
 }
 
 function literalForValue(val) {
+  if (val === null) return t.nullLiteral();
+  if (val === undefined) return t.identifier('undefined');
+  if (typeof val === 'boolean') return t.booleanLiteral(val);
   if (typeof val === 'number' && !Number.isNaN(val)) return t.numericLiteral(val);
-  return t.stringLiteral(String(val ?? ''));
+  return t.stringLiteral(String(val));
 }
 
 function readObjectExpression(expr) {
@@ -45,6 +48,11 @@ function readObjectExpression(expr) {
 
     if (t.isNumericLiteral(prop.value)) out[key] = prop.value.value;
     else if (t.isStringLiteral(prop.value)) out[key] = prop.value.value;
+    else if (t.isBooleanLiteral(prop.value)) out[key] = prop.value.value;
+    else if (t.isNullLiteral(prop.value)) out[key] = null;
+    else if (t.isTemplateLiteral(prop.value) && prop.value.expressions.length === 0) {
+      out[key] = prop.value.quasis[0]?.value.cooked || '';
+    }
   }
   return out;
 }
@@ -115,6 +123,13 @@ function parseTSXWithAST(code, nodesMap) {
           if (parsed) node.style = { ...(node.style || {}), ...parsed };
         }
 
+        const classAttr = opening.attributes.find(
+          (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'className' })
+        );
+        if (classAttr && t.isStringLiteral(classAttr.value)) {
+          node.className = classAttr.value.value;
+        }
+
         if (node.type === 'text' || node.type === 'button' || node.type === 'list-item') {
           const text = readJsxText(path.node);
           if (text != null) node.text = text;
@@ -124,7 +139,7 @@ function parseTSXWithAST(code, nodesMap) {
           const srcAttr = opening.attributes.find(
             (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'src' })
           );
-          if (srcAttr && t.isStringLiteral(srcAttr.value)) node.src = srcAttr.value;
+          if (srcAttr && t.isStringLiteral(srcAttr.value)) node.src = srcAttr.value.value;
         }
       }
     });
@@ -176,9 +191,64 @@ function astSyncAvailable() {
   return true;
 }
 
+<<<<<<< HEAD
 export {
+=======
+function detectStyleSources(code) {
+  if (!code?.trim()) return { hasInlineStyles: false, hasClassNames: false, hasTailwind: false, hasCssModules: false };
+
+  try {
+    const ast = recast.parse(code, { parser: babelParser });
+    let hasInlineStyles = false;
+    let hasClassNames = false;
+    let hasTailwind = false;
+    let hasCssModules = false;
+
+    traverse(ast, {
+      JSXElement(path) {
+        const opening = path.node.openingElement;
+        
+        const styleAttr = opening.attributes.find(
+          (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'style' })
+        );
+        if (styleAttr && t.isJSXExpressionContainer(styleAttr.value)) {
+          const parsed = readObjectExpression(styleAttr.value.expression);
+          if (parsed && Object.keys(parsed).length > 0) {
+            hasInlineStyles = true;
+          }
+        }
+
+        const classAttr = opening.attributes.find(
+          (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'className' })
+        );
+        if (classAttr) {
+          hasClassNames = true;
+          if (t.isStringLiteral(classAttr.value)) {
+            const classStr = classAttr.value.value;
+            const tailwindPattern = /\b(bg-|text-|p-|m-|flex|grid|rounded|border|shadow|w-|h-)/;
+            if (tailwindPattern.test(classStr)) {
+              hasTailwind = true;
+            }
+          }
+          if (t.isJSXExpressionContainer(classAttr.value)) {
+            hasCssModules = true;
+          }
+        }
+      }
+    });
+
+    return { hasInlineStyles, hasClassNames, hasTailwind, hasCssModules };
+  } catch (err) {
+    console.warn('[astSync] detectStyleSources failed:', err.message);
+    return { hasInlineStyles: false, hasClassNames: false, hasTailwind: false, hasCssModules: false };
+  }
+}
+
+module.exports = {
+>>>>>>> c43ed02 (feat(ast): expand AST support for real codebase patterns)
   parseTSXWithAST,
   patchTSXWithAST,
   getJsxId,
-  astSyncAvailable
+  astSyncAvailable,
+  detectStyleSources
 };
