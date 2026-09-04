@@ -4,6 +4,8 @@
 
 BluePainter brings visual editing to your existing React codebase while preserving formatting, comments, and team design policy.
 
+**📖 New to BluePainter?** See [EXTENSION_PILOT.md](https://github.com/kevinhorek/bluepainter-studio/blob/main/EXTENSION_PILOT.md) for a comprehensive first-session guide (5 minutes).
+
 ## Features
 
 ### 🎨 Visual Canvas Editor
@@ -30,12 +32,17 @@ All rules are configurable via VS Code settings.
 ### 📊 Learning Loop
 Every fix, dismiss, and policy change is logged to help improve team-specific rules over time.
 
-## Usage
+## Quick Start
 
-1. **Open a TSX file** with `id` attributes on elements
-2. **Open BluePainter panel** from the sidebar (paintcan icon)
-3. **Edit visually** on the canvas
-4. **Write to file** to sync changes back to code
+### First Session (5 minutes)
+
+1. Open BluePainter sidebar (🎨 paintcan icon in activity bar)
+2. Run `BluePainter: Pick Component` (Cmd/Ctrl+Shift+P)
+3. Select a TSX/JSX file from your workspace
+4. Review Designer's Receipts in the Receipts tab
+5. Apply fixes or dismiss rules as needed
+
+**For detailed walkthrough:** See [EXTENSION_PILOT.md](https://github.com/kevinhorek/bluepainter-studio/blob/main/EXTENSION_PILOT.md)
 
 ### Commands
 
@@ -68,6 +75,15 @@ This extension contributes the following settings:
 - **Simple layouts** — Best for pricing cards, hero sections, and similar components
 
 See [AST_SCOPE.md](https://github.com/kevinhorek/bluepainter-studio/blob/main/AST_SCOPE.md) for full technical scope.
+
+## Troubleshooting
+
+**Common issues:**
+- "No components found" → Workspace needs `.tsx` or `.jsx` files
+- "0 syncable ids" → Elements need `id` attributes for round-trip sync
+- "Parse error" → Check VS Code problems panel for syntax errors
+
+**For detailed troubleshooting:** See [EXTENSION_PILOT.md § Troubleshooting](https://github.com/kevinhorek/bluepainter-studio/blob/main/EXTENSION_PILOT.md#troubleshooting)
 
 ## Live Demo
 
