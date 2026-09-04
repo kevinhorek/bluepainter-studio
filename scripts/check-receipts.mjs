@@ -245,7 +245,7 @@ async function checkFile(filepath, policy) {
     return { errors: 0, warnings: 0, skipped: true };
   }
   
-  const { evaluateReceipts } = await loadReceiptEngine();
+  const { evaluateReceipts } = await loadReceiptPolicy();
   
   const rootNode = Object.values(nodes)[0];
   const result = evaluateReceipts(nodes, rootNode, policy, new Set());
