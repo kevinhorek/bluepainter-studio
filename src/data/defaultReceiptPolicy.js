@@ -5,7 +5,11 @@ export const DEFAULT_RECEIPT_POLICY = {
   maxFeatureCount: 5,
   weakCtaWords: ['submit', 'click here', 'send', 'button', 'ok', 'enter'],
   suggestedCta: 'Start free trial',
-  contrastFixColor: '#1e40af'
+  contrastFixColor: '#1e40af',
+  // Design tokens
+  primaryColor: '#2563eb',
+  secondaryColor: '#64748b',
+  textColor: '#1e293b'
 };
 
 export function loadReceiptPolicy() {
