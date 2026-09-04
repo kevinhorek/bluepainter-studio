@@ -38,6 +38,9 @@ export default function CanvasView({
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ nodeId: '', startX: 0, startY: 0, startLeft: 0, startTop: 0 });
 
+  // Determine if this is a page view
+  const isPageView = Boolean(pageViewport);
+
   // Handle inline contentEditable changes
   const handleInlineTextBlur = (nodeId, event) => {
     const textVal = event.target.innerText;
@@ -599,7 +602,6 @@ export default function CanvasView({
   };
 
   const activeToolMeta = getCanvasTool(activeCanvasTool);
-  const isPageView = Boolean(pageViewport);
 
   const getViewportWidth = () => {
     if (!activeViewportMode || !isPageView) return null;
