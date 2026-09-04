@@ -55,6 +55,7 @@
     "onLanguage:javascriptreact",
     "onCommand:bluepainter.openPanel",
     "onCommand:bluepainter.openCanvas",
+    "onCommand:bluepainter.pickComponent",
     "onCommand:bluepainter.syncFromFile",
     "onCommand:bluepainter.writeToFile"
   ],
@@ -75,6 +76,10 @@
       {
         "command": "bluepainter.openCanvas",
         "title": "BluePainter: Open Canvas Editor"
+      },
+      {
+        "command": "bluepainter.pickComponent",
+        "title": "BluePainter: Pick Component"
       },
       {
         "command": "bluepainter.syncFromFile",

@@ -351,6 +351,49 @@ class BluePainterController {
     }, 350);
   }
 
+  async pickAndOpenComponent() {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders || !workspaceFolders.length) {
+      vscode.window.showWarningMessage('BluePainter: no workspace folder open.');
+      return;
+    }
+
+    const files = await vscode.workspace.findFiles(
+      '{src/**/*.{tsx,jsx},**/*.{tsx,jsx}}',
+      '**/node_modules/**',
+      100
+    );
+
+    if (!files.length) {
+      vscode.window.showWarningMessage('BluePainter: no TSX/JSX files found in workspace.');
+      return;
+    }
+
+    const items = files.map((uri) => {
+      const relativePath = vscode.workspace.asRelativePath(uri);
+      const fileName = path.basename(uri.fsPath);
+      return {
+        label: fileName,
+        description: relativePath,
+        uri
+      };
+    });
+
+    const selected = await vscode.window.showQuickPick(items, {
+      placeHolder: 'Select a component to open in BluePainter',
+      matchOnDescription: true
+    });
+
+    if (!selected) return;
+
+    const doc = await vscode.workspace.openTextDocument(selected.uri);
+    const editor = await vscode.window.showTextDocument(doc, vscode.ViewColumn.One);
+    
+    this.loadDocument(editor);
+    this.refreshViews(editor);
+    vscode.window.showInformationMessage(`BluePainter: opened ${selected.label}`);
+  }
+
   async openEditorPanel() {
     const editor = vscode.window.activeTextEditor;
     if (!editor || !this.isSupportedDocument(editor.document)) {
@@ -474,6 +517,10 @@ function activate(context) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand('bluepainter.openCanvas', () => controller.openEditorPanel())
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('bluepainter.pickComponent', () => controller.pickAndOpenComponent())
   );
 
   context.subscriptions.push(
