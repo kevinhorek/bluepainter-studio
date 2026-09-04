@@ -1,11 +1,21 @@
 import { figmaFileToNodes, parseFigmaFileKey, parseFigmaNodeId } from './figmaImport';
 
 async function parseApiError(res) {
-  const data = await res.json().catch(() => ({}));
-  if (res.status === 404) {
-    return 'Figma import API not found — use production or run `npx vercel dev` locally.';
+  try {
+    const data = await res.json();
+    if (res.status === 404) {
+      if (data.error === 'Figma file not found' || data.error === 'Figma node not found' || data.error === 'No nodes found') {
+        return `${data.error}. ${data.details || ''}`;
+      }
+      return 'Figma import API not found — use production or run `npx vercel dev` locally.';
+    }
+    if (res.status === 403) {
+      return `${data.error || 'Access denied'}. ${data.details || 'Check your Figma token permissions.'}`;
+    }
+    return data.details ? `${data.error}: ${data.details}` : (data.error || `Import failed (${res.status})`);
+  } catch {
+    return `Import failed (${res.status})`;
   }
-  return data.error || data.details || `Import failed (${res.status})`;
 }
 
 export async function fetchFigmaFile({ token, fileUrl, fileKey, nodeId, nodeUrl }) {

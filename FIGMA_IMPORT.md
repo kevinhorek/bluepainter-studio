@@ -81,16 +81,33 @@ Pull frames from Figma → BluePainter canvas → edit visually → export as sh
 
 **`POST /api/figma-import`**
 
-Request:
+### Authentication
+
+The API accepts Figma tokens in two ways (in order of preference):
+
+1. **Client-side token** (recommended for personal use): Pass `token` in request body. The Studio UI sends the user's personal access token (stored in localStorage).
+2. **Server-side token** (recommended for production/team use): Set `FIGMA_TOKEN` environment variable on the API host (Vercel, etc.). When set, users don't need to provide a token.
+
+```bash
+# Set server-side token (Vercel)
+vercel env add FIGMA_TOKEN
+
+# Or in .env.local for local development
+echo "FIGMA_TOKEN=figd_..." >> .env.local
+```
+
+### Request
+
 ```json
 {
-  "token": "figd_...",
+  "token": "figd_...",  // Optional if FIGMA_TOKEN env var is set
   "fileUrl": "https://www.figma.com/design/ABC123/My-File",
   "nodeUrl": "https://www.figma.com/design/ABC123/My-File?node-id=123-456"
 }
 ```
 
-Response:
+### Response
+
 ```json
 {
   "fileKey": "ABC123",
@@ -99,6 +116,13 @@ Response:
   "figma": { /* Figma REST API JSON */ }
 }
 ```
+
+### Error responses
+
+- **400** — Invalid file URL or missing token
+- **403** — Invalid token or insufficient permissions (needs `file_content:read` scope)
+- **404** — File/node not found or API endpoint unavailable
+- **502** — Figma API error (network or rate limit)
 
 ## After import
 
@@ -142,10 +166,18 @@ A: Ensure the component is on the first page and is a top-level frame. Nested co
 
 **Q: Why do I see "Figma API error"?**  
 A: Check:
-1. Token is valid and has read-only file scope
+1. Token is valid and has read-only file scope (`file_content:read`)
 2. File URL is correct and accessible with your token
 3. File is not private unless token has access
 4. `/api/figma-import` is deployed or `vercel dev` is running locally
+
+**Server-side token (optional):** Set `FIGMA_TOKEN` env var on the API host (Vercel dashboard → Environment Variables) to skip token entry in the UI.
+
+**Q: Should I use client-side or server-side token?**  
+A:
+- **Client-side** (personal use): Each user provides their own token. Best for demos and personal projects.
+- **Server-side** (`FIGMA_TOKEN` env): One shared token on the API. Best for team deployments where you want users to import without managing tokens.
+- **Security note:** Personal access tokens grant read access to your Figma files. Use read-only scope and rotate tokens periodically.
 
 **Q: Can I import multiple files at once?**  
 A: Not yet. Import one frame at a time, or paste multiple frames into a single Figma file before importing.

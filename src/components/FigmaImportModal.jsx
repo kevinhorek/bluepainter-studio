@@ -39,6 +39,10 @@ export default function FigmaImportModal({ isOpen, onClose, onImported, onNotify
         if (!jsonPaste.trim()) throw new Error('Paste Figma JSON from the API or plugin export');
         result = importFromFigmaJsonString(jsonPaste);
       }
+      
+      if (!result.nodes || Object.keys(result.nodes).length === 0) {
+        throw new Error('No importable content found. The frame may be empty or unsupported. Try a different frame or check FIGMA_IMPORT.md for supported node types.');
+      }
 
       onImported?.({
         targetFile,
@@ -117,7 +121,10 @@ export default function FigmaImportModal({ isOpen, onClose, onImported, onNotify
               <p className="export-modal-note">
                 Create a token at{' '}
                 <a href="https://www.figma.com/developers/api#access-tokens" target="_blank" rel="noreferrer">figma.com/developers</a>
-                {' '}with <code>file_content:read</code>. Token stays in your browser.
+                {' '}with <code>file_content:read</code> scope. Token stays in your browser (localStorage).
+              </p>
+              <p className="export-modal-note">
+                <strong>Production alternative:</strong> Set <code>FIGMA_TOKEN</code> env var on the API host to skip client-side token entry.
               </p>
             </>
           )}
