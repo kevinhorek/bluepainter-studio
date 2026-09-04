@@ -41,6 +41,7 @@ import RealFileLoader from './components/RealFileLoader';
 import RestoreBackupModal from './components/RestoreBackupModal';
 import ExportConfirmationModal from './components/ExportConfirmationModal';
 import GitContextModal from './components/GitContextModal';
+import AuditBackendStatus from './components/AuditBackendStatus';
 import { createNodeFromTool, canDropIntoNode } from './utils/nodeFactory';
 import { getToolByShortcut, isPlacableTool } from './data/canvasTools';
 import { applyAIUpdates, getFirstUpdateTarget } from './utils/aiApply';
@@ -1137,6 +1138,8 @@ export default function App() {
       />
       
       <AppToast message={toast} onDismiss={() => setToast(null)} />
+      
+      {phase !== 'landing' && <AuditBackendStatus />}
     </div>
   );
 }

@@ -77,6 +77,10 @@ npm run deploy:vercel
 
 The learning loop (receipt fixes, dismissals, policy changes) can persist to a team database for analytics and compliance. **This is optional** — the app works without it.
 
+**Environment Variables:**
+- `DATABASE_URL` — PostgreSQL connection string (enables production audit persistence)
+- `VITE_AUDIT_API_URL` — Custom audit backend URL (optional, defaults to `/api/audit-log`)
+
 **Without `DATABASE_URL` (demo/validation mode):**
 - Events buffer to localStorage only
 - No team-wide audit data
@@ -87,20 +91,23 @@ The learning loop (receipt fixes, dismissals, policy changes) can persist to a t
 - 90-day retention policy
 - Query via `/api/audit-log/query`
 
-**Quick setup for pilots:**
+**Quick setup for production:**
 ```bash
-# 1. Create Postgres database (Supabase recommended)
-# 2. Set environment variable
-vercel env add DATABASE_URL  # Paste connection string
+# 1. Create Postgres database (Supabase or Vercel Postgres recommended)
 
-# 3. Run migration
+# 2. Set environment variable in Vercel dashboard
+#    Project Settings → Environment Variables → Add Variable
+#    Name: DATABASE_URL
+#    Value: postgresql://[user]:[password]@[host]:[port]/[database]
+
+# 3. Run schema migration
 psql $DATABASE_URL -f docs/migrations/001_audit_events.sql
 
 # 4. Redeploy
 vercel --prod
 ```
 
-See [docs/migrations/README.md](./docs/migrations/README.md) for detailed setup guide and [docs/AUDIT_BACKEND.md](./docs/AUDIT_BACKEND.md) for full documentation.
+**Full documentation:** [docs/AUDIT_BACKEND.md](./docs/AUDIT_BACKEND.md) — Complete setup guide with Supabase/Vercel Postgres instructions, monitoring, and troubleshooting.
 
 ## CI Receipt Gate
 

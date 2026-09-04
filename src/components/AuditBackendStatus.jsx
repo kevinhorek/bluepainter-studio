@@ -37,10 +37,10 @@ export default function AuditBackendStatus({ compact = false }) {
   const getStatusInfo = () => {
     if (status.softFailMode) {
       return {
-        icon: '⚠️',
+        icon: 'ℹ️',
         label: 'Audit Log: Local Only',
-        detail: 'Learning loop events are buffered locally. Set DATABASE_URL to persist to team backend.',
-        color: '#f59e0b',
+        detail: 'Learning loop events are buffered locally. This is normal for demo/validation. For production audit trail, set DATABASE_URL environment variable in Vercel.',
+        color: '#3b82f6',
         docs: 'docs/AUDIT_BACKEND.md'
       };
     }
@@ -49,7 +49,7 @@ export default function AuditBackendStatus({ compact = false }) {
       return {
         icon: '⚠️',
         label: 'Audit Backend Unavailable',
-        detail: status.lastError || 'Unable to reach audit backend. Events are buffered locally.',
+        detail: status.lastError || 'Unable to reach audit backend. Events are buffered locally and will sync when backend is available.',
         color: '#ef4444',
         docs: 'docs/AUDIT_BACKEND.md'
       };
@@ -58,7 +58,7 @@ export default function AuditBackendStatus({ compact = false }) {
     return {
       icon: '✓',
       label: 'Audit Log Active',
-      detail: `Events syncing to team backend. Buffer: ${status.bufferSize}`,
+      detail: `Events syncing to team backend. ${status.bufferSize > 0 ? `Buffer: ${status.bufferSize} pending` : 'All events synced'}`,
       color: '#10b981',
       docs: null
     };

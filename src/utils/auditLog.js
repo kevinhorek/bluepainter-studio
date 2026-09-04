@@ -210,12 +210,12 @@ async function sendBatchToBackend(events, retryCount = 0) {
     
     // Check if backend is in soft-fail mode (DATABASE_URL not configured)
     if (result.mode === 'soft-fail') {
-      console.warn('[AuditLog] Backend in soft-fail mode — DATABASE_URL not configured. Events accepted but not persisted.');
-      console.warn('[AuditLog] For production use, set DATABASE_URL environment variable. See docs/AUDIT_BACKEND.md');
+      console.log('[AuditLog] Backend in soft-fail mode — DATABASE_URL not configured. Events buffered locally.');
+      console.log('[AuditLog] This is normal for demo/validation. For production audit trail, set DATABASE_URL in Vercel. See docs/AUDIT_BACKEND.md');
       updateBackendStatus({ 
         available: true, 
         softFailMode: true, 
-        lastError: 'DATABASE_URL not configured' 
+        lastError: null // Not an error — this is expected behavior
       });
     } else {
       console.log(`[AuditLog] Sent ${result.accepted} events to backend`);
