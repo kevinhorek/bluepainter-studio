@@ -164,6 +164,9 @@ export default function WorkspaceHeader({
                   <button type="button" className="workspace-dropdown-item" onClick={() => { facilitatorActions.onExportFeedback(); setMenuOpen(false); }}>
                     Export{facilitatorActions.feedbackCount > 0 ? ` (${facilitatorActions.feedbackCount})` : ''}
                   </button>
+                  <button type="button" className="workspace-dropdown-item" onClick={() => { facilitatorActions.onExportLearningLoop(); setMenuOpen(false); }}>
+                    Export learning loop
+                  </button>
                 </>
               )}
             </div>

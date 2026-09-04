@@ -4,7 +4,7 @@ import { applyBrokenDesignScenario, applyFixedDesignScenario, getFreshHeroNodes,
 import { getFreshMarketingNodes } from './data/marketingPage';
 import { captureCanvasPageFrame } from './utils/canvasCapture';
 import { getWorkspaceFile } from './data/workspaceFiles';
-import { downloadValidationExport, getFeedbackSummary } from './utils/validationExport';
+import { downloadValidationExport, downloadLearningLoopExport, getFeedbackSummary } from './utils/validationExport';
 import { loadReceiptPolicy, saveReceiptPolicy } from './data/defaultReceiptPolicy';
 import { LearningLoop, getLearningSummary } from './utils/learningLoop';
 import { runPresenterSequence } from './utils/presenterMode';
@@ -569,6 +569,11 @@ export default function App() {
     refreshLearningSummary();
   };
 
+  const handleExportLearningLoop = () => {
+    downloadLearningLoopExport(learningLoop);
+    notify(`Learning loop exported — ${learningLoop.getStatistics().total} events`);
+  };
+
   const handleRunPresenter = () => {
     if (presenterRunning) return;
 
@@ -682,6 +687,7 @@ export default function App() {
           onOpenSpec: () => setSpecOpen(true),
           onOpenScorecard: () => setScorecardOpen(true),
           onExportFeedback: handleExportFeedback,
+          onExportLearningLoop: handleExportLearningLoop,
           feedbackCount,
           presenterRunning
         } : null}

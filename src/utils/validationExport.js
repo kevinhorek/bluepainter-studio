@@ -47,4 +47,16 @@ export function downloadValidationExport() {
   URL.revokeObjectURL(url);
 }
 
+export function downloadLearningLoopExport(learningLoop) {
+  const payload = learningLoop.exportJSON();
+  
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = `bluepainter-learning-loop-${new Date().toISOString().slice(0, 10)}.json`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
 export { downloadValidationExport as downloadFeedbackJSON };
