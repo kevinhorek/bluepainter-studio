@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { buildSessionScorecard, getScorecardChecks } from '../utils/sessionScorecard';
 import { getStoredFeedback } from '../utils/feedbackStorage';
 import { downloadValidationExport } from '../utils/validationExport';
+import { LearningLoop } from '../utils/learningLoop';
 import {
   buildScorecardSharePayload,
   buildSyncWrappedPayload,
@@ -15,6 +16,12 @@ export default function ValidationScorecardModal({ isOpen, onClose }) {
   const sessions = useMemo(() => (isOpen ? getStoredFeedback() : []), [isOpen]);
   const [shareStatus, setShareStatus] = useState('');
   const [showSessions, setShowSessions] = useState(false);
+
+  const learningSuggestions = useMemo(() => {
+    if (!isOpen) return [];
+    const loop = new LearningLoop();
+    return loop.getSuggestions();
+  }, [isOpen]);
 
   const interestLabels = {
     very: 'Very — I\'d pay for this',
@@ -79,7 +86,30 @@ export default function ValidationScorecardModal({ isOpen, onClose }) {
               <span className="validation-scorecard-stat-value">{scorecard.learning.totalEvents}</span>
               <span className="validation-scorecard-stat-label">Learning events</span>
             </div>
+            <div className={`validation-scorecard-stat ${learningSuggestions.length > 0 ? 'validation-scorecard-stat-highlight' : ''}`}>
+              <span className="validation-scorecard-stat-value">{learningSuggestions.length}</span>
+              <span className="validation-scorecard-stat-label">Policy suggestions</span>
+            </div>
+            <div className="validation-scorecard-stat">
+              <span className="validation-scorecard-stat-value">{scorecard.learning.roundTripsCanvas + scorecard.learning.roundTripsCode}</span>
+              <span className="validation-scorecard-stat-label">Round-trips</span>
+            </div>
           </div>
+
+          {learningSuggestions.length > 0 && (
+            <div className="validation-scorecard-suggestions-callout">
+              <div className="validation-scorecard-suggestions-header">
+                <span className="validation-scorecard-suggestions-icon">💡</span>
+                <span className="validation-scorecard-suggestions-title">
+                  {learningSuggestions.length} policy {learningSuggestions.length === 1 ? 'suggestion' : 'suggestions'} available
+                </span>
+              </div>
+              <p className="validation-scorecard-suggestions-desc">
+                Based on fix/dismiss patterns, the learning loop has suggestions to optimize your team policy. 
+                View them in the Receipts panel during your next session.
+              </p>
+            </div>
+          )}
 
           <h3 className="validation-scorecard-heading">Activation checklist</h3>
           <ul className="validation-scorecard-checks">
