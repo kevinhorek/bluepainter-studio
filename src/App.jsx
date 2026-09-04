@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { generateTSX, parseTSX } from './utils/syncEngine';
+import { exportComponentTSX } from './utils/componentExport';
 import { applyBrokenDesignScenario, applyFixedDesignScenario, getFreshHeroNodes, getFreshPricingNodes, getFreshDashboardNodes } from './utils/demoScenarios';
 import { getFreshMarketingNodes } from './data/marketingPage';
 import { captureCanvasPageFrame } from './utils/canvasCapture';
@@ -733,6 +734,33 @@ export default function App() {
     }
   };
 
+  const handleExportComponent = () => {
+    const nodesMap = nodesByFile[activeFile];
+    const fileInfo = getWorkspaceFile(activeFile);
+    const rootId = fileInfo.rootId;
+    
+    if (!rootId || !nodesMap || !nodesMap[rootId]) {
+      notify('⚠️ No component loaded to export');
+      return;
+    }
+
+    const existingCode = generateTSX(rootId, nodesMap, null);
+    const result = exportComponentTSX(rootId, nodesMap, existingCode);
+    
+    if (result.success) {
+      notify(`✓ ${result.filename} exported — ${result.linesOfCode} lines, ready for src/`);
+      learningLoop.log('component_exported', {
+        filename: result.filename,
+        componentName: result.componentName,
+        linesOfCode: result.linesOfCode,
+        sourceFile: activeFile
+      });
+      refreshLearningSummary();
+    } else {
+      notify(`❌ Export failed: ${result.error}`);
+    }
+  };
+
   const handleRunPresenter = () => {
     if (presenterRunning) return;
 
@@ -836,6 +864,7 @@ export default function App() {
         onShowAbout={() => setAboutOpen(true)}
         onOpenInterviewGuide={() => setValidationScriptOpen(true)}
         onOpenExportDeploy={() => setExportDeployOpen(true)}
+        onExportComponent={handleExportComponent}
         onOpenMarketingKit={handleOpenMarketingKit}
         onOpenFigmaImport={() => setFigmaImportOpen(true)}
         onOpenRealFile={() => setRealFileLoaderOpen(true)}

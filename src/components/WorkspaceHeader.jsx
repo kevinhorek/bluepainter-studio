@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { isFacilitatorMode } from '../utils/facilitatorMode';
 import { FILE_ORDER, WORKSPACE_FILES } from '../data/workspaceFiles';
+import { buildSessionScorecard } from '../utils/sessionScorecard';
 
 export default function WorkspaceHeader({
   activeFile,
@@ -10,13 +11,11 @@ export default function WorkspaceHeader({
   onShowAbout,
   onOpenInterviewGuide,
   onOpenExportDeploy,
+  onExportComponent,
   onOpenMarketingKit,
   onOpenFigmaImport,
-  onOpenRealFile,
-  onDownloadRealFile,
   onOpenAI,
   onCopyLink,
-  realFileLoaded,
   facilitatorActions
 }) {
   const facilitator = isFacilitatorMode();
@@ -24,6 +23,14 @@ export default function WorkspaceHeader({
   const [menuOpen, setMenuOpen] = useState(false);
   const fileRef = useRef(null);
   const menuRef = useRef(null);
+
+  const scorecard = facilitator ? buildSessionScorecard() : null;
+  const killCriteriaProgress = scorecard ? {
+    sessions: `${scorecard.sessions.completed}/${scorecard.sessions.target}`,
+    veryInterested: `${scorecard.interest.very}/${scorecard.interest.veryTarget}`,
+    pilotYes: scorecard.pilot.yes,
+    status: scorecard.recommendation
+  } : null;
 
   const active = WORKSPACE_FILES[activeFile];
 
@@ -47,6 +54,19 @@ export default function WorkspaceHeader({
           </button>
         <span className="workspace-prototype-badge">Prototype</span>
         {facilitator && <span className="workspace-facilitator-badge" title="Facilitator mode active — access session tools via ··· menu">Facilitator</span>}
+        {facilitator && killCriteriaProgress && (
+          <div className="workspace-progress-indicator" title={`Kill criteria: ${killCriteriaProgress.status}`}>
+            <span className="workspace-progress-metric">{killCriteriaProgress.sessions} sessions</span>
+            <span className="workspace-progress-sep">·</span>
+            <span className="workspace-progress-metric">{killCriteriaProgress.veryInterested} very</span>
+            {killCriteriaProgress.pilotYes > 0 && (
+              <>
+                <span className="workspace-progress-sep">·</span>
+                <span className="workspace-progress-metric workspace-progress-pilot">{killCriteriaProgress.pilotYes} pilot</span>
+              </>
+            )}
+          </div>
+        )}
         </div>
 
         <div className="workspace-file-picker" ref={fileRef}>
@@ -81,24 +101,6 @@ export default function WorkspaceHeader({
       </div>
 
       <div className="workspace-header-right">
-        <button
-          type="button"
-          className="workspace-real-file-btn"
-          onClick={onOpenRealFile}
-          title="Open a .tsx/.jsx file from your project"
-        >
-          📂 Open File
-        </button>
-        {realFileLoaded && (
-          <button
-            type="button"
-            className="workspace-download-btn"
-            onClick={onDownloadRealFile}
-            title="Download edited file"
-          >
-            💾 Download
-          </button>
-        )}
         <button
           type="button"
           className="workspace-ai-btn"
@@ -139,18 +141,6 @@ export default function WorkspaceHeader({
           </button>
           {menuOpen && (
             <div className="workspace-dropdown workspace-menu-dropdown">
-              <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { onOpenRealFile?.(); setMenuOpen(false); }}>
-                📂 Open Real File
-              </button>
-              {realFileLoaded && (
-                <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { onDownloadRealFile?.(); setMenuOpen(false); }}>
-                  💾 Download File
-                </button>
-              )}
-              <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { onOpenFigmaImport?.(); setMenuOpen(false); }}>
-                Import from Figma
-              </button>
-              <div className="workspace-dropdown-divider" />
               <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { onOpenAI?.(); setMenuOpen(false); }}>
                 AI Generate
               </button>
@@ -159,6 +149,12 @@ export default function WorkspaceHeader({
               </button>
               <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { onOpenExportDeploy?.(); setMenuOpen(false); }}>
                 Export & deploy
+              </button>
+              <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { onExportComponent?.(); setMenuOpen(false); }}>
+                Export component TSX
+              </button>
+              <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { onOpenFigmaImport?.(); setMenuOpen(false); }}>
+                Import from Figma
               </button>
               <div className="workspace-dropdown-divider" />
               <button type="button" className="workspace-dropdown-item" onClick={() => { onGoHome?.(); setMenuOpen(false); }}>

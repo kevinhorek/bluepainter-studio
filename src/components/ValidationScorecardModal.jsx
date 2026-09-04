@@ -23,6 +23,26 @@ export default function ValidationScorecardModal({ isOpen, onClose }) {
     return loop.getSuggestions();
   }, [isOpen]);
 
+  const lastLearningActivity = useMemo(() => {
+    if (!isOpen) return null;
+    const loop = new LearningLoop();
+    return loop.getLastActivityTimestamp();
+  }, [isOpen]);
+
+  const formatTimestamp = (timestamp) => {
+    if (!timestamp) return '';
+    const now = Date.now();
+    const diff = now - timestamp;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    
+    if (minutes < 1) return 'just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    return `${days}d ago`;
+  };
+
   const interestLabels = {
     very: 'Very — I\'d pay for this',
     somewhat: 'Somewhat — I\'d try it',
@@ -94,6 +114,10 @@ export default function ValidationScorecardModal({ isOpen, onClose }) {
               <span className="validation-scorecard-stat-value">{scorecard.learning.roundTripsCanvas + scorecard.learning.roundTripsCode}</span>
               <span className="validation-scorecard-stat-label">Round-trips</span>
             </div>
+            <div className="validation-scorecard-stat" title={`${scorecard.receipts.fixesApplied} fixes, ${scorecard.receipts.rulesDismissed} dismissals`}>
+              <span className="validation-scorecard-stat-value">{Math.round(scorecard.receipts.fixDismissRatio * 100)}%</span>
+              <span className="validation-scorecard-stat-label">Fix ratio</span>
+            </div>
           </div>
 
           {learningSuggestions.length > 0 && (
@@ -103,6 +127,11 @@ export default function ValidationScorecardModal({ isOpen, onClose }) {
                 <span className="validation-scorecard-suggestions-title">
                   {learningSuggestions.length} policy {learningSuggestions.length === 1 ? 'suggestion' : 'suggestions'} available
                 </span>
+                {lastLearningActivity && (
+                  <span className="validation-scorecard-timestamp" title="Last learning event">
+                    {formatTimestamp(lastLearningActivity)}
+                  </span>
+                )}
               </div>
               <p className="validation-scorecard-suggestions-desc">
                 Based on fix/dismiss patterns, the learning loop has suggestions to optimize your team policy. 
