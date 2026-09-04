@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { saveFeedback, buildCurrentSessionMetrics } from '../utils/feedbackStorage';
+import { isFacilitatorMode } from '../utils/facilitatorMode';
 
-export default function FeedbackModal({ isOpen, onClose }) {
+export default function FeedbackModal({ isOpen, onClose, onExport }) {
   const [interest, setInterest] = useState('');
   const [pilot, setPilot] = useState('');
   const [role, setRole] = useState('');
