@@ -16,6 +16,18 @@ export default function ValidationScorecardModal({ isOpen, onClose }) {
   const [shareStatus, setShareStatus] = useState('');
   const [showSessions, setShowSessions] = useState(false);
 
+  const interestLabels = {
+    very: 'Very — I\'d pay for this',
+    somewhat: 'Somewhat — I\'d try it',
+    not: 'Not really — not for me'
+  };
+
+  const pilotLabels = {
+    yes: 'Yes — would try on our codebase',
+    maybe: 'Maybe — depends on setup',
+    no: 'No — not for our team'
+  };
+
   if (!isOpen || !scorecard) return null;
 
   const recClass = scorecard.recommendation === 'GO'
@@ -106,10 +118,10 @@ export default function ValidationScorecardModal({ isOpen, onClose }) {
                   </div>
                   <div className="validation-session-details">
                     <div className="validation-session-field">
-                      <strong>Interest:</strong> {session.interest || 'not recorded'}
+                      <strong>Interest:</strong> {interestLabels[session.interest] || session.interest || 'not recorded'}
                     </div>
                     <div className="validation-session-field">
-                      <strong>Pilot:</strong> {session.pilot || 'not recorded'}
+                      <strong>Pilot:</strong> {pilotLabels[session.pilot] || session.pilot || 'not recorded'}
                     </div>
                     {session.role && (
                       <div className="validation-session-field">
