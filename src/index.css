@@ -6152,7 +6152,7 @@ input:checked + .slider-round:before {
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  border: 1px solid transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 6px;
   background: transparent;
   color: #94a3b8;
@@ -6168,6 +6168,11 @@ input:checked + .slider-round:before {
   background: rgba(59, 130, 246, 0.1);
   border-color: rgba(59, 130, 246, 0.2);
   color: #cbd5e1;
+}
+
+.viewport-switcher-btn:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .viewport-switcher-btn.active {

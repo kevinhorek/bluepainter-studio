@@ -38,6 +38,9 @@ export default function CanvasView({
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ nodeId: '', startX: 0, startY: 0, startLeft: 0, startTop: 0 });
 
+  // Determine if this is a page view
+  const isPageView = Boolean(pageViewport);
+
   // Handle inline contentEditable changes
   const handleInlineTextBlur = (nodeId, event) => {
     const textVal = event.target.innerText;
@@ -153,6 +156,33 @@ export default function CanvasView({
       document.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isResizing, isDragging, resizeStart, dragStart, nodesMap, onUpdateNode]);
+
+  useEffect(() => {
+    if (!activeViewportMode || !onViewportChange || !isPageView) return;
+
+    const handleKeyDown = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+        return;
+      }
+
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      const key = e.key.toUpperCase();
+      if (key === 'D') {
+        e.preventDefault();
+        onViewportChange('desktop');
+      } else if (key === 'T') {
+        e.preventDefault();
+        onViewportChange('tablet');
+      } else if (key === 'M') {
+        e.preventDefault();
+        onViewportChange('mobile');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeViewportMode, onViewportChange, isPageView]);
 
   useEffect(() => {
     if (activeCanvasTool !== 'hand') return;
@@ -572,7 +602,6 @@ export default function CanvasView({
   };
 
   const activeToolMeta = getCanvasTool(activeCanvasTool);
-  const isPageView = Boolean(pageViewport);
 
   const getViewportWidth = () => {
     if (!activeViewportMode || !isPageView) return null;
@@ -636,7 +665,7 @@ export default function CanvasView({
         </div>
       )}
 
-      {!hideToolbar && activeViewportMode && onViewportChange && (
+      {!hideToolbar && activeViewportMode && onViewportChange && isPageView && (
         <ViewportSwitcher
           activeViewport={activeViewportMode}
           onViewportChange={onViewportChange}
