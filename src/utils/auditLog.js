@@ -437,19 +437,146 @@ async function emergencyFlush() {
 }
 
 /**
- * Query audit log for a team (v1 admin feature).
+ * Query audit log for a team (v1 production feature).
  * 
- * @param {Object} filters - Query filters (userId, repoUrl, dateRange, eventType)
- * @returns {Promise<Array>} Matching events
+ * @param {Object} filters - Query filters
+ * @param {string} filters.teamId - Team UUID (required for team-scoped queries)
+ * @param {number} filters.startDate - Unix timestamp (ms) for range start
+ * @param {number} filters.endDate - Unix timestamp (ms) for range end
+ * @param {string} filters.userId - Filter by user email
+ * @param {string} filters.eventType - Filter by event type (comma-separated)
+ * @param {string} filters.filePath - Filter by file path (supports wildcards)
+ * @param {number} filters.limit - Number of results per page (default 50, max 500)
+ * @param {number} filters.offset - Pagination offset (default 0)
+ * @returns {Promise<Object>} Query results with events array and pagination metadata
  */
-// eslint-disable-next-line no-unused-vars
-export async function queryAuditLog(filters) {
-  // TODO v1: Implement backend query
-  // - Support filters: date range, user, repo, event type, file path
-  // - Pagination for large result sets
-  // - Export to CSV/JSON for compliance
+export async function queryAuditLog(filters = {}) {
+  const backendUrl = getAuditBackendUrl();
   
-  throw new Error('queryAuditLog not implemented in v0.2 (team backend required)');
+  if (!backendUrl) {
+    console.warn('[AuditLog] No backend URL configured — query not available');
+    return {
+      events: [],
+      total: 0,
+      limit: filters.limit || 50,
+      offset: filters.offset || 0,
+      hasMore: false,
+      error: 'Backend not configured'
+    };
+  }
+  
+  try {
+    // Build query parameters
+    const params = new URLSearchParams();
+    if (filters.teamId) params.append('teamId', filters.teamId);
+    if (filters.startDate) params.append('startDate', filters.startDate.toString());
+    if (filters.endDate) params.append('endDate', filters.endDate.toString());
+    if (filters.userId) params.append('userId', filters.userId);
+    if (filters.eventType) params.append('eventType', filters.eventType);
+    if (filters.filePath) params.append('filePath', filters.filePath);
+    if (filters.limit) params.append('limit', filters.limit.toString());
+    if (filters.offset) params.append('offset', filters.offset.toString());
+    
+    const response = await fetch(`${backendUrl}/query?${params.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Query failed' }));
+      console.error('[AuditLog] Query error:', errorData);
+      throw new Error(errorData.error || `HTTP ${response.status}`);
+    }
+    
+    const result = await response.json();
+    console.log(`[AuditLog] Query returned ${result.events.length} events`);
+    
+    return result;
+    
+  } catch (err) {
+    console.error('[AuditLog] Query failed:', err);
+    return {
+      events: [],
+      total: 0,
+      limit: filters.limit || 50,
+      offset: filters.offset || 0,
+      hasMore: false,
+      error: err.message
+    };
+  }
+}
+
+/**
+ * Export audit log events to CSV or JSON format.
+ * 
+ * @param {Object} filters - Query filters (same as queryAuditLog)
+ * @param {string} format - Export format: 'csv' or 'json'
+ * @returns {Promise<string>} Exported data as string
+ */
+export async function exportAuditLog(filters = {}, format = 'json') {
+  const result = await queryAuditLog({ ...filters, limit: 10000 }); // Max export size
+  
+  if (result.error || result.events.length === 0) {
+    throw new Error(result.error || 'No events to export');
+  }
+  
+  if (format === 'csv') {
+    return exportToCSV(result.events);
+  } else {
+    return JSON.stringify({
+      exportedAt: Date.now(),
+      filters,
+      total: result.total,
+      events: result.events
+    }, null, 2);
+  }
+}
+
+/**
+ * Convert events array to CSV format
+ * 
+ * @param {Array} events - Array of audit events
+ * @returns {string} CSV formatted string
+ */
+function exportToCSV(events) {
+  if (events.length === 0) return '';
+  
+  // CSV headers
+  const headers = [
+    'Event ID',
+    'Timestamp',
+    'Date',
+    'Event Type',
+    'User ID',
+    'Team ID',
+    'File Path',
+    'Branch',
+    'Commit SHA',
+    'Surface',
+    'Data'
+  ];
+  
+  // Build CSV rows
+  const rows = events.map(event => {
+    const context = event.context || {};
+    return [
+      event.eventId || '',
+      event.timestamp || '',
+      event.timestamp ? new Date(event.timestamp).toISOString() : '',
+      event.type || '',
+      context.userId || '',
+      context.teamId || '',
+      context.filePath || '',
+      context.branch || '',
+      context.commitSha || '',
+      context.surface || '',
+      JSON.stringify(event.data || {}).replace(/"/g, '""') // Escape quotes for CSV
+    ].map(val => `"${val}"`).join(',');
+  });
+  
+  return [headers.join(','), ...rows].join('\n');
 }
 
 /**

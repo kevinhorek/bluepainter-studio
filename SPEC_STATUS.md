@@ -3,7 +3,7 @@
 Track progress toward SPEC.md §5 (v1 scope) completion.
 
 **Last updated:** 2026-09-04  
-**Status:** V1 COMPLETE - awaiting pilot validation (SPEC §8)
+**Status:** ✅ V1 ENGINEERING COMPLETE — 🟡 Awaiting pilot validation (SPEC §8 human gate)
 
 ---
 
@@ -82,17 +82,24 @@ Track progress toward SPEC.md §5 (v1 scope) completion.
 
 ---
 
-## 🟡 In Progress / Needs Refinement
+## 🟡 Human Gate (SPEC §8) — Pilot Validation Required
 
-### Extension Marketplace
-- 🟡 **Package ready** - `bluepainter-0.2.0.vsix` builds successfully
-- 🟡 **MARKETPLACE.md** - Checklist exists
-- ⏳ **Not yet published** - Waiting for pilot validation
+### Validation Tools Ready ✅
+- ✅ **SELF_PILOT.md** - 30-minute self-guided validation workflow
+- ✅ **FACILITATOR.md** - Session guide for running validation with users
+- ✅ **Session scorecard** - Live metrics tracker (`?facilitator=1` mode)
+- ✅ **Pilot pack export** - Comprehensive JSON export with kill criteria dashboard
+- ✅ **Feedback modal** - Interest level + pilot willingness capture
 
-### Pilot Validation (SPEC §8)
-- 🟡 **Validation tools ready** - Scorecard, export, feedback modal
-- 🟡 **Session tracking** - Metrics, activation, retention signals
-- ⏳ **Pilot sessions needed** - Need 5-10 validation sessions for go/no-go
+### Pilot Sessions (⏳ Remaining Work)
+- ⏳ **Run 5–10 validation sessions** - Target users: frontend dev + designer pairs
+- ⏳ **Export pilot packs** - One JSON per session
+- ⏳ **Decision gate** - 3+ "very interested" + pilot willingness → GO
+
+### Extension Marketplace (Blocked on Pilots)
+- ✅ **Package ready** - `bluepainter-0.2.0.vsix` builds successfully
+- ✅ **MARKETPLACE.md** - Publish checklist complete
+- ⏳ **Not yet published** - Blocked on pilot validation only
 
 ---
 
@@ -125,32 +132,46 @@ Per SPEC, these are vision-only and NOT v1 scope:
 
 ## 🎯 Next Steps for v1 Launch
 
-### 1. Pilot Validation (SPEC §8) — REMAINING GATE
-- [ ] Run 5-10 validation sessions with target users
-- [ ] Export session JSON via scorecard
-- [ ] Decision gate: 3+ "very interested" → ship v1
+### 1. Pilot Validation (SPEC §8) — 🟡 REMAINING GATE (Human Work)
+- [ ] Run 5–10 validation sessions with target users (frontend dev + designer pairs)
+- [ ] Export pilot pack JSON after each session
+- [ ] Review kill criteria dashboard after sessions complete
+- [ ] Decision gate: 3+ "very interested" + pilot willingness → GO to Marketplace
 
-### 2. Marketplace Publish (Blocked on pilots)
-- [ ] Publish to VS Code Marketplace after pilot validation
-- [ ] Package ready: `bluepainter-0.2.0.vsix` builds successfully
+**Tools ready:**
+- SELF_PILOT.md — 30-minute self-guided validation
+- FACILITATOR.md — facilitator guide for running sessions
+- `?facilitator=1` mode — session scorecard + export
 
-### 3. Documentation Final Pass (After pilots)
-- [ ] Update SPEC.md status (mark v1 complete)
-- [ ] Add real user testimonials/case studies
-- [ ] Create video walkthrough for PILOT.md
+### 2. Marketplace Publish (⏳ Blocked on Pilot Validation)
+- [ ] Review pilot feedback for final UX tweaks
+- [ ] Publish `bluepainter-0.2.0.vsix` to VS Code Marketplace
+- [ ] Announce via newsletter + launch site
+
+**Package ready:** `bluepainter-0.2.0.vsix` builds successfully (no blockers)
+
+### 3. Post-Launch Documentation (⏳ After Pilots + Publish)
+- [ ] Add real pilot testimonials to README (do NOT invent; wait for real feedback)
+- [ ] Update SPEC.md with pilot learnings
+- [ ] Create video walkthrough for PILOT.md (screen recording of real usage)
 
 ---
 
 ## Summary
 
-**v1 SPEC §5 requirements:** ✅ 7/7 complete
+**SPEC §5 (v1 engineering):** ✅ 7/7 complete — all requirements shipped  
+**SPEC §8 (pilot validation):** 🟡 Human gate — 5–10 sessions required  
+**SPEC §9 (scope discipline):** ✅ Enforced — deferred features documented  
+**SPEC §12 (open questions):** ✅ 2/3 resolved (inline styles, git context) — pricing still open
 
 **All engineering shipped (#115–#123):**
-- Own-repo workflow: Studio + Extension
-- CI gate: Hardened receipt validation  
-- Extension polish: Restore UI, settings panel
-- Learning loop: Git context, timestamps, facilitator tools
+- ✅ Own-repo workflow: Studio + Extension
+- ✅ CI gate: Hardened receipt validation  
+- ✅ Extension polish: Restore UI, settings panel, conflict resolution
+- ✅ Learning loop: Git context, timestamps, facilitator tools, pilot pack export
 
-**Single remaining gate:** SPEC §8 pilot validation (5–10 sessions)
+**Single remaining gate:** SPEC §8 pilot validation (human work, 5–10 sessions)
 
-**Marketplace publish:** Blocked on pilot validation only
+**Marketplace publish:** ✅ Package ready, ⏳ blocked on pilot validation only
+
+**No blockers for validation sessions to begin.**

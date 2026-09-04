@@ -39,8 +39,8 @@ export class LearningLoop {
     
     // v1: Send enriched event to team audit log
     // Enabled when VITE_AUDIT_API_URL is configured
-    if (true) { // Temporarily enabled for testing
-      const enrichedEvent = enrichEventWithContext(event);
+    const enrichedEvent = enrichEventWithContext(event);
+    if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_AUDIT_API_URL) {
       sendToAuditLog(enrichedEvent).catch(err => {
         console.warn('[LearningLoop] Failed to send to audit log:', err);
       });
@@ -179,9 +179,11 @@ export class LearningLoop {
    * Rules dismissed often → suggest downgrade severity or hide
    * Rules fixed often → suggest quick-fix preference
    * Deterministic, local, no LLM required
+   * 
+   * Enhanced in v1 with team pattern detection
    */
   getSuggestions(options = {}) {
-    const { minEvents = 3, dismissThreshold = 0.7 } = options;
+    const { minEvents = 3, dismissThreshold = 0.7, fixThreshold = 5 } = options;
     const events = this._readAll();
     const suggestions = [];
 
@@ -191,7 +193,7 @@ export class LearningLoop {
 
     const stats = this.getStatistics();
 
-    // Analyze dismissed rules
+    // Analyze dismissed rules → suggest downgrade or hide
     Object.entries(stats.mostDismissedRules).forEach(([ruleId, dismissCount]) => {
       const ruleEvents = events.filter(
         (e) => (e.type === 'receipt_dismissed' || e.type === 'receipt_fix_applied') && 
@@ -214,27 +216,181 @@ export class LearningLoop {
       }
     });
 
-    // Analyze frequently fixed rules
+    // Analyze frequently fixed rules → suggest quick-fix or auto-apply
     Object.entries(stats.mostAppliedFixes).forEach(([fixKey, fixCount]) => {
       const fixEvents = events.filter((e) => e.type === 'receipt_fix_applied' && e.data.fixKey === fixKey);
       
-      if (fixCount >= minEvents) {
+      if (fixCount >= fixThreshold) {
         const ruleIds = [...new Set(fixEvents.map((e) => e.data.ruleId).filter(Boolean))];
+        
+        // Check if fixes are consistent (same fix applied repeatedly)
+        const fixMetaValues = fixEvents
+          .map((e) => JSON.stringify(e.data.fixMeta))
+          .filter(Boolean);
+        const uniqueFixMetas = [...new Set(fixMetaValues)];
+        const isConsistent = uniqueFixMetas.length <= 3; // Low variety = consistent pattern
+        
         suggestions.push({
           type: 'prefer_quick_fix',
           fixKey,
           ruleIds,
-          reason: `Applied ${fixCount} times`,
+          reason: `Applied ${fixCount} times${isConsistent ? ' (consistent pattern)' : ''}`,
           weight: Math.min(fixCount / 10, 1.0),
-          action: 'Consider making this fix more prominent or auto-applicable',
+          action: isConsistent 
+            ? 'Consider making this fix auto-applicable or creating a custom rule'
+            : 'Consider making this fix more prominent',
           fixCount,
+          isConsistent,
           timestamp: Date.now()
         });
       }
     });
 
+    // Detect file-specific patterns → suggest file-level overrides
+    const filePatterns = this._analyzeFilePatterns(events);
+    filePatterns.forEach(pattern => {
+      suggestions.push({
+        type: 'file_specific_rule',
+        filePath: pattern.filePath,
+        ruleId: pattern.ruleId,
+        reason: `${pattern.action} ${pattern.count} times in this file`,
+        weight: pattern.count / 10,
+        action: `Consider creating file-specific rule override for ${pattern.filePath}`,
+        count: pattern.count,
+        timestamp: Date.now()
+      });
+    });
+
+    // Detect team preference patterns → suggest policy updates
+    const policyPatterns = this._analyzePolicyPatterns(events);
+    policyPatterns.forEach(pattern => {
+      suggestions.push({
+        type: 'policy_update',
+        setting: pattern.setting,
+        suggestedValue: pattern.suggestedValue,
+        reason: `Based on ${pattern.evidence} team interactions`,
+        weight: pattern.confidence,
+        action: `Update ${pattern.setting} to ${pattern.suggestedValue}`,
+        timestamp: Date.now()
+      });
+    });
+
     // Sort by weight (highest first)
     return suggestions.sort((a, b) => b.weight - a.weight);
+  }
+
+  /**
+   * Analyze file-specific patterns in events
+   * @private
+   */
+  _analyzeFilePatterns(events) {
+    const fileActions = {};
+    
+    events.forEach(event => {
+      const filePath = event.context?.filePath || event.data?.fileName;
+      const ruleId = event.data?.ruleId;
+      
+      if (filePath && ruleId) {
+        const key = `${filePath}:${ruleId}`;
+        if (!fileActions[key]) {
+          fileActions[key] = {
+            filePath,
+            ruleId,
+            dismissed: 0,
+            fixed: 0
+          };
+        }
+        
+        if (event.type === 'receipt_dismissed') {
+          fileActions[key].dismissed++;
+        } else if (event.type === 'receipt_fix_applied') {
+          fileActions[key].fixed++;
+        }
+      }
+    });
+    
+    // Find significant patterns (files with >5 interactions for same rule)
+    return Object.values(fileActions)
+      .filter(pattern => (pattern.dismissed + pattern.fixed) >= 5)
+      .map(pattern => ({
+        ...pattern,
+        action: pattern.dismissed > pattern.fixed ? 'dismissed' : 'fixed',
+        count: pattern.dismissed + pattern.fixed
+      }));
+  }
+
+  /**
+   * Analyze policy adjustment patterns from team behavior
+   * @private
+   */
+  _analyzePolicyPatterns(events) {
+    const patterns = [];
+    
+    // Analyze spacing violations → suggest grid size adjustment
+    const spacingFixes = events.filter(e => 
+      e.type === 'receipt_fix_applied' && 
+      (e.data.fixKey === 'spacing' || e.data.ruleId === 'spacing')
+    );
+    
+    if (spacingFixes.length >= 8) {
+      // Extract common spacing values from fixes
+      const spacingValues = spacingFixes
+        .map(e => e.data.fixMeta?.value)
+        .filter(Boolean);
+      const commonValue = this._findMostCommon(spacingValues);
+      
+      if (commonValue) {
+        patterns.push({
+          setting: 'spacing.gridStep',
+          suggestedValue: commonValue,
+          evidence: spacingFixes.length,
+          confidence: Math.min(spacingFixes.length / 20, 1.0)
+        });
+      }
+    }
+    
+    // Analyze contrast threshold → suggest adjustment
+    const contrastEvents = events.filter(e => 
+      (e.type === 'receipt_fix_applied' || e.type === 'receipt_dismissed') &&
+      (e.data.ruleId === 'contrast')
+    );
+    const contrastDismissals = contrastEvents.filter(e => e.type === 'receipt_dismissed').length;
+    const contrastFixes = contrastEvents.filter(e => e.type === 'receipt_fix_applied').length;
+    
+    if (contrastDismissals >= 5 && contrastDismissals > contrastFixes * 2) {
+      patterns.push({
+        setting: 'contrast.minRatio',
+        suggestedValue: '3.0 (lower threshold)',
+        evidence: contrastDismissals,
+        confidence: Math.min(contrastDismissals / 10, 0.8)
+      });
+    }
+    
+    return patterns;
+  }
+
+  /**
+   * Find most common value in array
+   * @private
+   */
+  _findMostCommon(arr) {
+    if (arr.length === 0) return null;
+    
+    const counts = {};
+    arr.forEach(val => {
+      counts[val] = (counts[val] || 0) + 1;
+    });
+    
+    let maxCount = 0;
+    let mostCommon = null;
+    Object.entries(counts).forEach(([val, count]) => {
+      if (count > maxCount) {
+        maxCount = count;
+        mostCommon = val;
+      }
+    });
+    
+    return maxCount >= 3 ? mostCommon : null; // Require at least 3 occurrences
   }
 }
 
