@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { saveFeedback } from '../utils/feedbackStorage';
+import { saveFeedback, buildCurrentSessionMetrics } from '../utils/feedbackStorage';
 
 export default function FeedbackModal({ isOpen, onClose }) {
   const [interest, setInterest] = useState('');
@@ -14,12 +14,15 @@ export default function FeedbackModal({ isOpen, onClose }) {
     e.preventDefault();
     if (!interest) return;
 
+    const sessionMetrics = buildCurrentSessionMetrics();
+    
     const entry = {
       interest,
       pilot,
       role,
       comment,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      sessionMetrics
     };
 
     saveFeedback(entry);

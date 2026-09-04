@@ -14,6 +14,52 @@ export function saveFeedback(entry) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify([...existing, entry]));
 }
 
+export function buildCurrentSessionMetrics() {
+  const learning = getLearningSummaryForSession();
+  const roundTripCanvas = learning.roundTripsCanvas > 0;
+  const roundTripCode = learning.roundTripsCode > 0;
+  const activationComplete = roundTripCanvas && roundTripCode;
+  
+  return {
+    activation: {
+      roundTripCanvas,
+      roundTripCode,
+      complete: activationComplete,
+      canvasCount: learning.roundTripsCanvas,
+      codeCount: learning.roundTripsCode
+    },
+    receiptActions: {
+      fixesApplied: learning.fixesApplied,
+      rulesDismissed: learning.rulesDismissed,
+      total: learning.fixesApplied + learning.rulesDismissed
+    }
+  };
+}
+
+function getLearningSummaryForSession() {
+  try {
+    const raw = localStorage.getItem('bluepainter-learning-loop');
+    const events = raw ? JSON.parse(raw) : [];
+    const summary = {
+      fixesApplied: 0,
+      rulesDismissed: 0,
+      roundTripsCanvas: 0,
+      roundTripsCode: 0
+    };
+    
+    events.forEach((e) => {
+      if (e.type === 'fix_applied') summary.fixesApplied += 1;
+      else if (e.type === 'rule_dismissed') summary.rulesDismissed += 1;
+      else if (e.type === 'round_trip_canvas') summary.roundTripsCanvas += 1;
+      else if (e.type === 'round_trip_code') summary.roundTripsCode += 1;
+    });
+    
+    return summary;
+  } catch {
+    return { fixesApplied: 0, rulesDismissed: 0, roundTripsCanvas: 0, roundTripsCode: 0 };
+  }
+}
+
 export function getFeedbackSummary() {
   const responses = getStoredFeedback();
   const summary = {
@@ -24,7 +70,9 @@ export function getFeedbackSummary() {
     pilotYes: 0,
     pilotMaybe: 0,
     pilotNo: 0,
-    byRole: {}
+    byRole: {},
+    sessionsWithActivation: 0,
+    totalReceiptActions: 0
   };
   responses.forEach((r) => {
     if (r.interest === 'very') summary.very += 1;
@@ -34,6 +82,8 @@ export function getFeedbackSummary() {
     else if (r.pilot === 'maybe') summary.pilotMaybe += 1;
     else if (r.pilot === 'no') summary.pilotNo += 1;
     if (r.role) summary.byRole[r.role] = (summary.byRole[r.role] || 0) + 1;
+    if (r.sessionMetrics?.activation?.complete) summary.sessionsWithActivation += 1;
+    if (r.sessionMetrics?.receiptActions?.total) summary.totalReceiptActions += r.sessionMetrics.receiptActions.total;
   });
   return summary;
 }
