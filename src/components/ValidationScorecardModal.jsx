@@ -114,6 +114,10 @@ export default function ValidationScorecardModal({ isOpen, onClose }) {
               <span className="validation-scorecard-stat-value">{scorecard.learning.roundTripsCanvas + scorecard.learning.roundTripsCode}</span>
               <span className="validation-scorecard-stat-label">Round-trips</span>
             </div>
+            <div className="validation-scorecard-stat" title={`${scorecard.receipts.fixesApplied} fixes, ${scorecard.receipts.rulesDismissed} dismissals`}>
+              <span className="validation-scorecard-stat-value">{Math.round(scorecard.receipts.fixDismissRatio * 100)}%</span>
+              <span className="validation-scorecard-stat-label">Fix ratio</span>
+            </div>
           </div>
 
           {learningSuggestions.length > 0 && (
