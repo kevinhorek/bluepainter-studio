@@ -13,7 +13,8 @@
     source: '',
     mode: 'sidebar',
     suggestions: [],
-    appliedSuggestions: new Set()
+    appliedSuggestions: new Set(),
+    showFirstRunTip: false
   };
 
   const els = {
@@ -26,7 +27,9 @@
     inspectorEmpty: document.getElementById('bp-inspector-empty'),
     receipts: document.getElementById('bp-receipts'),
     scores: document.getElementById('bp-scores'),
-    status: document.getElementById('bp-status')
+    status: document.getElementById('bp-status'),
+    firstRunTip: document.getElementById('bp-first-run-tip'),
+    tipDismiss: document.getElementById('bp-tip-dismiss')
   };
 
   function camelToKebab(key) {
@@ -297,6 +300,11 @@
       : `${state.syncableCount} syncable id${state.syncableCount === 1 ? '' : 's'}`;
     els.source.textContent = state.source ? `Source: ${state.source}` : '';
     els.status.textContent = state.status || '';
+    
+    if (els.firstRunTip) {
+      els.firstRunTip.hidden = !state.showFirstRunTip;
+    }
+    
     renderCanvas();
     renderInspector();
     renderReceipts();
@@ -317,6 +325,12 @@
   document.getElementById('bp-open-demo-btn').addEventListener('click', () => {
     vscode.postMessage({ type: 'openDemo' });
   });
+
+  if (els.tipDismiss) {
+    els.tipDismiss.addEventListener('click', () => {
+      vscode.postMessage({ type: 'dismissFirstRunTip' });
+    });
+  }
 
   window.addEventListener('message', (event) => {
     const msg = event.data;

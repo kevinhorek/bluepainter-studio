@@ -319,3 +319,116 @@ body {
   border-radius: 4px;
   text-align: center;
 }
+
+.bp-first-run-tip {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.15));
+  border-bottom: 1px solid rgba(59, 130, 246, 0.3);
+  padding: 12px;
+}
+
+.bp-tip-header {
+  display: flex;
+  align-items: start;
+  gap: 10px;
+}
+
+.bp-tip-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.bp-tip-content {
+  flex: 1;
+}
+
+.bp-tip-content strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--vscode-textLink-foreground);
+  font-size: 12px;
+}
+
+.bp-tip-content p {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  opacity: 0.9;
+}
+
+.bp-tip-content code {
+  padding: 2px 4px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+  font-family: var(--vscode-editor-font-family);
+  font-size: 10px;
+}
+
+.bp-tip-dismiss {
+  background: transparent;
+  border: none;
+  color: var(--vscode-foreground);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+  opacity: 0.6;
+  width: 20px;
+  height: 20px;
+}
+
+.bp-tip-dismiss:hover {
+  opacity: 1;
+}
+  margin-bottom: 4px;
+  color: var(--vscode-textLink-foreground);
+  font-size: 12px;
+}
+
+.bp-tip-content p {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  opacity: 0.9;
+}
+
+.bp-tip-content code {
+>>>>>>> b3805ab (Add first-run tip for VS Code extension)
+  padding: 2px 4px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+  font-family: var(--vscode-editor-font-family);
+<<<<<<< HEAD
+  font-size: 0.75rem;
+}
+
+.bp-suggestion-applied {
+  margin-top: 6px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #10b981;
+  border: 1px solid #10b981;
+  border-radius: 4px;
+  text-align: center;
+=======
+  font-size: 10px;
+}
+
+.bp-tip-dismiss {
+  background: transparent;
+  border: none;
+  color: var(--vscode-foreground);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+  opacity: 0.6;
+  width: 20px;
+  height: 20px;
+}
+
+.bp-tip-dismiss:hover {
+  opacity: 1;
+>>>>>>> b3805ab (Add first-run tip for VS Code extension)
+}
