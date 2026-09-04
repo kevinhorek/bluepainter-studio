@@ -109,10 +109,10 @@ export default function FigmaShell({
           {/* Sync Header Info */}
           <div className="figma-banner">
             <div className="figma-banner-title">
-              <span>✨ Round-trip this frame to React code</span>
+              <span>✨ Import-only: Edit imported design as React code</span>
             </div>
             <div className="figma-banner-text">
-              Figma layer edits compile immediately to AST code, and code edits sync back to Figma vector elements.
+              Canvas edits compile to AST code, and code edits update the canvas. Changes do NOT sync back to Figma (v2 is import-only).
             </div>
           </div>
 
@@ -194,7 +194,10 @@ export default function FigmaShell({
                 />
                 <span className="slider-round"></span>
               </label>
-              <span>Sync changes back to Figma</span>
+              <span>Canvas ↔ code sync (within BluePainter only)</span>
+            </div>
+            <div style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: '4px', marginLeft: '56px' }}>
+              Import-only mode: changes do not sync back to Figma
             </div>
           </div>
 

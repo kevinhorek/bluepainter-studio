@@ -28,20 +28,30 @@ export default function FigmaImportModal({ isOpen, onClose, onImported, onNotify
       let result;
 
       if (tab === 'url') {
-        if (!token.trim()) throw new Error('Figma personal access token is required');
-        if (!parseFigmaFileKey(fileUrl)) throw new Error('Paste a valid Figma file URL');
+        if (!token.trim()) {
+          throw new Error('Figma personal access token is required. See FIGMA_TOKEN.md for setup instructions.');
+        }
+        if (!parseFigmaFileKey(fileUrl)) {
+          throw new Error('Paste a valid Figma file URL (e.g. https://www.figma.com/design/ABC123/My-File)');
+        }
         result = await importFromFigmaUrl({
           token: token.trim(),
           fileUrl: fileUrl.trim(),
           nodeUrl: nodeUrl.trim() || undefined
         });
       } else {
-        if (!jsonPaste.trim()) throw new Error('Paste Figma JSON from the API or plugin export');
+        if (!jsonPaste.trim()) {
+          throw new Error('Paste Figma JSON from the API (GET /v1/files/:key) or plugin export');
+        }
         result = importFromFigmaJsonString(jsonPaste);
       }
-      
+
       if (!result.nodes || Object.keys(result.nodes).length === 0) {
-        throw new Error('No importable content found. The frame may be empty or unsupported. Try a different frame or check FIGMA_IMPORT.md for supported node types.');
+        throw new Error('No importable content found. The frame may be empty or contain only unsupported elements (images, vectors, effects). Try a frame with text/boxes/auto-layout or check FIGMA_IMPORT.md for supported node types.');
+      }
+      
+      if (result.nodeCount < 2) {
+        console.warn('Import resulted in only 1 node (root). Frame may be empty or have unsupported children.');
       }
 
       onImported?.({
@@ -121,10 +131,12 @@ export default function FigmaImportModal({ isOpen, onClose, onImported, onNotify
               <p className="export-modal-note">
                 Create a token at{' '}
                 <a href="https://www.figma.com/developers/api#access-tokens" target="_blank" rel="noreferrer">figma.com/developers</a>
-                {' '}with <code>file_content:read</code> scope. Token stays in your browser (localStorage).
+                {' '}with <code>file_content:read</code> scope. Token stays in your browser (localStorage). See{' '}
+                <a href="https://github.com/kevinhorek/bluepainter-studio/blob/main/FIGMA_TOKEN.md" target="_blank" rel="noreferrer">FIGMA_TOKEN.md</a>
+                {' '}for detailed setup instructions.
               </p>
               <p className="export-modal-note">
-                <strong>Production alternative:</strong> Set <code>FIGMA_TOKEN</code> env var on the API host to skip client-side token entry.
+                <strong>Team deployment:</strong> Set <code>FIGMA_TOKEN</code> env var on the API host to skip client-side token entry.
               </p>
             </>
           )}
@@ -154,7 +166,11 @@ export default function FigmaImportModal({ isOpen, onClose, onImported, onNotify
           </button>
 
           <p className="export-modal-note deploy-api-note">
-            URL import uses <code>/api/figma-import</code>. On localhost run <code>npx vercel dev</code> or use the live demo.
+            URL import requires <code>/api/figma-import</code>. On localhost run <code>npx vercel dev</code> or use the live demo. If API unavailable, use <strong>Paste JSON</strong> tab.
+          </p>
+          
+          <p className="export-modal-note" style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '8px' }}>
+            <strong>Note:</strong> BluePainter v2 is <strong>import-only</strong>. Changes in BluePainter do NOT sync back to Figma (see SPEC.md for roadmap).
           </p>
         </div>
       </div>
