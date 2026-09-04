@@ -14,9 +14,10 @@ BluePainter brings visual editing to your existing React codebase while preservi
 - Changes write back to your TSX files with AST-based code generation
 
 ### 🔄 Bidirectional Sync
-- **Canvas → Code**: Visual edits update your TSX files
+- **Canvas → Code**: Visual edits update your TSX files with merge-ready code
 - **Code → Canvas**: Manual code changes reflect on canvas
 - **Formatting preserved**: Comments, spacing, and structure survive visual edits (powered by Recast/Babel)
+- **Write confirmation**: Toast shows file path when changes are written, confirming merge-ready status
 
 ### ✅ Designer's Receipts
 Live policy checks that enforce team design standards:

@@ -5,7 +5,7 @@ const traverseModule = require('@babel/traverse');
 const { bootstrapFromFile, mergeNodeUpdate } = require('./lib/bootstrap');
 const { parseTSX, generateTSX } = require('./lib/syncEngine');
 const { evaluateReceipts, applyReceiptFix } = require('@bluepainter/shared/receiptPolicy');
-const { loadReceiptPolicyFromConfig } = require('./lib/defaultReceiptPolicy');
+const { loadReceiptPolicyFromConfig, loadLearningOverrides } = require('./lib/defaultReceiptPolicy');
 const { SessionStore } = require('./lib/sessionStore');
 const { LearningLoop } = require('./lib/learningLoop');
 const { detectWorkspaceType, getWorkspaceRecommendations } = require('./lib/designSystemDetection');
@@ -185,12 +185,18 @@ class BluePainterController {
     const selected = ctx.state.selectedNodeId ? ctx.state.nodesMap[ctx.state.selectedNodeId] : null;
     const policy = this.getConfig();
     const dismissedRules = ctx.state.dismissedRules || new Set();
+    
+    // Load learning overrides and merge with dismissed rules (SPEC §3 extension parity)
+    const learningOverrides = loadLearningOverrides();
+    const allDismissedRules = new Set([...dismissedRules, ...learningOverrides.hiddenRules]);
+    
     const receiptResult = selected
-      ? evaluateReceipts(ctx.state.nodesMap, selected, policy, dismissedRules)
+      ? evaluateReceipts(ctx.state.nodesMap, selected, policy, allDismissedRules)
       : { rules: [], scores: { design: 100, accessibility: 100, buildability: 100, total: 100 } };
 
     const suggestions = this.learningLoop.getSuggestions();
     const showFirstRunTip = !this.context.globalState.get('bluepainter.firstRunTipDismissed', false);
+    const learningOverrides = loadLearningOverrides();
 
     return {
       fileName: path.basename(ctx.editor.document.fileName),
@@ -205,7 +211,8 @@ class BluePainterController {
       mode: 'sidebar',
       status: '',
       suggestions,
-      showFirstRunTip
+      showFirstRunTip,
+      learningOverrides
     };
   }
 
@@ -312,12 +319,21 @@ class BluePainterController {
     // Log canvas→code round-trip to learning loop
     if (!options.quiet) {
       const nodeCount = Object.keys(ctx.state.nodesMap).length;
+      const fileName = ctx.editor.document.fileName;
+      const relativePath = vscode.workspace.asRelativePath(fileName);
+      
       this.learningLoop.log('canvas_to_code_roundtrip', {
-        fileName: path.basename(ctx.editor.document.fileName),
+        fileName: path.basename(fileName),
+        relativePath,
         nodeCount,
         hadConflict: hasConflict
       });
-      vscode.window.showInformationMessage(`BluePainter: wrote ${nodeCount} node(s) to file.`);
+      
+      // Show merge-ready confirmation with full path
+      vscode.window.showInformationMessage(
+        `✓ Merge-ready: ${relativePath} — ${nodeCount} node(s) written`,
+        { modal: false }
+      );
     }
     
     this.refreshViews(editor);
@@ -363,13 +379,18 @@ class BluePainterController {
     }
     
     const nodeCount = Object.keys(ctx.state.nodesMap).length;
+    const relativePath = vscode.workspace.asRelativePath(ctx.editor.document.fileName);
+    
     this.learningLoop.log('code_to_canvas_roundtrip', {
       fileName: path.basename(ctx.editor.document.fileName),
+      relativePath,
       nodeCount,
       source: ctx.state.source
     });
+    
     vscode.window.showInformationMessage(
-      `BluePainter: synced ${nodeCount} node(s) from file.`
+      `✓ Synced from: ${relativePath} — ${nodeCount} node(s)`,
+      { modal: false }
     );
     this.refreshViews(editor);
   }

@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { generateTSX, parseTSX } from './utils/syncEngine';
+import { exportComponentTSX } from './utils/componentExport';
 import { applyBrokenDesignScenario, applyFixedDesignScenario, getFreshHeroNodes, getFreshPricingNodes, getFreshDashboardNodes } from './utils/demoScenarios';
 import { getFreshMarketingNodes } from './data/marketingPage';
 import { captureCanvasPageFrame } from './utils/canvasCapture';
 import { getWorkspaceFile } from './data/workspaceFiles';
 import { downloadValidationExport, downloadLearningLoopExport, downloadPilotPackExport, getFeedbackSummary } from './utils/validationExport';
-import { loadReceiptPolicy, saveReceiptPolicy } from './data/defaultReceiptPolicy';
+import { loadReceiptPolicy, saveReceiptPolicy, loadLearningConfig, saveLearningConfig } from './data/defaultReceiptPolicy';
 import { LearningLoop, getLearningSummary } from './utils/learningLoop';
 import { runPresenterSequence } from './utils/presenterMode';
 import { isFacilitatorMode } from './utils/facilitatorMode';
@@ -127,6 +128,7 @@ export default function App() {
   const [presenterRunning, setPresenterRunning] = useState(false);
   const [feedbackCount, setFeedbackCount] = useState(() => getFeedbackSummary().total);
   const [receiptPolicy, setReceiptPolicy] = useState(() => loadReceiptPolicy());
+  const [learningConfig, setLearningConfig] = useState(() => loadLearningConfig());
   const [dismissedRules, setDismissedRules] = useState(() => new Set());
   const [learningSummary, setLearningSummary] = useState(() => getLearningSummary());
   const presenterCancelRef = useRef(null);
@@ -457,9 +459,14 @@ export default function App() {
   };
 
   const handleUpdateNode = (nodeId, updatedFields) => {
-    // Conflict detection: check if code has changed since last sync (CONFLICT_MODEL.md)
+    // Conflict detection: check if code has changed since last sync (CONFLICT_MODEL.md v2)
     if (lastSyncedCode && code !== lastSyncedCode) {
-      setPendingCanvasUpdate({ nodeId, updatedFields });
+      setPendingCanvasUpdate({ 
+        nodeId, 
+        updatedFields,
+        lastSyncedCode,
+        currentCode: code 
+      });
       setConflictDialogOpen(true);
       return;
     }
@@ -490,7 +497,8 @@ export default function App() {
     if (resolution === 'overwrite_with_canvas' && pendingCanvasUpdate) {
       learningLoop.log('conflict_resolved', {
         resolution: 'overwrite_with_canvas',
-        fileName: activeFile
+        fileName: activeFile,
+        nodeId: pendingCanvasUpdate.nodeId
       });
       applyNodeUpdate(pendingCanvasUpdate.nodeId, pendingCanvasUpdate.updatedFields);
     } else if (resolution === 'discard_canvas') {
@@ -502,6 +510,18 @@ export default function App() {
       const updatedNodes = parseTSX(code, activeNodesMap);
       setActiveNodesMap(updatedNodes);
       setLastSyncedCode(code);
+    } else if (resolution === 'show_both') {
+      learningLoop.log('conflict_resolved', {
+        resolution: 'show_both_manual_fix',
+        fileName: activeFile,
+        nodeId: pendingCanvasUpdate?.nodeId
+      });
+      setToast({
+        message: 'Review the diff and manually resolve the conflict in the code editor.',
+        type: 'info',
+        duration: 5000
+      });
+      // Don't apply either change - user must manually resolve
     }
     // 'cancel' - do nothing
 
@@ -629,6 +649,35 @@ export default function App() {
     refreshLearningSummary();
   };
 
+  const handleLearningSuggestionApplied = (suggestion) => {
+    const updatedConfig = { ...learningConfig };
+
+    if (suggestion.type === 'downgrade_rule') {
+      if (!updatedConfig.hiddenRules.includes(suggestion.ruleId)) {
+        updatedConfig.hiddenRules = [...updatedConfig.hiddenRules, suggestion.ruleId];
+        learningLoop.log('learning_rule_hidden', {
+          ruleId: suggestion.ruleId,
+          reason: suggestion.reason
+        });
+      }
+    } else if (suggestion.type === 'prefer_quick_fix') {
+      updatedConfig.preferredFixes[suggestion.fixKey] = {
+        priority: 'high',
+        appliedCount: suggestion.fixCount,
+        ruleIds: suggestion.ruleIds,
+        timestamp: Date.now()
+      };
+      learningLoop.log('learning_fix_preferred', {
+        fixKey: suggestion.fixKey,
+        ruleIds: suggestion.ruleIds
+      });
+    }
+
+    setLearningConfig(updatedConfig);
+    saveLearningConfig(updatedConfig);
+    refreshLearningSummary();
+  };
+
   const handleDismissRule = (ruleId) => {
     setDismissedRules((prev) => new Set([...prev, ruleId]));
     learningLoop.logReceiptDismissed(ruleId, selectedNodeId, activeFile);
@@ -641,33 +690,34 @@ export default function App() {
   };
 
   const handleApplySuggestion = (suggestion) => {
+    const updatedConfig = { ...learningConfig };
+
     if (suggestion.type === 'downgrade_rule') {
-      setDismissedRules((prev) => new Set([...prev, suggestion.ruleId]));
-      learningLoop.log('learning_suggestion_applied', {
-        type: 'downgrade_rule',
-        ruleId: suggestion.ruleId,
-        weight: suggestion.weight
-      });
-      notify(`Rule "${suggestion.ruleId}" hidden from receipts`);
-    } else if (suggestion.type === 'prefer_quick_fix') {
-      try {
-        const prefs = JSON.parse(localStorage.getItem('bluepainter-quick-fix-prefs') || '{}');
-        prefs[suggestion.fixKey] = {
-          preferred: true,
-          appliedAt: Date.now(),
-          weight: suggestion.weight
-        };
-        localStorage.setItem('bluepainter-quick-fix-prefs', JSON.stringify(prefs));
-        learningLoop.log('learning_suggestion_applied', {
-          type: 'prefer_quick_fix',
-          fixKey: suggestion.fixKey,
-          weight: suggestion.weight
+      if (!updatedConfig.hiddenRules.includes(suggestion.ruleId)) {
+        updatedConfig.hiddenRules = [...updatedConfig.hiddenRules, suggestion.ruleId];
+        setDismissedRules((prev) => new Set([...prev, suggestion.ruleId]));
+        learningLoop.log('learning_rule_hidden', {
+          ruleId: suggestion.ruleId,
+          reason: suggestion.reason
         });
-        notify(`Quick-fix preference saved for "${suggestion.fixKey}"`);
-      } catch (err) {
-        notify(`Failed to save preference: ${err.message}`);
+        notify(`Rule "${suggestion.ruleId}" hidden from receipts`);
       }
+    } else if (suggestion.type === 'prefer_quick_fix') {
+      updatedConfig.preferredFixes[suggestion.fixKey] = {
+        priority: 'high',
+        appliedCount: suggestion.fixCount,
+        ruleIds: suggestion.ruleIds,
+        timestamp: Date.now()
+      };
+      learningLoop.log('learning_fix_preferred', {
+        fixKey: suggestion.fixKey,
+        ruleIds: suggestion.ruleIds
+      });
+      notify(`Quick-fix preference saved for "${suggestion.fixKey}"`);
     }
+    
+    setLearningConfig(updatedConfig);
+    saveLearningConfig(updatedConfig);
     refreshLearningSummary();
   };
 
@@ -733,6 +783,33 @@ export default function App() {
     }
   };
 
+  const handleExportComponent = () => {
+    const nodesMap = nodesByFile[activeFile];
+    const fileInfo = getWorkspaceFile(activeFile);
+    const rootId = fileInfo.rootId;
+    
+    if (!rootId || !nodesMap || !nodesMap[rootId]) {
+      notify('⚠️ No component loaded to export');
+      return;
+    }
+
+    const existingCode = generateTSX(rootId, nodesMap, null);
+    const result = exportComponentTSX(rootId, nodesMap, existingCode);
+    
+    if (result.success) {
+      notify(`✓ ${result.filename} exported — ${result.linesOfCode} lines, ready for src/`);
+      learningLoop.log('component_exported', {
+        filename: result.filename,
+        componentName: result.componentName,
+        linesOfCode: result.linesOfCode,
+        sourceFile: activeFile
+      });
+      refreshLearningSummary();
+    } else {
+      notify(`❌ Export failed: ${result.error}`);
+    }
+  };
+
   const handleRunPresenter = () => {
     if (presenterRunning) return;
 
@@ -780,6 +857,7 @@ export default function App() {
     onFixApplied: handleReceiptFix,
     learningSummary,
     learningLoop,
+    learningConfig,
     onApplySuggestion: handleApplySuggestion
   };
 
@@ -820,7 +898,11 @@ export default function App() {
           onLaunchDemo={handleLaunchApp}
           onShowFeedback={() => setFeedbackOpen(true)}
         />
-        <FeedbackModal isOpen={feedbackOpen} onClose={handleFeedbackClose} />
+        <FeedbackModal 
+          isOpen={feedbackOpen} 
+          onClose={handleFeedbackClose}
+          onExport={facilitator ? handleExportFeedback : null}
+        />
         <AppToast message={toast} onDismiss={() => setToast(null)} />
       </div>
     );
@@ -836,6 +918,7 @@ export default function App() {
         onShowAbout={() => setAboutOpen(true)}
         onOpenInterviewGuide={() => setValidationScriptOpen(true)}
         onOpenExportDeploy={() => setExportDeployOpen(true)}
+        onExportComponent={handleExportComponent}
         onOpenMarketingKit={handleOpenMarketingKit}
         onOpenFigmaImport={() => setFigmaImportOpen(true)}
         onOpenRealFile={() => setRealFileLoaderOpen(true)}
@@ -949,6 +1032,12 @@ export default function App() {
       <ConflictDialog
         isOpen={conflictDialogOpen}
         onResolve={handleConflictResolve}
+        conflictContext={{
+          lastSyncedCode: pendingCanvasUpdate?.lastSyncedCode,
+          currentCode: pendingCanvasUpdate?.currentCode,
+          pendingUpdate: pendingCanvasUpdate?.updatedFields,
+          nodeId: pendingCanvasUpdate?.nodeId
+        }}
       />
       
       <AppToast message={toast} onDismiss={() => setToast(null)} />

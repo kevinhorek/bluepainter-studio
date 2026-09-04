@@ -310,6 +310,7 @@ html {
   line-height: 1.4;
 }
 
+<<<<<<< HEAD
 .team-policy-intro {
   font-size: 0.7rem;
   color: #94a3b8;
@@ -371,6 +372,48 @@ html {
 .team-policy-export-btn:hover {
   background: rgba(16, 185, 129, 0.1);
   border-color: rgba(16, 185, 129, 0.4);
+=======
+.team-policy-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 12px 0;
+}
+
+.team-policy-section-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+
+.team-policy-grid input[type="color"] {
+  height: 32px;
+  padding: 2px;
+  cursor: pointer;
+>>>>>>> 63de0e5 (feat: add design tokens to policy config with receipt integration)
+}
+
+.team-policy-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 12px 0;
+}
+
+.team-policy-section-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+
+.team-policy-grid input[type="color"] {
+  height: 32px;
+  padding: 2px;
+  cursor: pointer;
 }
 
 .learning-loop-strip {
@@ -6713,4 +6756,36 @@ input:checked + .slider-round:before {
   color: var(--error);
   background: rgba(239, 68, 68, 0.05);
   border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+<<<<<<< HEAD
+/* Conflict Dialog v2 Styles */
+.conflict-v2 {
+  max-width: 650px;
+}
+
+.conflict-v2 .modal-body {
+  max-height: 500px;
+  overflow-y: auto;
+
+.conflict-v2 .modal-body {
+  max-height: 500px;
+  overflow-y: auto;
+>>>>>>> 28c6a6d (feat: implement conflict model v2 with three-way diff UI)
+=======
+/* Learning suggestions badge in receipts header */
+.receipts-suggestions-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 12px;
+  cursor: help;
+>>>>>>> 1097758 (Add suggestions count badge to Receipts panel header)
 }

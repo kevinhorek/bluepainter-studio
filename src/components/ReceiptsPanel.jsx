@@ -3,6 +3,20 @@ import TeamPolicyPanel from './TeamPolicyPanel';
 import LearningSuggestions from './LearningSuggestions';
 import { evaluateReceipts, applyReceiptFix } from '@bluepainter/shared/receiptPolicy';
 import { isFacilitatorMode } from '../utils/facilitatorMode';
+import { saveLearningConfig } from '../data/defaultReceiptPolicy';
+
+function formatTimestamp(timestamp) {
+  const now = Date.now();
+  const diff = now - timestamp;
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  return `${days}d ago`;
+}
 
 export default function ReceiptsPanel({
   component,
@@ -18,6 +32,7 @@ export default function ReceiptsPanel({
   onFixApplied,
   learningSummary,
   learningLoop,
+  learningConfig,
   onApplySuggestion
 }) {
   const [policyOpen, setPolicyOpen] = useState(false);
@@ -28,6 +43,8 @@ export default function ReceiptsPanel({
     ? evaluateReceipts(nodesMap, component, policy, dismissedRules)
     : { rules: [], scores: { total: 0, design: 0, buildability: 0, accessibility: 0 } };
   const { rules, scores } = receiptResult;
+
+  const suggestionsCount = learningLoop ? learningLoop.getSuggestions().length : 0;
 
   useEffect(() => {
     if (highlightRuleId && ruleRefs.current[highlightRuleId]) {
@@ -62,6 +79,11 @@ export default function ReceiptsPanel({
       <div className="receipts-header">
         <div className="receipts-title">
           <span>Receipts</span>
+          {suggestionsCount > 0 && (
+            <span className="receipts-suggestions-badge" title={`${suggestionsCount} learning ${suggestionsCount === 1 ? 'suggestion' : 'suggestions'} available`}>
+              💡 {suggestionsCount}
+            </span>
+          )}
         </div>
         <div className="receipts-header-actions">
           {onPolicyChange && (
@@ -77,13 +99,27 @@ export default function ReceiptsPanel({
 
       <div className="receipts-scroll">
         {policyOpen && onPolicyChange && (
-          <TeamPolicyPanel policy={policy} onPolicyChange={onPolicyChange} compact={!facilitator} />
+          <TeamPolicyPanel 
+            policy={policy} 
+            onPolicyChange={onPolicyChange} 
+            learningConfig={learningConfig}
+            onLearningConfigChange={(config) => {
+              setLearningConfig(config);
+              saveLearningConfig(config);
+            }}
+            compact={!facilitator} 
+          />
         )}
 
         {facilitator && learningSummary && learningSummary.totalEvents > 0 && (
           <div className="learning-loop-strip">
             <span>Learning loop</span>
             <span>{learningSummary.fixesApplied} fixes · {learningSummary.roundTripsCanvas + learningSummary.roundTripsCode} syncs</span>
+            {learningLoop && learningLoop.getLastActivityTimestamp() && (
+              <span className="learning-loop-timestamp" title="Last learning event">
+                {formatTimestamp(learningLoop.getLastActivityTimestamp())}
+              </span>
+            )}
           </div>
         )}
 
