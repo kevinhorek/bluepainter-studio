@@ -10,6 +10,7 @@ export default function WorkspaceHeader({
   onShowAbout,
   onOpenInterviewGuide,
   onOpenExportDeploy,
+  onExportComponent,
   onOpenMarketingKit,
   onOpenFigmaImport,
   onOpenRealFile,
@@ -159,6 +160,9 @@ export default function WorkspaceHeader({
               </button>
               <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { onOpenExportDeploy?.(); setMenuOpen(false); }}>
                 Export & deploy
+              </button>
+              <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { onExportComponent?.(); setMenuOpen(false); }}>
+                Export component TSX
               </button>
               <div className="workspace-dropdown-divider" />
               <button type="button" className="workspace-dropdown-item" onClick={() => { onGoHome?.(); setMenuOpen(false); }}>

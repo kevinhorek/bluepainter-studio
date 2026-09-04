@@ -32,6 +32,10 @@ function evaluateReceipts(nodesMap, component, policy, dismissedRules = new Set(
   if (btnColor === 'blue' || btnColor === 'primary') btnColor = '#2563eb';
   const contrastRatio = getContrastRatio(btnColor);
   const isContrastValid = contrastRatio >= (policy.minContrastRatio || 4.5);
+  
+  // Check if button uses brand primary color
+  const brandPrimary = policy.primaryColor || '#2563eb';
+  const usesBrandColor = btnColor.toLowerCase() === brandPrimary.toLowerCase();
 
   const buttonText = buttonNode?.text || '';
   const weakWords = policy.weakCtaWords || [];
@@ -76,6 +80,19 @@ function evaluateReceipts(nodesMap, component, policy, dismissedRules = new Set(
     fixKey: 'contrast',
     fixMeta: { nodeId: buttonNode?.id, color: policy.contrastFixColor }
   });
+  
+  // Add brand color consistency check
+  if (buttonNode && !usesBrandColor) {
+    addRule('brand-color', false, {
+      title: 'Button uses off-brand color',
+      desc: `Button color ${btnColor} doesn't match brand primary ${brandPrimary}.`,
+      tag: 'Design',
+      severity: 'info',
+      fixLabel: `Use brand primary`,
+      fixKey: 'brand-color',
+      fixMeta: { nodeId: buttonNode.id, color: brandPrimary }
+    });
+  }
 
   if (buttonNode) {
     addRule('copy', !isCopyWeak, {
@@ -126,7 +143,7 @@ function evaluateReceipts(nodesMap, component, policy, dismissedRules = new Set(
   rules.forEach((r) => {
     if (r.valid) return;
     if (r.id === 'spacing' || r.id === 'radius') designScore -= r.id === 'spacing' ? 20 : 10;
-    if (r.id === 'copy') designScore -= 15;
+    if (r.id === 'copy' || r.id === 'brand-color') designScore -= r.id === 'copy' ? 15 : 5;
     if (r.id === 'contrast') accessibilityScore -= 45;
     if (r.id === 'features') buildabilityScore -= 25;
   });
@@ -148,6 +165,8 @@ function applyReceiptFix(fixKey, fixMeta, nodesMap, onUpdateNode) {
   if (fixKey === 'spacing') {
     onUpdateNode(fixMeta.nodeId, { style: { ...node.style, padding: fixMeta.padding } });
   } else if (fixKey === 'contrast') {
+    onUpdateNode(fixMeta.nodeId, { style: { ...node.style, background: fixMeta.color } });
+  } else if (fixKey === 'brand-color') {
     onUpdateNode(fixMeta.nodeId, { style: { ...node.style, background: fixMeta.color } });
   } else if (fixKey === 'copy') {
     onUpdateNode(fixMeta.nodeId, { text: fixMeta.text });
