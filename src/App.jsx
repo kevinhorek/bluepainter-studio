@@ -426,7 +426,7 @@ export default function App() {
     
     window.addEventListener('keydown', handleFacilitatorShortcuts);
     return () => window.removeEventListener('keydown', handleFacilitatorShortcuts);
-  }, [facilitator, phase, sessionChecklistOpen, scorecardOpen, handleExportPilotPack, handleExportLearningLoop]);
+  }, [facilitator, phase, sessionChecklistOpen, scorecardOpen]);
 
   const handleGoHome = useCallback(() => {
     setMarketingKitOpen(false);
