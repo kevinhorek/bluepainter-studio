@@ -88,6 +88,10 @@ export default function App() {
   const [aiInitialType, setAiInitialType] = useState('full-marketing');
   const [figmaImportOpen, setFigmaImportOpen] = useState(false);
   const [fileViewports, setFileViewports] = useState({});
+  const [activeViewportMode, setActiveViewportMode] = useState(() => {
+    const saved = localStorage.getItem('bluepainter-viewport-mode');
+    return saved || 'desktop';
+  });
   const [welcomeOpen, setWelcomeOpen] = useState(() => !hasSeenWelcome());
   const [toast, setToast] = useState(null);
   const [activeFile, setActiveFile] = useState('dashboard');
@@ -142,6 +146,11 @@ export default function App() {
   const handleSetActiveFile = useCallback((file) => {
     setActiveFile(file);
     setSelectedNodeId(getWorkspaceFile(file).defaultSelection);
+  }, []);
+
+  const handleViewportChange = useCallback((viewportId) => {
+    setActiveViewportMode(viewportId);
+    localStorage.setItem('bluepainter-viewport-mode', viewportId);
   }, []);
 
   const notify = useCallback((message) => {
@@ -751,7 +760,9 @@ export default function App() {
       hero: nodesByFile.hero
     },
     onOpenComponentFile: handleSetActiveFile,
-    receiptsConfig
+    receiptsConfig,
+    activeViewportMode,
+    onViewportChange: handleViewportChange
   };
 
   const workspacePhase = facilitator ? phase : 'phase1';

@@ -3,6 +3,7 @@ import { getWorkspaceFile } from '../data/workspaceFiles';
 import { isPlacableTool, getCanvasTool } from '../data/canvasTools';
 import { isLeafNode } from '../utils/nodeFactory';
 import CanvasToolbar from './CanvasToolbar';
+import ViewportSwitcher from './ViewportSwitcher';
 
 export default function CanvasView({
   rootNodeId,
@@ -20,7 +21,9 @@ export default function CanvasView({
   onFocus,
   pageViewport = null,
   componentLibrary = null,
-  onOpenComponentFile = null
+  onOpenComponentFile = null,
+  activeViewportMode = null,
+  onViewportChange = null
 }) {
   const canvasRef = useRef(null);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
@@ -621,6 +624,13 @@ export default function CanvasView({
             </>
           )}
         </div>
+      )}
+
+      {!hideToolbar && activeViewportMode && onViewportChange && (
+        <ViewportSwitcher
+          activeViewport={activeViewportMode}
+          onViewportChange={onViewportChange}
+        />
       )}
 
       {!hideToolbar && (
