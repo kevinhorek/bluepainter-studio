@@ -119,7 +119,12 @@
           <span class="bp-receipt-tag">${escapeHtml(rule.tag || '')}</span>
         </div>
         <p class="bp-receipt-desc">${escapeHtml(rule.desc || '')}</p>
-        ${!rule.valid && rule.fixLabel ? `<button class="bp-btn small" data-fix-key="${escapeHtml(rule.fixKey)}" data-fix-meta='${escapeAttr(JSON.stringify(rule.fixMeta || {}))}'>${escapeHtml(rule.fixLabel)}</button>` : ''}
+        ${!rule.valid ? `
+          <div class="bp-receipt-actions">
+            ${rule.fixLabel ? `<button class="bp-btn small" data-fix-key="${escapeHtml(rule.fixKey)}" data-fix-meta='${escapeAttr(JSON.stringify(rule.fixMeta || {}))}'>${escapeHtml(rule.fixLabel)}</button>` : ''}
+            <button class="bp-btn small secondary" data-dismiss-rule="${escapeHtml(rule.id)}" data-node-id="${escapeHtml(state.selectedNodeId || '')}">Dismiss</button>
+          </div>
+        ` : ''}
       </div>
     `).join('');
 
@@ -129,6 +134,16 @@
           type: 'applyFix',
           fixKey: btn.dataset.fixKey,
           fixMeta: JSON.parse(btn.dataset.fixMeta || '{}')
+        });
+      });
+    });
+
+    els.receipts.querySelectorAll('[data-dismiss-rule]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        vscode.postMessage({
+          type: 'dismissReceipt',
+          ruleId: btn.dataset.dismissRule,
+          nodeId: btn.dataset.nodeId
         });
       });
     });
