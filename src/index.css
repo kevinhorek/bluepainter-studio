@@ -5009,6 +5009,33 @@ input:checked + .slider-round:before {
   margin-bottom: 8px;
   padding-bottom: 8px;
   border-bottom: 1px solid #e5e7eb;
+  gap: 12px;
+}
+
+.validation-session-engagement {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.validation-session-engagement-high {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.validation-session-engagement-medium {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.validation-session-engagement-low {
+  background: rgba(156, 163, 175, 0.1);
+  color: #6b7280;
+  border: 1px solid rgba(156, 163, 175, 0.3);
 }
 
 .validation-session-number {
