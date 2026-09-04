@@ -185,8 +185,7 @@ export default function TeamPolicyPanel({ policy, onPolicyChange, learningConfig
                 </div>
               );
             })}
-      {!compact && (
-        <>
+          </div>
           <div className="team-policy-divider" />
           <div className="team-policy-section-label">Design Tokens</div>
           <div className="team-policy-grid">
