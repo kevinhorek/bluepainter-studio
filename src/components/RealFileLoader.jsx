@@ -167,9 +167,9 @@ export default function RealFileLoader({ isOpen, onClose, onFileLoaded }) {
               </div>
             ) : warnings.length > 0 ? (
               <div className="file-drop-message warning">
-                <span className="file-drop-icon">⚠️</span>
+                <span className="file-drop-icon">✅</span>
                 <div className="warnings-list">
-                  <p><strong>File loaded with warnings:</strong></p>
+                  <p><strong>File loaded successfully with limitations:</strong></p>
                   {warnings.map((warning, idx) => (
                     <div key={idx} className="warning-item">
                       <p>{warning.message}</p>
@@ -177,13 +177,14 @@ export default function RealFileLoader({ isOpen, onClose, onFileLoaded }) {
                       {warning.example && <pre className="warning-example">{warning.example}</pre>}
                     </div>
                   ))}
+                  <p className="warning-note">Your component is loaded and working — these are just scope notes.</p>
                 </div>
                 <button
                   type="button"
                   className="btn-primary"
                   onClick={onClose}
                 >
-                  Continue Anyway
+                  Got it
                 </button>
               </div>
             ) : (
