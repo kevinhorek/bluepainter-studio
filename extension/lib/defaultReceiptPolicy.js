@@ -12,11 +12,6 @@ const DEFAULT_RECEIPT_POLICY = {
   contrastFixColor: '#1e40af'
 };
 
-const DEFAULT_LEARNING_OVERRIDES = {
-  hiddenRules: [],
-  preferredFixes: {}
-};
-
 function loadWorkspaceConfig() {
   const workspaceFolders = vscode.workspace.workspaceFolders;
   if (!workspaceFolders || workspaceFolders.length === 0) {
@@ -42,7 +37,6 @@ function loadWorkspaceConfig() {
 function loadReceiptPolicyFromConfig(vscodeConfig) {
   const workspaceConfig = loadWorkspaceConfig();
   const workspacePolicy = workspaceConfig?.receiptPolicy || null;
-  
   const settingsPolicy = vscodeConfig ? {
     spacingGrid: vscodeConfig.get('spacingGrid', DEFAULT_RECEIPT_POLICY.spacingGrid),
     radiusGrid: vscodeConfig.get('radiusGrid', DEFAULT_RECEIPT_POLICY.radiusGrid),
@@ -60,24 +54,26 @@ function loadReceiptPolicyFromConfig(vscodeConfig) {
   return settingsPolicy;
 }
 
-function loadLearningOverrides() {
+const DEFAULT_LEARNING_LOOP_OPTIONS = {
+  minEvents: 3,
+  dismissThreshold: 0.7
+};
+
+function loadLearningLoopOverrides() {
   const workspaceConfig = loadWorkspaceConfig();
   const overrides = workspaceConfig?.learningLoopOverrides || null;
   
   if (overrides) {
-    return {
-      ...DEFAULT_LEARNING_OVERRIDES,
-      ...overrides
-    };
+    return { ...DEFAULT_LEARNING_LOOP_OPTIONS, ...overrides };
   }
   
-  return { ...DEFAULT_LEARNING_OVERRIDES };
+  return DEFAULT_LEARNING_LOOP_OPTIONS;
 }
 
 module.exports = { 
   DEFAULT_RECEIPT_POLICY, 
-  DEFAULT_LEARNING_OVERRIDES,
+  DEFAULT_LEARNING_LOOP_OPTIONS,
   loadReceiptPolicyFromConfig, 
   loadWorkspaceConfig,
-  loadLearningOverrides
+  loadLearningLoopOverrides
 };
