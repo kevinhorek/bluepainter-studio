@@ -101,14 +101,20 @@ export default function WorkspaceHeader({
           ⏮️ Restore
         </button>
         {realFileLoaded && (
-          <button
-            type="button"
-            className="workspace-download-btn"
-            onClick={onDownloadRealFile}
-            title="Download edited file"
-          >
-            💾 Download
-          </button>
+          <>
+            <div className="workspace-file-indicator" title="Currently loaded file">
+              <span className="workspace-file-icon">📄</span>
+              <span className="workspace-file-name">{active?.label || 'Untitled'}</span>
+            </div>
+            <button
+              type="button"
+              className="workspace-download-btn"
+              onClick={onDownloadRealFile}
+              title={`Download ${active?.label || 'file'}`}
+            >
+              💾 Download
+            </button>
+          </>
         )}
         <button
           type="button"

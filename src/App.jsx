@@ -297,8 +297,12 @@ export default function App() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    learningLoop.log('real_file_downloaded', { fileName: realFileData.fileName });
-    notify(`Downloaded ${realFileData.fileName}`);
+    const linesChanged = currentCode.split('\n').length;
+    learningLoop.log('real_file_downloaded', { 
+      fileName: realFileData.fileName,
+      linesOfCode: linesChanged
+    });
+    notify(`✓ ${realFileData.fileName} saved (${linesChanged} lines)`);
   }, [realFileData, activeFile, code, learningLoop, notify]);
 
   const handleApplyAI = useCallback(({ type, updates, message, source }) => {
