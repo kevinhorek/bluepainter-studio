@@ -4,7 +4,10 @@
  * Tests button lists, nested containers, complex style updates, and edge cases
  */
 
-import { parseTSXWithAST, patchTSXWithAST } from '../src/utils/astSyncEngine.js';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+const { parseTSXWithAST, patchTSXWithAST } = require('@bluepainter/shared/astSyncEngine');
 
 console.log('=== Advanced AST Sync Tests ===\n');
 

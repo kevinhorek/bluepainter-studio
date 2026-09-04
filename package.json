@@ -4,6 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "main": "desktop/main.cjs",
+  "workspaces": [
+    "packages/*",
+    "extension"
+  ],
   "scripts": {
     "dev": "vite",
     "dev:full": "vercel dev",

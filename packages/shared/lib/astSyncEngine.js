@@ -1,15 +1,12 @@
-import recast from 'recast';
-import { parse } from '@babel/parser';
-import traverseModule from '@babel/traverse';
-import * as t from '@babel/types';
+const recast = require('recast');
+const { parse } = require('@babel/parser');
+const traverseModule = require('@babel/traverse');
+const t = require('@babel/types');
 
 const traverse = traverseModule.default || traverseModule;
 
 const babelParser = {
   parse(source) {
-    // Recast needs the token stream and node ranges to preserve original
-    // formatting; without tokens/ranges it falls back to its own (non-JSX)
-    // tokenizer and throws "Invalid regular expression: missing /" on JSX.
     return parse(source, {
       sourceType: 'module',
       plugins: ['jsx', 'typescript'],
@@ -94,8 +91,7 @@ function setJsxText(jsxElement, text) {
   jsxElement.children = [t.jsxText(String(text ?? ''))];
 }
 
-/** Parse TSX → nodes map (AST). Returns null on failure. */
-export function parseTSXWithAST(code, nodesMap) {
+function parseTSXWithAST(code, nodesMap) {
   if (!code?.trim() || !nodesMap) return null;
 
   const updated = JSON.parse(JSON.stringify(nodesMap));
@@ -136,13 +132,11 @@ export function parseTSXWithAST(code, nodesMap) {
     return updated;
   } catch (err) {
     console.warn('[astSync] parse failed:', err.message);
-    console.warn('[astSync] Hint: Ensure valid JSX syntax and stable string-literal id attributes');
     return null;
   }
 }
 
-/** Patch existing TSX from nodes while preserving formatting/comments. */
-export function patchTSXWithAST(code, nodesMap) {
+function patchTSXWithAST(code, nodesMap) {
   if (!code?.trim() || !nodesMap) return null;
 
   try {
@@ -174,11 +168,17 @@ export function patchTSXWithAST(code, nodesMap) {
     return recast.print(ast).code;
   } catch (err) {
     console.warn('[astSync] patch failed:', err.message);
-    console.warn('[astSync] Hint: Canvas edits only modify inline style={{}}. Tailwind/CSS Module classes are preserved but not editable on canvas.');
     return null;
   }
 }
 
-export function astSyncAvailable() {
+function astSyncAvailable() {
   return true;
 }
+
+module.exports = {
+  parseTSXWithAST,
+  patchTSXWithAST,
+  getJsxId,
+  astSyncAvailable
+};

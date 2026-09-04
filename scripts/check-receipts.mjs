@@ -55,9 +55,10 @@ function getDefaultPolicy() {
   };
 }
 
-async function loadReceiptEngine() {
-  const receiptPolicyPath = join(repoRoot, 'src/utils/receiptPolicy.js');
-  const receiptModule = await import(`file://${receiptPolicyPath}`);
+async function loadReceiptPolicy() {
+  const { createRequire } = await import('module');
+  const require = createRequire(import.meta.url);
+  const receiptModule = require('@bluepainter/shared/receiptPolicy');
   return receiptModule;
 }
 

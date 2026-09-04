@@ -6,7 +6,7 @@ import LayersPanel from '../LayersPanel';
 import InspectorPanel from '../InspectorPanel';
 import DetailDrawer from '../DetailDrawer';
 import ReceiptMessageBar from '../ReceiptMessageBar';
-import { evaluateReceipts } from '../../utils/receiptPolicy';
+import { evaluateReceipts } from '@bluepainter/shared/receiptPolicy';
 
 import ComponentLibrary from '../ComponentLibrary';
 
