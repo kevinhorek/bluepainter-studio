@@ -3213,6 +3213,17 @@ input:checked + .slider-round:before {
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
 }
 
+.feedback-export-note {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #94a3b8;
+}
+
 .feedback-modal h2 {
   font-family: var(--font-title);
   font-size: 1.35rem;
