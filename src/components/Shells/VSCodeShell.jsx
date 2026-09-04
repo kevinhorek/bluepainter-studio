@@ -7,6 +7,7 @@ import InspectorPanel from '../InspectorPanel';
 import DetailDrawer from '../DetailDrawer';
 import ReceiptMessageBar from '../ReceiptMessageBar';
 import { evaluateReceipts } from '@bluepainter/shared/receiptPolicy';
+import ASTScopeBanner from '../AST_ScopeBanner';
 
 import ComponentLibrary from '../ComponentLibrary';
 
@@ -73,6 +74,11 @@ export default function VSCodeShell({
 
   return (
     <div className="studio-shell">
+      {fileConfig.isRealFile && (
+        <div style={{ padding: '16px 16px 0' }}>
+          <ASTScopeBanner nodesMap={nodesMap} />
+        </div>
+      )}
       <div className={`studio-main studio-layout-${paneLayout}`}>
         <div className={`studio-canvas-pane ${designCollapsed ? 'is-collapsed' : ''}`}>
           {designCollapsed ? (

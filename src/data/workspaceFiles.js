@@ -51,7 +51,8 @@ export const WORKSPACE_FILES = {
     componentName: 'RealFile',
     isPage: false,
     defaultSelection: 'real-file-root',
-    isRealFile: true
+    isRealFile: true,
+    viewport: { width: 1280, height: 800 }
   }
 };
 
