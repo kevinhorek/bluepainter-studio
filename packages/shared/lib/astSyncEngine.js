@@ -191,9 +191,6 @@ function astSyncAvailable() {
   return true;
 }
 
-<<<<<<< HEAD
-export {
-=======
 function detectStyleSources(code) {
   if (!code?.trim()) return { hasInlineStyles: false, hasClassNames: false, hasTailwind: false, hasCssModules: false };
 
@@ -244,8 +241,7 @@ function detectStyleSources(code) {
   }
 }
 
-module.exports = {
->>>>>>> c43ed02 (feat(ast): expand AST support for real codebase patterns)
+export {
   parseTSXWithAST,
   patchTSXWithAST,
   getJsxId,

@@ -34,11 +34,12 @@ All inline styles are synced via the `style={{ ... }}` JSX attribute. Supported 
 - `border`, `borderWidth`, `borderColor`, `borderStyle`, `borderRadius`
 - `boxShadow`
 - `opacity`
+- `objectFit` (for image elements), `overflow`
 
 ### Typography
-- `fontSize`, `fontWeight`, `fontFamily`
+- `fontSize`, `fontWeight`, `fontFamily`, `fontStyle`
 - `lineHeight`, `letterSpacing`
-- `textAlign`, `textDecoration`
+- `textAlign`, `textDecoration`, `textTransform`
 
 ### Position
 - `position`, `top`, `right`, `bottom`, `left`
