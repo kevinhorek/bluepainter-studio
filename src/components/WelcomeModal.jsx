@@ -6,14 +6,16 @@ export default function WelcomeModal({ onStart, onShowReceipts }) {
           <div className="logo-icon"><div className="logo-dot" /></div>
           <span>BluePainter</span>
         </div>
-        <h1>Click around — it&apos;s a live prototype</h1>
+        <h1>Welcome to BluePainter Studio</h1>
         <p className="welcome-lead">
-          Edit the design or the code. Both stay in sync. Designer&apos;s Receipts catch issues before you ship.
+          This is a fully interactive prototype. Edit on canvas or in code — both stay in sync. 
+          Designer&apos;s Receipts catch contrast, spacing, and UX issues before you ship.
         </p>
         <ol className="welcome-steps">
-          <li><strong>Click</strong> any element on the canvas</li>
-          <li><strong>Switch files</strong> — try PricingCard or DashboardPage</li>
-          <li><strong>Open the sidebar</strong> — inspect, receipts, or drag components from Library</li>
+          <li><strong>Click any element</strong> on the canvas to select and edit it</li>
+          <li><strong>Switch files</strong> with the top bar — try PricingCard or DashboardPage</li>
+          <li><strong>Open the sidebar</strong> (right rail icons) — inspect, receipts, or drag components from Library</li>
+          <li><strong>Edit code directly</strong> — changes sync back to the canvas instantly</li>
         </ol>
         <div className="welcome-actions">
           <button type="button" className="welcome-primary" onClick={onStart}>
@@ -24,7 +26,8 @@ export default function WelcomeModal({ onStart, onShowReceipts }) {
           </button>
         </div>
         <p className="welcome-footnote">
-          When you&apos;re done, use <strong>··· → Share feedback</strong> — it helps us decide whether to build this.
+          <strong>Your feedback matters.</strong> After exploring, click <strong>··· → Share feedback</strong> in the top bar.
+          It helps us decide whether to build this for real.
         </p>
       </div>
     </div>
