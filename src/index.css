@@ -310,6 +310,7 @@ html {
   line-height: 1.4;
 }
 
+<<<<<<< HEAD
 .team-policy-intro {
   font-size: 0.7rem;
   color: #94a3b8;
@@ -371,6 +372,27 @@ html {
 .team-policy-export-btn:hover {
   background: rgba(16, 185, 129, 0.1);
   border-color: rgba(16, 185, 129, 0.4);
+=======
+.team-policy-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 12px 0;
+}
+
+.team-policy-section-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+
+.team-policy-grid input[type="color"] {
+  height: 32px;
+  padding: 2px;
+  cursor: pointer;
+>>>>>>> 63de0e5 (feat: add design tokens to policy config with receipt integration)
 }
 
 .team-policy-divider {
