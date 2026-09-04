@@ -145,6 +145,69 @@ export class LearningLoop {
       events
     };
   }
+
+  /**
+   * Generate weighted suggestions from logged events (SPEC §3)
+   * Rules dismissed often → suggest downgrade severity or hide
+   * Rules fixed often → suggest quick-fix preference
+   * Deterministic, local, no LLM required
+   */
+  getSuggestions(options = {}) {
+    const { minEvents = 3, dismissThreshold = 0.7 } = options;
+    const events = this._readAll();
+    const suggestions = [];
+
+    if (events.length < minEvents) {
+      return suggestions;
+    }
+
+    const stats = this.getStatistics();
+
+    // Analyze dismissed rules
+    Object.entries(stats.mostDismissedRules).forEach(([ruleId, dismissCount]) => {
+      const ruleEvents = events.filter(
+        (e) => (e.type === 'receipt_dismissed' || e.type === 'receipt_fix_applied') && 
+               (e.data.ruleId === ruleId || e.data.ruleId === ruleId)
+      );
+      const fixCount = ruleEvents.filter((e) => e.type === 'receipt_fix_applied').length;
+      const totalInteractions = dismissCount + fixCount;
+
+      if (totalInteractions >= minEvents && dismissCount / totalInteractions >= dismissThreshold) {
+        suggestions.push({
+          type: 'downgrade_rule',
+          ruleId,
+          reason: `Dismissed ${dismissCount}/${totalInteractions} times`,
+          weight: dismissCount / totalInteractions,
+          action: 'Consider downgrading severity or hiding this rule',
+          dismissCount,
+          fixCount,
+          timestamp: Date.now()
+        });
+      }
+    });
+
+    // Analyze frequently fixed rules
+    Object.entries(stats.mostAppliedFixes).forEach(([fixKey, fixCount]) => {
+      const fixEvents = events.filter((e) => e.type === 'receipt_fix_applied' && e.data.fixKey === fixKey);
+      
+      if (fixCount >= minEvents) {
+        const ruleIds = [...new Set(fixEvents.map((e) => e.data.ruleId).filter(Boolean))];
+        suggestions.push({
+          type: 'prefer_quick_fix',
+          fixKey,
+          ruleIds,
+          reason: `Applied ${fixCount} times`,
+          weight: Math.min(fixCount / 10, 1.0),
+          action: 'Consider making this fix more prominent or auto-applicable',
+          fixCount,
+          timestamp: Date.now()
+        });
+      }
+    });
+
+    // Sort by weight (highest first)
+    return suggestions.sort((a, b) => b.weight - a.weight);
+  }
 }
 
 // Legacy function-based API for backward compatibility

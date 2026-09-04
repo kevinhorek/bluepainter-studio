@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import TeamPolicyPanel from './TeamPolicyPanel';
+import LearningSuggestions from './LearningSuggestions';
 import { evaluateReceipts, applyReceiptFix } from '../utils/receiptPolicy';
 import { isFacilitatorMode } from '../utils/facilitatorMode';
 
@@ -15,7 +16,8 @@ export default function ReceiptsPanel({
   dismissedRules = new Set(),
   onDismissRule,
   onFixApplied,
-  learningSummary
+  learningSummary,
+  learningLoop
 }) {
   const [policyOpen, setPolicyOpen] = useState(false);
   const facilitator = isFacilitatorMode();
@@ -82,6 +84,10 @@ export default function ReceiptsPanel({
             <span>Learning loop</span>
             <span>{learningSummary.fixesApplied} fixes · {learningSummary.roundTripsCanvas + learningSummary.roundTripsCode} syncs</span>
           </div>
+        )}
+
+        {learningLoop && (
+          <LearningSuggestions learningLoop={learningLoop} lightMode={lightMode} />
         )}
 
         <div className="score-metrics">
