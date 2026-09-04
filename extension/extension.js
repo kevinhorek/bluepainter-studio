@@ -55,7 +55,8 @@ function getWebviewHtml(webview, extensionUri, mode = 'sidebar') {
         <span class="bp-tip-icon">👋</span>
         <div class="bp-tip-content">
           <strong>Welcome to BluePainter!</strong>
-          <p>Use <code>BluePainter: Pick Component</code> (Cmd/Ctrl+Shift+P) to open a TSX/JSX file. You'll see a live canvas, receipts for design policy checks, and one-click fixes. See EXTENSION_PILOT.md for your first session guide.</p>
+          <p><strong>Quick Start:</strong> Open Command Palette (⌘/Ctrl+Shift+P) → type "BluePainter: Pick Component" → select a .tsx/.jsx file from your workspace.</p>
+          <p style="margin-top: 8px; font-size: 0.8rem; opacity: 0.85;"><strong>Then:</strong> Edit on canvas → "Write to file" button saves directly to your repo with AST preservation. See receipts for live design policy checks.</p>
         </div>
         <button class="bp-tip-dismiss" id="bp-tip-dismiss" title="Dismiss">×</button>
       </div>
@@ -334,12 +335,23 @@ class BluePainterController {
     // Log canvas→code round-trip to learning loop
     if (!options.quiet) {
       const nodeCount = Object.keys(ctx.state.nodesMap).length;
+      const fileName = path.basename(ctx.editor.document.fileName);
+      const filePath = vscode.workspace.asRelativePath(ctx.editor.document.fileName);
+      
       this.learningLoop.log('canvas_to_code_roundtrip', {
-        fileName: path.basename(ctx.editor.document.fileName),
+        fileName,
         nodeCount,
         hadConflict: hasConflict
       });
-      vscode.window.showInformationMessage(`BluePainter: wrote ${nodeCount} node(s) to file.`);
+      
+      vscode.window.showInformationMessage(
+        `✓ Canvas → File: Wrote ${nodeCount} ${nodeCount === 1 ? 'component' : 'components'} to \`${filePath}\``,
+        'View File'
+      ).then((choice) => {
+        if (choice === 'View File') {
+          vscode.window.showTextDocument(ctx.editor.document, { viewColumn: vscode.ViewColumn.One, preview: false });
+        }
+      });
     }
     
     this.refreshViews(editor);
