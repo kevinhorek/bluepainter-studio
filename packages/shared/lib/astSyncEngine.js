@@ -146,7 +146,9 @@ function parseTSXWithAST(code, nodesMap) {
 
     return updated;
   } catch (err) {
-    console.warn('[astSync] parse failed:', err.message);
+    console.error('[astSync] parse failed:', err.message);
+    console.error('[astSync] Hint: Check for syntax errors, unclosed tags, or malformed JSX');
+    console.error('[astSync] Common issues: missing closing tags, invalid attribute syntax, computed id attributes');
     return null;
   }
 }
@@ -182,7 +184,9 @@ function patchTSXWithAST(code, nodesMap) {
 
     return recast.print(ast).code;
   } catch (err) {
-    console.warn('[astSync] patch failed:', err.message);
+    console.error('[astSync] patch failed:', err.message);
+    console.error('[astSync] Hint: Ensure all elements have stable string literal id attributes');
+    console.error('[astSync] Failed elements may have dynamic ids like id={`node-${index}`}');
     return null;
   }
 }
@@ -191,9 +195,6 @@ function astSyncAvailable() {
   return true;
 }
 
-<<<<<<< HEAD
-export {
-=======
 function detectStyleSources(code) {
   if (!code?.trim()) return { hasInlineStyles: false, hasClassNames: false, hasTailwind: false, hasCssModules: false };
 
@@ -244,8 +245,7 @@ function detectStyleSources(code) {
   }
 }
 
-module.exports = {
->>>>>>> c43ed02 (feat(ast): expand AST support for real codebase patterns)
+export {
   parseTSXWithAST,
   patchTSXWithAST,
   getJsxId,
