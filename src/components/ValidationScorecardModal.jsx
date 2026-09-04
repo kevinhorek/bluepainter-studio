@@ -137,7 +137,6 @@ export default function ValidationScorecardModal({ isOpen, onClose }) {
               <span className="validation-scorecard-stat-value">{scorecard.learning.roundTripsCanvas + scorecard.learning.roundTripsCode}</span>
               <span className="validation-scorecard-stat-label">Round-trips</span>
             </div>
-<<<<<<< HEAD
             {conflictStats && conflictStats.total > 0 && (
               <div className="validation-scorecard-stat">
                 <span className="validation-scorecard-stat-value">{conflictStats.total}</span>
@@ -150,12 +149,10 @@ export default function ValidationScorecardModal({ isOpen, onClose }) {
                 <span className="validation-scorecard-stat-label">Receipt compliance</span>
               </div>
             )}
-=======
             <div className="validation-scorecard-stat" title={`${scorecard.receipts.fixesApplied} fixes, ${scorecard.receipts.rulesDismissed} dismissals`}>
               <span className="validation-scorecard-stat-value">{Math.round(scorecard.receipts.fixDismissRatio * 100)}%</span>
               <span className="validation-scorecard-stat-label">Fix ratio</span>
             </div>
->>>>>>> de7fbaa (Add fix/dismiss ratio metric to validation scorecard)
           </div>
 
           {learningSuggestions.length > 0 && (
