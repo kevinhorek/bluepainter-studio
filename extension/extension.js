@@ -55,8 +55,12 @@ function getWebviewHtml(webview, extensionUri, mode = 'sidebar') {
         <span class="bp-tip-icon">👋</span>
         <div class="bp-tip-content">
           <strong>Welcome to BluePainter!</strong>
-          <p><strong>Quick Start:</strong> Open Command Palette (⌘/Ctrl+Shift+P) → type "BluePainter: Pick Component" → select a .tsx/.jsx file from your workspace.</p>
-          <p style="margin-top: 8px; font-size: 0.8rem; opacity: 0.85;"><strong>Then:</strong> Edit on canvas → "Write to file" button saves directly to your repo with AST preservation. See receipts for live design policy checks.</p>
+          <p><strong>Quick Start:</strong> Open Command Palette (⌘/Ctrl+Shift+P) → type <strong>"BluePainter: Pick Component"</strong> → select a .tsx/.jsx file from your workspace.</p>
+          <p style="margin-top: 8px; font-size: 0.85rem;">Once loaded, you can edit components visually on the canvas, apply Designer's Receipts fixes, and sync changes back to your code with full AST preservation.</p>
+          <div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="bp-btn small secondary" id="bp-open-pilot-guide">📖 View Setup Guide</button>
+            <button class="bp-btn small secondary" id="bp-open-config-from-tip">⚙️ Configure</button>
+          </div>
         </div>
         <button class="bp-tip-dismiss" id="bp-tip-dismiss" title="Dismiss">×</button>
       </div>
@@ -79,7 +83,17 @@ function getWebviewHtml(webview, extensionUri, mode = 'sidebar') {
       <section class="bp-pane active" data-pane="canvas">
         <div class="bp-canvas-wrap">
           <div class="bp-canvas" id="bp-canvas"></div>
-          <p class="bp-empty" id="bp-canvas-empty">Open a TSX file with <code>id="…"</code> attributes to preview and edit.</p>
+          <div class="bp-empty" id="bp-canvas-empty">
+            <div style="text-align: center; padding: 24px;">
+              <div style="font-size: 2.5rem; margin-bottom: 12px;">🎨</div>
+              <p style="font-size: 1.1rem; font-weight: 600; margin-bottom: 8px;">No Component Loaded</p>
+              <p style="opacity: 0.75; margin-bottom: 16px;">Pick a React component to start visual editing</p>
+              <button class="bp-btn" id="bp-pick-component-btn">Pick Component</button>
+              <p style="margin-top: 16px; font-size: 0.85rem; opacity: 0.6;">
+                Or: <a href="#" id="bp-empty-pilot-link" style="color: inherit; text-decoration: underline;">View first-session guide</a>
+              </p>
+            </div>
+          </div>
         </div>
       </section>
       <section class="bp-pane" data-pane="inspector">
@@ -136,6 +150,32 @@ class BluePainterController {
 
   getDemoUrl() {
     return vscode.workspace.getConfiguration('bluepainter').get('demoUrl', 'https://bluepainter-studio.vercel.app/#/app');
+  }
+
+  async openPilotGuide() {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders || !workspaceFolders.length) {
+      vscode.window.showWarningMessage('BluePainter: no workspace folder open.');
+      return;
+    }
+
+    const guidePath = path.join(workspaceFolders[0].uri.fsPath, 'EXTENSION_PILOT.md');
+    const guideUri = vscode.Uri.file(guidePath);
+
+    try {
+      await vscode.workspace.fs.stat(guideUri);
+      const doc = await vscode.workspace.openTextDocument(guideUri);
+      await vscode.window.showTextDocument(doc, { preview: false });
+    } catch {
+      vscode.window.showInformationMessage(
+        'EXTENSION_PILOT.md not found. Opening online documentation instead.',
+        'Open Docs'
+      ).then((choice) => {
+        if (choice === 'Open Docs') {
+          vscode.env.openExternal(vscode.Uri.parse('https://bluepainter-studio.vercel.app/#/docs'));
+        }
+      });
+    }
   }
 
   isSupportedDocument(doc) {
@@ -513,6 +553,12 @@ class BluePainterController {
     switch (msg.type) {
       case 'ready':
         this.refreshViews(editor);
+        break;
+      case 'pickComponent':
+        this.pickAndOpenComponent();
+        break;
+      case 'openPilotGuide':
+        this.openPilotGuide();
         break;
       case 'selectNode':
         if (editor) {
