@@ -175,6 +175,33 @@ export default function App() {
     setTimeout(() => setToast(null), 3500);
   }, []);
 
+
+  const handleExportLearningLoop = useCallback(() => {
+    const result = downloadLearningLoopExport(learningLoop);
+    if (result.success) {
+      if (result.isEmpty) {
+        notify('⚠️ Learning loop exported — no events yet. Interact with receipts to log events.');
+      } else {
+        notify(`✓ Learning loop exported — ${result.eventCount} event(s)`);
+      }
+    } else {
+      notify(`❌ Export failed: ${result.error}`);
+    }
+  }, [learningLoop, notify]);
+
+  const handleExportPilotPack = useCallback(() => {
+    const result = downloadPilotPackExport();
+    if (result.success) {
+      if (result.isEmpty) {
+        notify('⚠️ Pilot pack created — no session data yet. Run validation sessions first.');
+      } else {
+        notify(`✓ Pilot pack exported — ${result.sessionCount} session(s), ${result.recommendation} recommendation`);
+      }
+    } else {
+      notify(`❌ Export failed: ${result.error}`);
+    }
+  }, [notify]);
+
   const handleUpdateNodeByFile = useCallback((fileId, nodeId, updatedFields) => {
     setNodesByFile((prev) => {
       const map = prev[fileId];
@@ -821,31 +848,6 @@ export default function App() {
     refreshLearningSummary();
   };
 
-  const handleExportLearningLoop = () => {
-    const result = downloadLearningLoopExport(learningLoop);
-    if (result.success) {
-      if (result.isEmpty) {
-        notify('⚠️ Learning loop exported — no events yet. Interact with receipts to log events.');
-      } else {
-        notify(`✓ Learning loop exported — ${result.eventCount} event(s)`);
-      }
-    } else {
-      notify(`❌ Export failed: ${result.error}`);
-    }
-  };
-
-  const handleExportPilotPack = () => {
-    const result = downloadPilotPackExport();
-    if (result.success) {
-      if (result.isEmpty) {
-        notify('⚠️ Pilot pack created — no session data yet. Run validation sessions first.');
-      } else {
-        notify(`✓ Pilot pack exported — ${result.sessionCount} session(s), ${result.recommendation} recommendation`);
-      }
-    } else {
-      notify(`❌ Export failed: ${result.error}`);
-    }
-  };
 
   const handleExportComponent = () => {
     const nodesMap = nodesByFile[activeFile];
