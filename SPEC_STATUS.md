@@ -7,6 +7,21 @@ Track progress toward SPEC.md §5 (v1 scope) completion.
 
 ---
 
+## 🎯 Production Status (2026-09-04)
+
+### Authentication & Projects ✅
+- ✅ **Production auth gating** - Studio behind Supabase sign-in (#163)
+- ✅ **Marketing page public** - `#/home` accessible without authentication
+- ✅ **Per-user projects** - Full project isolation via Supabase RLS (#163)
+- ✅ **AuthModal UI polish** - Dark modal-card + modal-close styles (#165)
+
+### Brand Assets ✅
+- ✅ **BluePainter logo** - Professional brand identity shipped (#162)
+- ✅ **Brush icon** - Distinctive favicon and icon set (#162)
+- ✅ **Astro site updated** - Marketing site uses new logo (#162)
+
+---
+
 ## ✅ Completed (SPEC §5)
 
 ### Real AST Sync
