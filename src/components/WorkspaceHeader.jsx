@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { isFacilitatorMode } from '../utils/facilitatorMode';
 import { FILE_ORDER, WORKSPACE_FILES } from '../data/workspaceFiles';
+import { buildSessionScorecard } from '../utils/sessionScorecard';
 
 export default function WorkspaceHeader({
   activeFile,
@@ -25,6 +26,14 @@ export default function WorkspaceHeader({
   const fileRef = useRef(null);
   const menuRef = useRef(null);
 
+  const scorecard = facilitator ? buildSessionScorecard() : null;
+  const killCriteriaProgress = scorecard ? {
+    sessions: `${scorecard.sessions.completed}/${scorecard.sessions.target}`,
+    veryInterested: `${scorecard.interest.very}/${scorecard.interest.veryTarget}`,
+    pilotYes: scorecard.pilot.yes,
+    status: scorecard.recommendation
+  } : null;
+
   const active = WORKSPACE_FILES[activeFile];
 
   useEffect(() => {
@@ -47,6 +56,19 @@ export default function WorkspaceHeader({
           </button>
         <span className="workspace-prototype-badge">Prototype</span>
         {facilitator && <span className="workspace-facilitator-badge" title="Facilitator mode active — access session tools via ··· menu">Facilitator</span>}
+        {facilitator && killCriteriaProgress && (
+          <div className="workspace-progress-indicator" title={`Kill criteria: ${killCriteriaProgress.status}`}>
+            <span className="workspace-progress-metric">{killCriteriaProgress.sessions} sessions</span>
+            <span className="workspace-progress-sep">·</span>
+            <span className="workspace-progress-metric">{killCriteriaProgress.veryInterested} very</span>
+            {killCriteriaProgress.pilotYes > 0 && (
+              <>
+                <span className="workspace-progress-sep">·</span>
+                <span className="workspace-progress-metric workspace-progress-pilot">{killCriteriaProgress.pilotYes} pilot</span>
+              </>
+            )}
+          </div>
+        )}
         </div>
 
         <div className="workspace-file-picker" ref={fileRef}>
