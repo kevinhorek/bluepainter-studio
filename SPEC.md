@@ -1,7 +1,7 @@
 # BluePainter — Product Spec
 
-> **Status:** v1 engineering → validation gate (per SPEC §8)  
-> **Engineering progress:** ✓ Merge-ready export (Studio + extension), ✓ Design tokens in policy, AST sync active  
+> **Status:** v1 engineering complete → awaiting pilot validation (SPEC §8)  
+> **SPEC §5 (7/7):** ✓ Extension, ✓ AST sync, ✓ Receipts, ✓ Learning loop, ✓ CI gate — all shipped (#115–#123)  
 > **Live demo:** https://bluepainter-studio.vercel.app  
 > **Repo:** https://github.com/kevinhorek/bluepainter-studio
 
