@@ -23,6 +23,49 @@ export default function ValidationScorecardModal({ isOpen, onClose }) {
     return loop.getSuggestions();
   }, [isOpen]);
 
+  const conflictStats = useMemo(() => {
+    if (!isOpen) return null;
+    const loop = new LearningLoop();
+    const allEvents = loop.getAll();
+    const conflicts = allEvents.filter(e => e.type === 'conflict_resolved');
+    
+    const resolutions = {
+      overwrite_with_canvas: 0,
+      discard_canvas: 0,
+      show_both_manual_fix: 0,
+      cancel: 0
+    };
+    
+    conflicts.forEach(c => {
+      const resolution = c.data?.resolution;
+      if (resolution && resolutions[resolution] !== undefined) {
+        resolutions[resolution]++;
+      }
+    });
+    
+    return {
+      total: conflicts.length,
+      resolutions
+    };
+  }, [isOpen]);
+
+  const receiptCompliance = useMemo(() => {
+    if (!isOpen) return null;
+    const loop = new LearningLoop();
+    const stats = loop.getStatistics();
+    
+    const fixesApplied = Object.values(stats.mostAppliedFixes || {}).reduce((a, b) => a + b, 0);
+    const rulesDismissed = Object.values(stats.mostDismissedRules || {}).reduce((a, b) => a + b, 0);
+    const total = fixesApplied + rulesDismissed;
+    
+    return {
+      fixesApplied,
+      rulesDismissed,
+      total,
+      complianceRate: total > 0 ? (fixesApplied / total * 100).toFixed(0) : 0
+    };
+  }, [isOpen]);
+
   const interestLabels = {
     very: 'Very — I\'d pay for this',
     somewhat: 'Somewhat — I\'d try it',
@@ -94,6 +137,18 @@ export default function ValidationScorecardModal({ isOpen, onClose }) {
               <span className="validation-scorecard-stat-value">{scorecard.learning.roundTripsCanvas + scorecard.learning.roundTripsCode}</span>
               <span className="validation-scorecard-stat-label">Round-trips</span>
             </div>
+            {conflictStats && conflictStats.total > 0 && (
+              <div className="validation-scorecard-stat">
+                <span className="validation-scorecard-stat-value">{conflictStats.total}</span>
+                <span className="validation-scorecard-stat-label">Conflicts resolved</span>
+              </div>
+            )}
+            {receiptCompliance && receiptCompliance.total > 0 && (
+              <div className={`validation-scorecard-stat ${receiptCompliance.complianceRate >= 70 ? 'validation-scorecard-stat-success' : ''}`}>
+                <span className="validation-scorecard-stat-value">{receiptCompliance.complianceRate}%</span>
+                <span className="validation-scorecard-stat-label">Receipt compliance</span>
+              </div>
+            )}
           </div>
 
           {learningSuggestions.length > 0 && (
@@ -107,6 +162,48 @@ export default function ValidationScorecardModal({ isOpen, onClose }) {
               <p className="validation-scorecard-suggestions-desc">
                 Based on fix/dismiss patterns, the learning loop has suggestions to optimize your team policy. 
                 View them in the Receipts panel during your next session.
+              </p>
+            </div>
+          )}
+
+          {conflictStats && conflictStats.total > 0 && (
+            <div className="validation-scorecard-conflict-summary">
+              <h4 style={{ margin: '0 0 8px 0', fontSize: '0.85rem', fontWeight: 600 }}>Conflict Resolution (SPEC §10)</h4>
+              <div className="conflict-resolution-grid">
+                <div className="conflict-resolution-item">
+                  <span className="conflict-resolution-count">{conflictStats.resolutions.overwrite_with_canvas}</span>
+                  <span className="conflict-resolution-label">Keep Canvas</span>
+                </div>
+                <div className="conflict-resolution-item">
+                  <span className="conflict-resolution-count">{conflictStats.resolutions.discard_canvas}</span>
+                  <span className="conflict-resolution-label">Keep Code</span>
+                </div>
+                <div className="conflict-resolution-item">
+                  <span className="conflict-resolution-count">{conflictStats.resolutions.show_both_manual_fix || 0}</span>
+                  <span className="conflict-resolution-label">Manual Fix</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {receiptCompliance && receiptCompliance.total > 0 && (
+            <div className="validation-scorecard-receipt-compliance">
+              <h4 style={{ margin: '0 0 8px 0', fontSize: '0.85rem', fontWeight: 600 }}>
+                Receipt Compliance Badge
+                <span style={{ 
+                  marginLeft: '8px',
+                  padding: '2px 8px',
+                  background: receiptCompliance.complianceRate >= 70 ? '#10b981' : receiptCompliance.complianceRate >= 50 ? '#f59e0b' : '#ef4444',
+                  color: '#fff',
+                  borderRadius: '4px',
+                  fontSize: '0.75rem',
+                  fontWeight: 700
+                }}>
+                  {receiptCompliance.complianceRate}%
+                </span>
+              </h4>
+              <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '4px 0' }}>
+                {receiptCompliance.fixesApplied} fixes applied, {receiptCompliance.rulesDismissed} rules dismissed (total: {receiptCompliance.total})
               </p>
             </div>
           )}
