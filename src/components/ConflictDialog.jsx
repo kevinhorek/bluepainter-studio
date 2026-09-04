@@ -56,11 +56,12 @@ export default function ConflictDialog({
     <div className="modal-overlay" onClick={() => onResolve('cancel')}>
       <div className="modal conflict-dialog conflict-v2" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>⚠️ Conflict Detected</h2>
+          <h2>⚠️ Simultaneous Edit Conflict</h2>
         </div>
         <div className="modal-body">
           <p style={{ marginBottom: '0.75rem' }}>
-            The code has been modified externally while you made canvas changes.
+            The code file has unsaved or external changes (e.g., another editor window, git pull, or file watcher) 
+            while you edited the canvas. <strong>Choose how to resolve:</strong>
           </p>
           
           <div style={{ 
@@ -137,42 +138,65 @@ export default function ConflictDialog({
             </div>
           )}
           
-          <p style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '1rem' }}>
-            <strong>Choose resolution:</strong>
-          </p>
+          <div style={{ 
+            background: '#fef3c7', 
+            border: '1px solid #fbbf24',
+            borderRadius: '6px',
+            padding: '10px',
+            marginBottom: '1rem',
+            fontSize: '0.875rem',
+            lineHeight: '1.4'
+          }}>
+            <strong>⚠️ Recommendation:</strong> Choose <strong>Review Both</strong> (safest) or <strong>Cancel</strong> 
+            to avoid losing work. Only use Keep Canvas or Keep Code if you're certain one side should be discarded.
+          </div>
+
+          <div style={{ fontSize: '0.875rem', marginBottom: '0.75rem' }}>
+            <a 
+              href="./CONFLICT_MODEL.md" 
+              target="_blank"
+              style={{ color: '#2563eb', textDecoration: 'underline' }}
+              title="Learn more about how BluePainter handles conflicts"
+            >
+              📖 Learn more about conflict resolution
+            </a>
+          </div>
         </div>
         <div className="modal-footer" style={{ gap: '8px', flexDirection: 'column' }}>
           <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
             <button 
               className="btn btn-primary" 
-              onClick={() => onResolve('overwrite_with_canvas')}
-              style={{ flex: 1 }}
-            >
-              Keep Canvas Changes
-            </button>
-            <button 
-              className="btn" 
-              onClick={() => onResolve('discard_canvas')}
-              style={{ flex: 1 }}
-            >
-              Keep Code Changes
-            </button>
-          </div>
-          <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-            <button 
-              className="btn btn-secondary" 
               onClick={() => onResolve('show_both')}
               style={{ flex: 1 }}
-              title="Review both changes side-by-side without applying either"
+              title="Safest option: Review both changes without applying either automatically"
             >
-              Review Both (Manual Fix)
+              ✓ Review Both (Recommended)
             </button>
             <button 
               className="btn btn-secondary" 
               onClick={() => onResolve('cancel')}
               style={{ flex: 1 }}
+              title="Close this dialog and resolve manually later"
             >
               Cancel
+            </button>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+            <button 
+              className="btn" 
+              onClick={() => onResolve('overwrite_with_canvas')}
+              style={{ flex: 1, background: '#dc2626', color: 'white' }}
+              title="⚠️ Code changes will be lost"
+            >
+              Keep Canvas (Discard Code)
+            </button>
+            <button 
+              className="btn" 
+              onClick={() => onResolve('discard_canvas')}
+              style={{ flex: 1, background: '#dc2626', color: 'white' }}
+              title="⚠️ Canvas changes will be lost"
+            >
+              Keep Code (Discard Canvas)
             </button>
           </div>
         </div>
