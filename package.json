@@ -9,6 +9,7 @@
     "dev:full": "vercel dev",
     "build": "vite build",
     "lint": "eslint .",
+    "test:ast": "node scripts/test-ast-sync.mjs",
     "preview": "vite preview",
     "deploy:vercel": "npm run build && npx vercel --prod",
     "deploy:netlify": "npm run build && npx netlify deploy --prod --dir=dist",

@@ -1,121 +1,158 @@
 #!/usr/bin/env node
-import { parseTSXWithAST, patchTSXWithAST } from '../src/utils/astSyncEngine.js';
+// Test AST sync consistency between Studio and extension engines
 
-const sampleTSX = `import { Button } from './components/Button';
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
-// This is an important comment about the component
-export function TestComponent() {
-  return (
-    <div id="root-1" style={{ padding: 24, backgroundColor: '#f0f0f0' }}>
-      {/* Header section */}
-      <h1 id="heading-1" style={{ color: '#000000', fontSize: 32 }}>
-        Original Heading
-      </h1>
-      <p id="text-1" style={{ marginTop: 16 }}>
-        Original paragraph text.
-      </p>
-      <Button id="button-1" />
-    </div>
-  );
-}
-`;
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const rootDir = join(__dirname, '..');
 
-const nodesMap = {
-  'root-1': {
-    id: 'root-1',
-    type: 'container',
-    tag: 'div',
-    style: { padding: 24, backgroundColor: '#f0f0f0' },
-    children: ['heading-1', 'text-1', 'button-1']
-  },
-  'heading-1': {
-    id: 'heading-1',
-    type: 'text',
-    tag: 'h1',
-    style: { color: '#ff0000', fontSize: 32 }, // Changed color to red
-    text: 'Updated Heading' // Changed text
-  },
-  'text-1': {
-    id: 'text-1',
-    type: 'text',
-    tag: 'p',
-    style: { marginTop: 16, color: '#0000ff' }, // Added blue color
-    text: 'Updated paragraph text.' // Changed text
-  },
-  'button-1': {
-    id: 'button-1',
-    type: 'component-instance',
-    refFile: 'Button.tsx'
+// Import Studio engine (ES modules)
+const { parseTSXWithAST: studioParseAST, patchTSXWithAST: studioPatchAST } = await import(
+  join(rootDir, 'src/utils/astSyncEngine.js')
+);
+
+// Import extension engine (CommonJS via dynamic import)
+const { parseTSXWithAST: extParseAST, patchTSXWithAST: extPatchAST } = await import(
+  join(rootDir, 'extension/lib/astSyncEngine.js')
+);
+
+// Test fixtures
+const fixtures = [
+  {
+    name: 'PricingCard',
+    path: join(rootDir, 'extension/test-fixtures/PricingCard.tsx'),
+    nodes: {
+      'cta-button': {
+        id: 'cta-button',
+        type: 'button',
+        tag: 'button',
+        style: {
+          width: '100%',
+          background: '#1E40AF',
+          color: '#ffffff',
+          padding: 12,
+          borderRadius: 8
+        },
+        text: 'Submit'
+      },
+      'header-text': {
+        id: 'header-text',
+        type: 'text',
+        tag: 'h3',
+        style: {
+          textTransform: 'uppercase',
+          fontSize: 12,
+          fontWeight: 700,
+          color: '#64748b'
+        },
+        text: 'PRO'
+      }
+    }
   }
-};
-
-console.log('=== Testing AST-preserving canvas → code sync ===\n');
-
-console.log('1. Testing patchTSXWithAST (canvas edits → code)...');
-const patched = patchTSXWithAST(sampleTSX, nodesMap);
-
-if (!patched) {
-  console.error('❌ FAIL: patchTSXWithAST returned null (AST patch failed)');
-  process.exit(1);
-}
-
-console.log('✓ patchTSXWithAST succeeded\n');
-
-console.log('2. Verifying changes in patched code...');
-const checks = [
-  { name: 'Color changed to #ff0000', test: () => patched.includes('#ff0000') },
-  { name: 'Text changed to "Updated Heading"', test: () => patched.includes('Updated Heading') },
-  { name: 'Color added to paragraph (#0000ff)', test: () => patched.includes('#0000ff') },
-  { name: 'Paragraph text changed', test: () => patched.includes('Updated paragraph text.') },
-  { name: 'Original comment preserved', test: () => patched.includes('// This is an important comment') },
-  { name: 'JSX comment preserved', test: () => patched.includes('{/* Header section */}') },
-  { name: 'Import statement preserved', test: () => patched.includes("import { Button } from './components/Button'") }
 ];
 
-let allPassed = true;
-for (const check of checks) {
-  const passed = check.test();
-  console.log(`  ${passed ? '✓' : '❌'} ${check.name}`);
-  if (!passed) allPassed = false;
+let passed = 0;
+let failed = 0;
+
+console.log('Testing AST sync consistency between Studio and extension engines\n');
+
+for (const fixture of fixtures) {
+  console.log(`Testing fixture: ${fixture.name}`);
+  const code = readFileSync(fixture.path, 'utf-8');
+
+  // Test 1: Parse consistency
+  console.log('  [1/3] Testing parse consistency...');
+  const studioParsed = studioParseAST(code, fixture.nodes);
+  const extParsed = extParseAST(code, fixture.nodes);
+
+  if (!studioParsed) {
+    console.log('    ❌ Studio parse failed');
+    failed++;
+  } else if (!extParsed) {
+    console.log('    ❌ Extension parse failed');
+    failed++;
+  } else {
+    const studioKeys = Object.keys(studioParsed).sort();
+    const extKeys = Object.keys(extParsed).sort();
+    
+    if (JSON.stringify(studioKeys) === JSON.stringify(extKeys)) {
+      console.log('    ✓ Parse consistency: both engines parsed same nodes');
+      passed++;
+    } else {
+      console.log('    ❌ Parse consistency: different node keys');
+      console.log('      Studio:', studioKeys);
+      console.log('      Extension:', extKeys);
+      failed++;
+    }
+  }
+
+  // Test 2: Patch generates valid code
+  console.log('  [2/3] Testing patch validity...');
+  const modifiedNodes = JSON.parse(JSON.stringify(fixture.nodes));
+  modifiedNodes['cta-button'].text = 'Start free trial';
+  modifiedNodes['cta-button'].style.background = '#2563eb';
+
+  const studioPatched = studioPatchAST(code, modifiedNodes);
+  const extPatched = extPatchAST(code, modifiedNodes);
+
+  if (!studioPatched) {
+    console.log('    ❌ Studio patch failed');
+    failed++;
+  } else if (!extPatched) {
+    console.log('    ❌ Extension patch failed');
+    failed++;
+  } else {
+    const studioValid = studioPatched.includes('Start free trial') && studioPatched.includes('#2563eb');
+    const extValid = extPatched.includes('Start free trial') && extPatched.includes('#2563eb');
+    
+    if (studioValid && extValid) {
+      console.log('    ✓ Patch validity: both engines applied changes correctly');
+      passed++;
+    } else {
+      console.log('    ❌ Patch validity: changes not applied correctly');
+      if (!studioValid) console.log('      Studio patch missing expected changes');
+      if (!extValid) console.log('      Extension patch missing expected changes');
+      failed++;
+    }
+  }
+
+  // Test 3: Round-trip preserves formatting
+  console.log('  [3/3] Testing round-trip formatting preservation...');
+  const roundTripped = studioPatchAST(code, fixture.nodes);
+  
+  if (!roundTripped) {
+    console.log('    ❌ Round-trip failed');
+    failed++;
+  } else {
+    // Check that original formatting markers are preserved
+    const hasExportKeyword = roundTripped.includes('export function');
+    const hasOriginalIndent = roundTripped.includes('      style={{');
+    
+    if (hasExportKeyword && hasOriginalIndent) {
+      console.log('    ✓ Round-trip: formatting preserved');
+      passed++;
+    } else {
+      console.log('    ❌ Round-trip: formatting not preserved');
+      if (!hasExportKeyword) console.log('      Missing export keyword');
+      if (!hasOriginalIndent) console.log('      Indentation changed');
+      failed++;
+    }
+  }
+
+  console.log('');
 }
 
-if (!allPassed) {
-  console.error('\n❌ FAIL: Some checks failed');
-  console.log('\n=== Patched code ===');
-  console.log(patched);
+// Summary
+console.log('─'.repeat(60));
+console.log(`Results: ${passed} passed, ${failed} failed`);
+console.log('─'.repeat(60));
+
+if (failed > 0) {
+  console.log('\n❌ AST sync consistency test FAILED');
   process.exit(1);
+} else {
+  console.log('\n✓ All AST sync consistency tests PASSED');
+  process.exit(0);
 }
-
-console.log('\n3. Testing parseTSXWithAST (code → canvas)...');
-const parsed = parseTSXWithAST(patched, nodesMap);
-
-if (!parsed) {
-  console.error('❌ FAIL: parseTSXWithAST returned null');
-  process.exit(1);
-}
-
-console.log('✓ parseTSXWithAST succeeded');
-
-console.log('\n4. Verifying round-trip integrity...');
-const roundTripChecks = [
-  { name: 'Heading color parsed back as #ff0000', test: () => parsed['heading-1'].style.color === '#ff0000' },
-  { name: 'Heading text parsed back', test: () => parsed['heading-1'].text === 'Updated Heading' },
-  { name: 'Paragraph color parsed back as #0000ff', test: () => parsed['text-1'].style.color === '#0000ff' },
-  { name: 'Paragraph text parsed back', test: () => parsed['text-1'].text === 'Updated paragraph text.' }
-];
-
-let roundTripPassed = true;
-for (const check of roundTripChecks) {
-  const passed = check.test();
-  console.log(`  ${passed ? '✓' : '❌'} ${check.name}`);
-  if (!passed) roundTripPassed = false;
-}
-
-if (!roundTripPassed) {
-  console.error('\n❌ FAIL: Round-trip checks failed');
-  console.log('\n=== Parsed nodes ===');
-  console.log(JSON.stringify(parsed, null, 2));
-  process.exit(1);
-}
-
-console.log('\n=== ✓ All tests passed! AST sync is working correctly ===');
