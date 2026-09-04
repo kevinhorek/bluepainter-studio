@@ -55,7 +55,7 @@ function getWebviewHtml(webview, extensionUri, mode = 'sidebar') {
         <span class="bp-tip-icon">👋</span>
         <div class="bp-tip-content">
           <strong>Welcome to BluePainter!</strong>
-          <p>Try <code>BluePainter: Pick Component</code> from the command palette (Cmd/Ctrl+Shift+P) to quickly open TSX/JSX files. Check receipts before merging to catch policy issues.</p>
+          <p>Use <code>BluePainter: Pick Component</code> (Cmd/Ctrl+Shift+P) to open a TSX/JSX file. You'll see a live canvas, receipts for design policy checks, and one-click fixes. See EXTENSION_PILOT.md for your first session guide.</p>
         </div>
         <button class="bp-tip-dismiss" id="bp-tip-dismiss" title="Dismiss">×</button>
       </div>
