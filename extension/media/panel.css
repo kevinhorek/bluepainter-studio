@@ -380,3 +380,64 @@ body {
 .bp-tip-dismiss:hover {
   opacity: 1;
 }
+
+.bp-config-section {
+  padding: 0 12px 12px;
+  border-top: 1px solid var(--vscode-panel-border);
+}
+
+.bp-config-details {
+  margin-top: 12px;
+}
+
+.bp-config-summary {
+  cursor: pointer;
+  padding: 8px 0;
+  font-size: 12px;
+  font-weight: 500;
+  list-style: none;
+  user-select: none;
+  opacity: 0.85;
+}
+
+.bp-config-summary:hover {
+  opacity: 1;
+}
+
+.bp-config-summary::-webkit-details-marker {
+  display: none;
+}
+
+.bp-config-content {
+  padding: 12px 0 0;
+}
+
+.bp-config-text {
+  margin: 0 0 10px;
+  font-size: 11px;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+.bp-config-help {
+  margin: 10px 0 0;
+  padding: 10px;
+  font-size: 10px;
+  line-height: 1.6;
+  background: var(--vscode-textBlockQuote-background);
+  border-left: 3px solid var(--vscode-textBlockQuote-border);
+  border-radius: 4px;
+  opacity: 0.85;
+}
+
+.bp-config-help strong {
+  color: var(--vscode-textLink-foreground);
+}
+
+.bp-config-help code {
+  padding: 2px 4px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+  font-family: var(--vscode-editor-font-family);
+  font-size: 10px;
+}

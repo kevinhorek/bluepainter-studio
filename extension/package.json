@@ -89,6 +89,14 @@
       {
         "command": "bluepainter.writeToFile",
         "title": "BluePainter: Write Canvas to File"
+      },
+      {
+        "command": "bluepainter.openSettings",
+        "title": "BluePainter: Open Extension Settings"
+      },
+      {
+        "command": "bluepainter.openConfigFile",
+        "title": "BluePainter: Open Team Config File"
       }
     ],
     "configuration": {
@@ -102,22 +110,22 @@
         "bluepainter.spacingGrid": {
           "type": "number",
           "default": 8,
-          "description": "Designer Receipts spacing grid (px)."
+          "markdownDescription": "Designer Receipts spacing grid in pixels. Components should use padding/margin values that are multiples of this grid. For team-wide settings, create a `.bluepainter.json` file in your repo root. See [Configuration Guide](https://bluepainter-studio.vercel.app/#/docs) for details."
         },
         "bluepainter.radiusGrid": {
           "type": "number",
           "default": 4,
-          "description": "Designer Receipts border-radius grid (px)."
+          "markdownDescription": "Designer Receipts border-radius grid in pixels. Components should use border-radius values that are multiples of this grid. For team-wide settings, create a `.bluepainter.json` file in your repo root."
         },
         "bluepainter.minContrastRatio": {
           "type": "number",
           "default": 4.5,
-          "description": "Minimum WCAG contrast ratio for button receipts."
+          "markdownDescription": "Minimum WCAG contrast ratio for button text/background. Default 4.5:1 meets WCAG AA standards. Error-severity receipts can block CI/CD if enabled. For team-wide settings, create a `.bluepainter.json` file in your repo root."
         },
         "bluepainter.maxFeatureCount": {
           "type": "number",
           "default": 5,
-          "description": "Maximum feature list items before clutter receipt fires."
+          "markdownDescription": "Maximum feature list items before clutter receipt fires. Helps maintain clean, focused UI by warning when feature lists exceed this count. For team-wide settings, create a `.bluepainter.json` file in your repo root."
         },
         "bluepainter.weakCtaWords": {
           "type": "array",
@@ -125,22 +133,22 @@
             "type": "string"
           },
           "default": ["submit", "click here", "send", "button", "ok", "enter"],
-          "description": "Weak CTA words that trigger conversion receipts."
+          "markdownDescription": "Weak CTA words that trigger conversion receipts. These generic terms are flagged for replacement with more specific, action-oriented copy. For team-wide settings, create a `.bluepainter.json` file in your repo root."
         },
         "bluepainter.suggestedCta": {
           "type": "string",
           "default": "Start free trial",
-          "description": "Suggested CTA copy for receipt fixes."
+          "markdownDescription": "Suggested CTA copy shown in receipt fixes. Customize this to match your product's primary call-to-action. For team-wide settings, create a `.bluepainter.json` file in your repo root."
         },
         "bluepainter.contrastFixColor": {
           "type": "string",
           "default": "#1e40af",
-          "description": "Button background color applied by contrast fix."
+          "markdownDescription": "Button background color applied by contrast fix (hex color). Should meet WCAG AA contrast ratio when paired with white text. For team-wide settings, create a `.bluepainter.json` file in your repo root."
         },
         "bluepainter.enableDesignSystemDetection": {
           "type": "boolean",
           "default": true,
-          "description": "Detect design systems and monorepos to show helpful tips."
+          "markdownDescription": "Detect design systems and monorepos to show helpful tips. When enabled, BluePainter analyzes your workspace structure and suggests best practices for component organization and policy configuration."
         }
       }
     },
