@@ -32,7 +32,12 @@ function literalForValue(val) {
   if (val === null) return t.nullLiteral();
   if (val === undefined) return t.identifier('undefined');
   if (typeof val === 'boolean') return t.booleanLiteral(val);
-  if (typeof val === 'number' && !Number.isNaN(val)) return t.numericLiteral(val);
+  if (typeof val === 'number' && !Number.isNaN(val)) {
+    if (val < 0) {
+      return t.unaryExpression('-', t.numericLiteral(Math.abs(val)));
+    }
+    return t.numericLiteral(val);
+  }
   return t.stringLiteral(String(val));
 }
 
