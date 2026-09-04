@@ -15,6 +15,7 @@ export default function ValidationScorecardModal({ isOpen, onClose }) {
   const sessions = useMemo(() => (isOpen ? getStoredFeedback() : []), [isOpen]);
   const [shareStatus, setShareStatus] = useState('');
   const [showSessions, setShowSessions] = useState(false);
+<<<<<<< HEAD
 
   const interestLabels = {
     very: 'Very — I\'d pay for this',
@@ -27,6 +28,8 @@ export default function ValidationScorecardModal({ isOpen, onClose }) {
     maybe: 'Maybe — depends on setup',
     no: 'No — not for our team'
   };
+=======
+>>>>>>> origin/main
 
   if (!isOpen || !scorecard) return null;
 
@@ -118,10 +121,17 @@ export default function ValidationScorecardModal({ isOpen, onClose }) {
                   </div>
                   <div className="validation-session-details">
                     <div className="validation-session-field">
+<<<<<<< HEAD
                       <strong>Interest:</strong> {interestLabels[session.interest] || session.interest || 'not recorded'}
                     </div>
                     <div className="validation-session-field">
                       <strong>Pilot:</strong> {pilotLabels[session.pilot] || session.pilot || 'not recorded'}
+=======
+                      <strong>Interest:</strong> {session.interest || 'not recorded'}
+                    </div>
+                    <div className="validation-session-field">
+                      <strong>Pilot:</strong> {session.pilot || 'not recorded'}
+>>>>>>> origin/main
                     </div>
                     {session.role && (
                       <div className="validation-session-field">
