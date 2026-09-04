@@ -312,12 +312,21 @@ class BluePainterController {
     // Log canvas→code round-trip to learning loop
     if (!options.quiet) {
       const nodeCount = Object.keys(ctx.state.nodesMap).length;
+      const fileName = ctx.editor.document.fileName;
+      const relativePath = vscode.workspace.asRelativePath(fileName);
+      
       this.learningLoop.log('canvas_to_code_roundtrip', {
-        fileName: path.basename(ctx.editor.document.fileName),
+        fileName: path.basename(fileName),
+        relativePath,
         nodeCount,
         hadConflict: hasConflict
       });
-      vscode.window.showInformationMessage(`BluePainter: wrote ${nodeCount} node(s) to file.`);
+      
+      // Show merge-ready confirmation with full path
+      vscode.window.showInformationMessage(
+        `✓ Merge-ready: ${relativePath} — ${nodeCount} node(s) written`,
+        { modal: false }
+      );
     }
     
     this.refreshViews(editor);
@@ -363,13 +372,18 @@ class BluePainterController {
     }
     
     const nodeCount = Object.keys(ctx.state.nodesMap).length;
+    const relativePath = vscode.workspace.asRelativePath(ctx.editor.document.fileName);
+    
     this.learningLoop.log('code_to_canvas_roundtrip', {
       fileName: path.basename(ctx.editor.document.fileName),
+      relativePath,
       nodeCount,
       source: ctx.state.source
     });
+    
     vscode.window.showInformationMessage(
-      `BluePainter: synced ${nodeCount} node(s) from file.`
+      `✓ Synced from: ${relativePath} — ${nodeCount} node(s)`,
+      { modal: false }
     );
     this.refreshViews(editor);
   }
