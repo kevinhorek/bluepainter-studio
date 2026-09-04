@@ -130,6 +130,11 @@
           "type": "string",
           "default": "#1e40af",
           "description": "Button background color applied by contrast fix."
+        },
+        "bluepainter.enableDesignSystemDetection": {
+          "type": "boolean",
+          "default": true,
+          "description": "Detect design systems and monorepos to show helpful tips."
         }
       }
     },

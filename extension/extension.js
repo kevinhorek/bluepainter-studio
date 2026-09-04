@@ -8,6 +8,7 @@ const { evaluateReceipts, applyReceiptFix } = require('./lib/receiptPolicy');
 const { loadReceiptPolicyFromConfig } = require('./lib/defaultReceiptPolicy');
 const { SessionStore } = require('./lib/sessionStore');
 const { LearningLoop } = require('./lib/learningLoop');
+const { detectWorkspaceType, getWorkspaceRecommendations } = require('./lib/designSystemDetection');
 
 const traverse = traverseModule.default || traverseModule;
 const SUPPORTED_LANGS = new Set(['typescriptreact', 'javascriptreact']);
@@ -512,6 +513,41 @@ function activate(context) {
   if (vscode.window.activeTextEditor) {
     controller.loadDocument(vscode.window.activeTextEditor);
     controller.refreshViews(vscode.window.activeTextEditor);
+  }
+
+  const config = vscode.workspace.getConfiguration('bluepainter');
+  const enableDetection = config.get('enableDesignSystemDetection', true);
+  
+  if (enableDetection) {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (workspaceFolders && workspaceFolders.length > 0) {
+      const workspaceRoot = workspaceFolders[0].uri.fsPath;
+      const detection = detectWorkspaceType(workspaceRoot);
+      
+      if (detection.isDesignSystem && detection.confidence !== 'none') {
+        const channel = vscode.window.createOutputChannel('BluePainter');
+        channel.appendLine('BluePainter: Design system detected');
+        channel.appendLine(`  Confidence: ${detection.confidence}`);
+        channel.appendLine(`  Indicators: ${detection.indicators.join(', ')}`);
+        
+        const recommendations = getWorkspaceRecommendations(detection);
+        if (recommendations.length > 0) {
+          channel.appendLine('\nRecommendations:');
+          recommendations.forEach((rec) => {
+            channel.appendLine(`  [${rec.type}] ${rec.message}`);
+          });
+        }
+
+        if (detection.confidence === 'high') {
+          const msg = `Design system detected: ${detection.indicators[0]}`;
+          vscode.window.showInformationMessage(msg, 'Learn More').then((choice) => {
+            if (choice === 'Learn More') {
+              vscode.env.openExternal(vscode.Uri.parse('https://bluepainter-studio.vercel.app/#/docs'));
+            }
+          });
+        }
+      }
+    }
   }
 }
 
