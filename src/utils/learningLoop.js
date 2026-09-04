@@ -273,15 +273,15 @@ export function getLearningSummary() {
   };
 
   events.forEach((e) => {
-    if (e.type === 'fix_applied') {
+    if (e.type === 'receipt_fix_applied') {
       summary.fixesApplied += 1;
-      if (e.ruleId) summary.fixByRule[e.ruleId] = (summary.fixByRule[e.ruleId] || 0) + 1;
-    } else if (e.type === 'rule_dismissed') {
+      if (e.data?.ruleId) summary.fixByRule[e.data.ruleId] = (summary.fixByRule[e.data.ruleId] || 0) + 1;
+    } else if (e.type === 'receipt_dismissed') {
       summary.rulesDismissed += 1;
-      if (e.ruleId) summary.dismissByRule[e.ruleId] = (summary.dismissByRule[e.ruleId] || 0) + 1;
-    } else if (e.type === 'policy_updated') summary.policyUpdates += 1;
-    else if (e.type === 'round_trip_canvas') summary.roundTripsCanvas += 1;
-    else if (e.type === 'round_trip_code') summary.roundTripsCode += 1;
+      if (e.data?.ruleId) summary.dismissByRule[e.data.ruleId] = (summary.dismissByRule[e.data.ruleId] || 0) + 1;
+    } else if (e.type === 'policy_change') summary.policyUpdates += 1;
+    else if (e.type === 'canvas_to_code_sync') summary.roundTripsCanvas += 1;
+    else if (e.type === 'code_to_canvas_sync') summary.roundTripsCode += 1;
   });
 
   return summary;

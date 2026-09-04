@@ -48,10 +48,10 @@ function getLearningSummaryForSession() {
     };
     
     events.forEach((e) => {
-      if (e.type === 'fix_applied') summary.fixesApplied += 1;
-      else if (e.type === 'rule_dismissed') summary.rulesDismissed += 1;
-      else if (e.type === 'round_trip_canvas') summary.roundTripsCanvas += 1;
-      else if (e.type === 'round_trip_code') summary.roundTripsCode += 1;
+      if (e.type === 'receipt_fix_applied') summary.fixesApplied += 1;
+      else if (e.type === 'receipt_dismissed') summary.rulesDismissed += 1;
+      else if (e.type === 'canvas_to_code_sync') summary.roundTripsCanvas += 1;
+      else if (e.type === 'code_to_canvas_sync') summary.roundTripsCode += 1;
     });
     
     return summary;

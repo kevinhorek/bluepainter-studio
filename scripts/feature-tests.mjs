@@ -170,8 +170,8 @@ test('buildProjectFileMap', () => {
 
 test('learning loop + scorecard', () => {
   clearLearningEvents();
-  logLearningEvent('round_trip_canvas', { file: 'pricing' });
-  logLearningEvent('fix_applied', { ruleId: 'contrast' });
+  logLearningEvent('canvas_to_code_sync', { file: 'pricing' });
+  logLearningEvent('receipt_fix_applied', { data: { ruleId: 'contrast' } });
   const summary = getLearningSummary();
   assert.equal(summary.roundTripsCanvas, 1);
   assert.equal(summary.fixesApplied, 1);
