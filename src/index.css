@@ -7346,3 +7346,29 @@ input:checked + .slider-round:before {
   background: rgba(239, 68, 68, 0.2);
   border-color: rgba(239, 68, 68, 0.5);
 }
+
+/* Receipts Empty State */
+.receipts-empty-state {
+  text-align: center;
+  padding: 32px 24px;
+}
+
+.receipts-empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.receipts-empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.receipts-empty-text {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  max-width: 280px;
+  margin: 0 auto;
+}
