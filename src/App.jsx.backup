@@ -401,32 +401,6 @@ export default function App() {
     };
   }, [activeCanvasTool]);
 
-  const handleExportLearningLoop = useCallback(() => {
-    const result = downloadLearningLoopExport(learningLoop);
-    if (result.success) {
-      if (result.isEmpty) {
-        notify('⚠️ Learning loop exported — no events yet. Interact with receipts to log events.');
-      } else {
-        notify(`✓ Learning loop exported — ${result.eventCount} event(s)`);
-      }
-    } else {
-      notify(`❌ Export failed: ${result.error}`);
-    }
-  }, [learningLoop, notify]);
-
-  const handleExportPilotPack = useCallback(() => {
-    const result = downloadPilotPackExport();
-    if (result.success) {
-      if (result.isEmpty) {
-        notify('⚠️ Pilot pack created — no session data yet. Run validation sessions first.');
-      } else {
-        notify(`✓ Pilot pack exported — ${result.sessionCount} session(s), ${result.recommendation} recommendation`);
-      }
-    } else {
-      notify(`❌ Export failed: ${result.error}`);
-    }
-  }, [notify, learningLoop, refreshLearningSummary]);
-
   // Facilitator keyboard shortcuts
   useEffect(() => {
     if (!facilitator || phase === 'landing') return;
@@ -463,7 +437,7 @@ export default function App() {
     
     window.addEventListener('keydown', handleFacilitatorShortcuts);
     return () => window.removeEventListener('keydown', handleFacilitatorShortcuts);
-  }, [facilitator, phase, sessionChecklistOpen, scorecardOpen]);
+  }, [facilitator, phase, sessionChecklistOpen, scorecardOpen, handleExportPilotPack, handleExportLearningLoop]);
 
   const handleGoHome = useCallback(() => {
     setMarketingKitOpen(false);
@@ -474,12 +448,9 @@ export default function App() {
   }, []);
 
   const handleLaunchApp = useCallback((nextPhase = 'phase1') => {
-    console.log("[handleLaunchApp] called, authLoading:", authLoading, "user:", user, "currentProject:", currentProject);
-    console.log("[handleLaunchApp] called, authLoading:", authLoading, "user:", user, "currentProject:", currentProject);
     if (authLoading) return;
     
     if (!user) {
-      console.log("[handleLaunchApp] Setting authModalOpen to true");
       setAuthModalOpen(true);
       return;
     }
@@ -935,7 +906,31 @@ export default function App() {
     refreshLearningSummary();
   };
 
+  const handleExportLearningLoop = () => {
+    const result = downloadLearningLoopExport(learningLoop);
+    if (result.success) {
+      if (result.isEmpty) {
+        notify('⚠️ Learning loop exported — no events yet. Interact with receipts to log events.');
+      } else {
+        notify(`✓ Learning loop exported — ${result.eventCount} event(s)`);
+      }
+    } else {
+      notify(`❌ Export failed: ${result.error}`);
+    }
+  };
 
+  const handleExportPilotPack = () => {
+    const result = downloadPilotPackExport();
+    if (result.success) {
+      if (result.isEmpty) {
+        notify('⚠️ Pilot pack created — no session data yet. Run validation sessions first.');
+      } else {
+        notify(`✓ Pilot pack exported — ${result.sessionCount} session(s), ${result.recommendation} recommendation`);
+      }
+    } else {
+      notify(`❌ Export failed: ${result.error}`);
+    }
+  };
 
   const handleExportComponent = () => {
     const nodesMap = nodesByFile[activeFile];
@@ -1088,11 +1083,6 @@ export default function App() {
           onExport={facilitator ? handleExportFeedback : null}
         />
         <AppToast message={toast} onDismiss={() => setToast(null)} />
-        <AuthModal 
-          isOpen={authModalOpen} 
-          onClose={() => setAuthModalOpen(false)}
-          onSuccess={handleAuthSuccess}
-        />
       </div>
     );
   }

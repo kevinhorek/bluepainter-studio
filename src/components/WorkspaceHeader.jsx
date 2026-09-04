@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { isFacilitatorMode } from '../utils/facilitatorMode';
 import { FILE_ORDER, WORKSPACE_FILES } from '../data/workspaceFiles';
+import { useAuth } from '../lib/auth/AuthContext';
 
 export default function WorkspaceHeader({
   activeFile,
@@ -24,10 +25,17 @@ export default function WorkspaceHeader({
   facilitatorActions
 }) {
   const facilitator = isFacilitatorMode();
+  const { user, signOut } = useAuth();
   const [fileOpen, setFileOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const fileRef = useRef(null);
   const menuRef = useRef(null);
+
+  const handleSignOut = async () => {
+    await signOut();
+    window.location.hash = '#/home';
+    window.location.reload();
+  };
 
   const active = WORKSPACE_FILES[activeFile];
 
@@ -143,6 +151,22 @@ export default function WorkspaceHeader({
         <span className="sync-indicator sync-indicator-minimal" title="Canvas and code in sync">
           <span className="sync-dot" />
         </span>
+
+        {user && (
+          <div className="workspace-user-info">
+            <span className="workspace-user-email" title={user.email}>
+              {user.email}
+            </span>
+            <button
+              type="button"
+              className="workspace-signout-btn"
+              onClick={handleSignOut}
+              title="Sign out"
+            >
+              Sign out
+            </button>
+          </div>
+        )}
 
         <div className="workspace-menu-wrap" ref={menuRef}>
           <button
