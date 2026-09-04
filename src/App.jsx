@@ -1,7 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { generateTSX, parseTSX } from './utils/syncEngine';
-import { exportComponentTSX } from './utils/componentExport';
-import { batchExportComponents } from './utils/batchComponentExport';
+import { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense } from 'react';
 import { applyBrokenDesignScenario, applyFixedDesignScenario, getFreshHeroNodes, getFreshPricingNodes, getFreshDashboardNodes } from './utils/demoScenarios';
 import { getFreshMarketingNodes } from './data/marketingPage';
 import { captureCanvasPageFrame } from './utils/canvasCapture';
@@ -32,12 +29,13 @@ import PresenterToast from './components/PresenterToast';
 import SpecModal from './components/SpecModal';
 import ConflictDialog from './components/ConflictDialog';
 import ExportDeployModal from './components/ExportDeployModal';
-import MarketingKitModal from './components/MarketingKitModal';
+// Lazy-load to prevent Babel TDZ on MarketingPage
+const MarketingKitModal = lazy(() => import('./components/MarketingKitModal'));
 import { getEmptyFigmaImportNodes } from './utils/figmaImport';
 import FigmaImportModal from './components/FigmaImportModal';
 import FacilitatorDashboard from './components/FacilitatorDashboard';
 import AIGeneratePanel from './components/AIGeneratePanel';
-import RealFileLoader from './components/RealFileLoader';
+const RealFileLoader = lazy(() => import('./components/RealFileLoader'));
 import RestoreBackupModal from './components/RestoreBackupModal';
 import ExportConfirmationModal from './components/ExportConfirmationModal';
 import GitContextModal from './components/GitContextModal';
@@ -50,6 +48,11 @@ import { createBackup, AUTO_SAVE_INTERVAL_MS } from './utils/autoSaveBackup';
 const VALID_PHASES = ['landing', 'phase1', 'phase2', 'phase3', 'phase4'];
 const TOUR_SEEN_KEY = 'bluepainter-tour-seen';
 const facilitator = isFacilitatorMode();
+
+// Lazy-load Babel/AST modules to prevent TDZ crash on MarketingPage
+const loadSyncEngine = () => import('./utils/syncEngine');
+const loadComponentExport = () => import('./utils/componentExport');
+const loadBatchExport = () => import('./utils/batchComponentExport');
 
 function parseHash() {
   const hash = window.location.hash.replace(/^#\/?/, '');
@@ -517,17 +520,19 @@ export default function App() {
       return;
     }
     if (activeRootId && activeNodesMap) {
-      const nextCode = generateTSX(activeRootId, activeNodesMap, codeRef.current);
-      if (nextCode === null) {
-        notify('⚠️ Canvas sync paused — some edits could not update the code. Try editing simpler properties or switching to a different component.');
-        return;
-      }
-      setCode(nextCode);
-      setLastSyncedCode(nextCode);
-      // Log canvas-to-code sync when code is actually updated
-      if (codeRef.current) {
-        learningLoop.logCanvasToCodeSync(activeRootId, activeFile, codeRef.current ? 'patch' : 'generate');
-      }
+      loadSyncEngine().then(({ generateTSX }) => {
+        const nextCode = generateTSX(activeRootId, activeNodesMap, codeRef.current);
+        if (nextCode === null) {
+          notify('⚠️ Canvas sync paused — some edits could not update the code. Try editing simpler properties or switching to a different component.');
+          return;
+        }
+        setCode(nextCode);
+        setLastSyncedCode(nextCode);
+        // Log canvas-to-code sync when code is actually updated
+        if (codeRef.current) {
+          learningLoop.logCanvasToCodeSync(activeRootId, activeFile, codeRef.current ? 'patch' : 'generate');
+        }
+      });
     }
   }, [activeFile, activeRootId, activeNodesMap, notify, learningLoop]);
 
@@ -568,10 +573,11 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [phase, feedbackPromptShown]);
 
-  const handleCodeChange = (newCode) => {
+  const handleCodeChange = async (newCode) => {
     skipCodegenRef.current = true;
     setCode(newCode);
     setLastSyncedCode(newCode);
+    const { parseTSX } = await loadSyncEngine();
     const updatedNodes = parseTSX(newCode, activeNodesMap);
     setActiveNodesMap(updatedNodes);
     learningLoop.logCodeToCanvasSync(activeFile, Object.keys(updatedNodes).length);
@@ -611,7 +617,7 @@ export default function App() {
     refreshLearningSummary();
   };
 
-  const handleConflictResolve = (resolution) => {
+  const handleConflictResolve = async (resolution) => {
     setConflictDialogOpen(false);
 
     if (resolution === 'overwrite_with_canvas' && pendingCanvasUpdate) {
@@ -627,6 +633,7 @@ export default function App() {
         fileName: activeFile
       });
       // Re-sync canvas from current code
+      const { parseTSX } = await loadSyncEngine();
       const updatedNodes = parseTSX(code, activeNodesMap);
       setActiveNodesMap(updatedNodes);
       setLastSyncedCode(code);
@@ -849,7 +856,7 @@ export default function App() {
   };
 
 
-  const handleExportComponent = () => {
+  const handleExportComponent = async () => {
     const nodesMap = nodesByFile[activeFile];
     const fileInfo = getWorkspaceFile(activeFile);
     const rootId = fileInfo.rootId;
@@ -859,6 +866,8 @@ export default function App() {
       return;
     }
 
+    const { generateTSX } = await loadSyncEngine();
+    const { exportComponentTSX } = await loadComponentExport();
     const existingCode = generateTSX(rootId, nodesMap, null);
     const result = exportComponentTSX(rootId, nodesMap, existingCode);
     
@@ -878,6 +887,7 @@ export default function App() {
   };
   
   const handleBatchExportComponents = async () => {
+    const { batchExportComponents } = await loadBatchExport();
     const result = await batchExportComponents(nodesByFile);
     
     if (result.success) {
@@ -1074,12 +1084,13 @@ export default function App() {
         nodesByFile={nodesByFile}
         onExported={() => setToast('Project downloaded — see DEPLOY.md in the zip')}
       />
-      <MarketingKitModal
-        isOpen={marketingKitOpen}
-        onClose={() => { setMarketingKitOpen(false); setMarketingActiveFieldId(null); }}
-        nodesByFile={nodesByFile}
-        activeFieldId={marketingActiveFieldId}
-        onSelectField={handleSelectMarketingField}
+      <Suspense fallback={<div />}>
+        <MarketingKitModal
+          isOpen={marketingKitOpen}
+          onClose={() => { setMarketingKitOpen(false); setMarketingActiveFieldId(null); }}
+          nodesByFile={nodesByFile}
+          activeFieldId={marketingActiveFieldId}
+          onSelectField={handleSelectMarketingField}
         onUpdateField={handleUpdateNodeByFile}
         onEditOnCanvas={handleEditMarketingOnCanvas}
         onCaptureScreenshot={handleCaptureDashboardScreenshot}
@@ -1090,18 +1101,21 @@ export default function App() {
         onOpenAI={handleOpenAI}
         onExported={() => notify('Marketing kit downloaded')}
         onCopyToast={notify}
-      />
+        />
+      </Suspense>
       <FigmaImportModal
         isOpen={figmaImportOpen}
         onClose={() => setFigmaImportOpen(false)}
         onImported={handleFigmaImported}
         onNotify={notify}
       />
-      <RealFileLoader
-        isOpen={realFileLoaderOpen}
-        onClose={() => setRealFileLoaderOpen(false)}
-        onFileLoaded={handleRealFileLoaded}
-      />
+      <Suspense fallback={<div />}>
+        <RealFileLoader
+          isOpen={realFileLoaderOpen}
+          onClose={() => setRealFileLoaderOpen(false)}
+          onFileLoaded={handleRealFileLoaded}
+        />
+      </Suspense>
       <RestoreBackupModal
         isOpen={restoreBackupOpen}
         onClose={() => setRestoreBackupOpen(false)}
