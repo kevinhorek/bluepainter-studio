@@ -89,6 +89,7 @@ Pull frames from Figma → canvas → export as React. One-way only (no sync bac
 
 - **URL import:** Requires Figma personal access token + `/api/figma-import` (works on live demo, or `npx vercel dev` locally)
 - **JSON paste:** Offline fallback — paste Figma REST API JSON
+- **Optional:** Set `FIGMA_TOKEN` environment variable on API host to skip token entry in UI (recommended for team deployments)
 
 See [FIGMA_IMPORT.md](./FIGMA_IMPORT.md) for supported node types, limitations, and usage.
 
