@@ -3,7 +3,7 @@ import { getWorkspaceFile } from '../data/workspaceFiles';
 import { isPlacableTool, getCanvasTool } from '../data/canvasTools';
 import { isLeafNode } from '../utils/nodeFactory';
 import CanvasToolbar from './CanvasToolbar';
-import ViewportSwitcher from './ViewportSwitcher';
+import ViewportSwitcher, { VIEWPORT_PRESETS } from './ViewportSwitcher';
 
 export default function CanvasView({
   rootNodeId,
@@ -574,6 +574,15 @@ export default function CanvasView({
   const activeToolMeta = getCanvasTool(activeCanvasTool);
   const isPageView = Boolean(pageViewport);
 
+  const getViewportWidth = () => {
+    if (!activeViewportMode || !isPageView) return null;
+    const preset = VIEWPORT_PRESETS.find(v => v.id === activeViewportMode);
+    return preset ? preset.width : null;
+  };
+
+  const effectiveViewportWidth = getViewportWidth();
+  const effectiveWidth = effectiveViewportWidth || (isPageView ? pageViewport.width : null);
+
   return (
     <div 
       className={`canvas-container ${gridClass} ${isPageView ? 'canvas-page-view' : ''}`}
@@ -597,12 +606,13 @@ export default function CanvasView({
         id={isPageView ? 'canvas-page-frame' : undefined}
         style={{
         position: 'relative',
-        width: isPageView ? pageViewport.width : '100%',
+        width: effectiveWidth ? effectiveWidth : (isPageView ? pageViewport.width : '100%'),
         height: isPageView ? pageViewport.height : '100%',
-        minWidth: isPageView ? pageViewport.width : 800,
+        minWidth: effectiveWidth ? effectiveWidth : (isPageView ? pageViewport.width : 800),
         minHeight: isPageView ? pageViewport.height : 600,
         flexShrink: 0,
-        transform: `translate(${panOffset.x}px, ${panOffset.y}px)`
+        transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
+        transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
       }}>
         {renderASTNode(rootNodeId)}
       </div>
@@ -613,7 +623,7 @@ export default function CanvasView({
           {isPageView ? (
             <>
               <span className="canvas-status-label">Page</span>
-              <span className="canvas-status-value">{pageViewport.width} × {pageViewport.height}</span>
+              <span className="canvas-status-value">{effectiveWidth || pageViewport.width} × {pageViewport.height}</span>
             </>
           ) : (
             <>
