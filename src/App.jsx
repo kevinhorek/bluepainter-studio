@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { generateTSX, parseTSX } from './utils/syncEngine';
 import { exportComponentTSX } from './utils/componentExport';
 import { exportPageBundle } from './utils/pageBundleExport';
+import { batchExportComponents } from './utils/batchComponentExport';
 import { applyBrokenDesignScenario, applyFixedDesignScenario, getFreshHeroNodes, getFreshPricingNodes, getFreshDashboardNodes } from './utils/demoScenarios';
 import { getFreshMarketingNodes } from './data/marketingPage';
 import { captureCanvasPageFrame } from './utils/canvasCapture';
@@ -805,6 +806,22 @@ export default function App() {
       notify(`❌ Bundle export failed: ${result.error}`);
     }
   };
+  
+  const handleBatchExportComponents = async () => {
+    const result = await batchExportComponents(nodesByFile);
+    
+    if (result.success) {
+      notify(`✓ Batch export complete — ${result.exported} component(s) in ${result.filename}`);
+      learningLoop.log('batch_export', {
+        exported: result.exported,
+        failed: result.failed,
+        components: result.components.map(c => c.componentName)
+      });
+      refreshLearningSummary();
+    } else {
+      notify(`❌ Batch export failed: ${result.error}`);
+    }
+  };
 
   const handleExportComponent = () => {
     const nodesMap = nodesByFile[activeFile];
@@ -943,6 +960,7 @@ export default function App() {
         onOpenExportDeploy={() => setExportDeployOpen(true)}
         onExportComponent={handleExportComponent}
         onExportPageBundle={handleExportPageBundle}
+        onBatchExport={handleBatchExportComponents}
         onOpenMarketingKit={handleOpenMarketingKit}
         onOpenFigmaImport={() => setFigmaImportOpen(true)}
         onOpenRealFile={() => setRealFileLoaderOpen(true)}
