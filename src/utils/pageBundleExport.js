@@ -1,5 +1,5 @@
 import { generateTSX } from './syncEngine';
-import { getWorkspaceFile, getComponentName } from '../data/workspaceFiles';
+import { getWorkspaceFile } from '../data/workspaceFiles';
 import JSZip from 'jszip';
 
 /**

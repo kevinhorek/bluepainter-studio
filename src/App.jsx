@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { generateTSX, parseTSX } from './utils/syncEngine';
 import { exportComponentTSX } from './utils/componentExport';
+import { exportPageBundle } from './utils/pageBundleExport';
 import { applyBrokenDesignScenario, applyFixedDesignScenario, getFreshHeroNodes, getFreshPricingNodes, getFreshDashboardNodes } from './utils/demoScenarios';
 import { getFreshMarketingNodes } from './data/marketingPage';
 import { captureCanvasPageFrame } from './utils/canvasCapture';
@@ -751,6 +752,28 @@ export default function App() {
       notify(`❌ Export failed: ${result.error}`);
     }
   };
+  
+  const handleExportPageBundle = async () => {
+    const fileInfo = getWorkspaceFile(activeFile);
+    if (!fileInfo?.isPage) {
+      notify('⚠️ Select a page to export as bundle (Dashboard or Marketing)');
+      return;
+    }
+    
+    const result = await exportPageBundle(activeFile, nodesByFile);
+    
+    if (result.success) {
+      notify(`✓ Page bundle exported — ${result.pageComponent} + ${result.dependencies.length} component(s)`);
+      learningLoop.log('page_bundle_export', {
+        page: result.pageComponent,
+        dependencies: result.dependencies,
+        totalFiles: result.totalFiles
+      });
+      refreshLearningSummary();
+    } else {
+      notify(`❌ Bundle export failed: ${result.error}`);
+    }
+  };
 
   const handleExportComponent = () => {
     const nodesMap = nodesByFile[activeFile];
@@ -887,6 +910,7 @@ export default function App() {
         onOpenInterviewGuide={() => setValidationScriptOpen(true)}
         onOpenExportDeploy={() => setExportDeployOpen(true)}
         onExportComponent={handleExportComponent}
+        onExportPageBundle={handleExportPageBundle}
         onOpenMarketingKit={handleOpenMarketingKit}
         onOpenFigmaImport={() => setFigmaImportOpen(true)}
         onOpenRealFile={() => setRealFileLoaderOpen(true)}
