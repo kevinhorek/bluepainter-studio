@@ -36,6 +36,17 @@ function evaluateReceipts(nodesMap, component, policy, dismissedRules = new Set(
   // Check if button uses brand primary color
   const brandPrimary = policy.primaryColor || '#2563eb';
   const usesBrandColor = btnColor.toLowerCase() === brandPrimary.toLowerCase();
+  
+  // Check text nodes for brand text color consistency
+  const textNodes = Object.values(nodesMap).filter(n => 
+    (n.type === 'text' || n.type === 'list-item') && n.text && n.style?.color
+  );
+  const brandTextColor = policy.textColor || '#1e293b';
+  const hasOffBrandText = textNodes.some(n => {
+    const textColor = n.style.color;
+    return textColor && textColor !== brandTextColor && 
+           !['inherit', 'currentColor'].includes(textColor);
+  });
 
   const buttonText = buttonNode?.text || '';
   const weakWords = policy.weakCtaWords || [];
@@ -135,6 +146,25 @@ function evaluateReceipts(nodesMap, component, policy, dismissedRules = new Set(
       fixMeta: { nodeId: featuresListNode.id, max: maxFeatures }
     });
   }
+  
+  // Text color consistency check
+  if (hasOffBrandText && textNodes.length > 0) {
+    const offBrandNode = textNodes.find(n => {
+      const textColor = n.style?.color;
+      return textColor && textColor !== brandTextColor && 
+             !['inherit', 'currentColor'].includes(textColor);
+    });
+    
+    addRule('text-color', false, {
+      title: 'Inconsistent text colors detected',
+      desc: `Some text uses custom colors instead of brand text color ${brandTextColor}.`,
+      tag: 'Design',
+      severity: 'info',
+      fixLabel: 'Use brand text color',
+      fixKey: 'text-color',
+      fixMeta: { nodeId: offBrandNode?.id, color: brandTextColor }
+    });
+  }
 
   let designScore = 100;
   let accessibilityScore = 100;
@@ -143,7 +173,9 @@ function evaluateReceipts(nodesMap, component, policy, dismissedRules = new Set(
   rules.forEach((r) => {
     if (r.valid) return;
     if (r.id === 'spacing' || r.id === 'radius') designScore -= r.id === 'spacing' ? 20 : 10;
-    if (r.id === 'copy' || r.id === 'brand-color') designScore -= r.id === 'copy' ? 15 : 5;
+    if (r.id === 'copy' || r.id === 'brand-color' || r.id === 'text-color') {
+      designScore -= r.id === 'copy' ? 15 : 5;
+    }
     if (r.id === 'contrast') accessibilityScore -= 45;
     if (r.id === 'features') buildabilityScore -= 25;
   });
@@ -168,6 +200,8 @@ function applyReceiptFix(fixKey, fixMeta, nodesMap, onUpdateNode) {
     onUpdateNode(fixMeta.nodeId, { style: { ...node.style, background: fixMeta.color } });
   } else if (fixKey === 'brand-color') {
     onUpdateNode(fixMeta.nodeId, { style: { ...node.style, background: fixMeta.color } });
+  } else if (fixKey === 'text-color') {
+    onUpdateNode(fixMeta.nodeId, { style: { ...node.style, color: fixMeta.color } });
   } else if (fixKey === 'copy') {
     onUpdateNode(fixMeta.nodeId, { text: fixMeta.text });
   } else if (fixKey === 'radius') {
