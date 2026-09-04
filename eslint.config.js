@@ -24,6 +24,7 @@ export default defineConfig([
       'scripts/**/*.{js,mjs}',
       'mcp/**/*.{js,mjs}',
       'site/api/**/*.{js,mjs}',
+      'desktop/**/*.{js,cjs,mjs}',
       'vite.config.js',
       'eslint.config.js',
     ],
