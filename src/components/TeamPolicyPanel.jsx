@@ -43,6 +43,11 @@ export default function TeamPolicyPanel({ policy, onPolicyChange, compact = fals
     input.click();
   };
 
+  const handleWeakCtaChange = (value) => {
+    const words = value.split(',').map(w => w.trim()).filter(w => w.length > 0);
+    update('weakCtaWords', words);
+  };
+
   return (
     <div className="team-policy-panel">
       {!compact && (
@@ -84,11 +89,19 @@ export default function TeamPolicyPanel({ policy, onPolicyChange, compact = fals
       )}
       <div className="team-policy-grid">
         <label>
-          Grid
+          Spacing grid
           <select value={policy.spacingGrid} onChange={(e) => update('spacingGrid', Number(e.target.value))}>
             <option value={4}>4px</option>
             <option value={8}>8px</option>
             <option value={16}>16px</option>
+          </select>
+        </label>
+        <label>
+          Radius grid
+          <select value={policy.radiusGrid} onChange={(e) => update('radiusGrid', Number(e.target.value))}>
+            <option value={2}>2px</option>
+            <option value={4}>4px</option>
+            <option value={8}>8px</option>
           </select>
         </label>
         <label>
@@ -99,13 +112,40 @@ export default function TeamPolicyPanel({ policy, onPolicyChange, compact = fals
           </select>
         </label>
         <label>
-          Max items
+          Max features
           <input
             type="number"
             min={3}
             max={10}
             value={policy.maxFeatureCount}
             onChange={(e) => update('maxFeatureCount', Number(e.target.value))}
+          />
+        </label>
+        <label style={{ gridColumn: '1 / -1' }}>
+          Suggested CTA
+          <input
+            type="text"
+            value={policy.suggestedCta || ''}
+            onChange={(e) => update('suggestedCta', e.target.value)}
+            placeholder="e.g., Start free trial"
+          />
+        </label>
+        <label style={{ gridColumn: '1 / -1' }}>
+          Weak CTA words (comma-separated)
+          <input
+            type="text"
+            value={(policy.weakCtaWords || []).join(', ')}
+            onChange={(e) => handleWeakCtaChange(e.target.value)}
+            placeholder="e.g., submit, click here, send"
+          />
+        </label>
+        <label>
+          Contrast fix color
+          <input
+            type="color"
+            value={policy.contrastFixColor || '#1e40af'}
+            onChange={(e) => update('contrastFixColor', e.target.value)}
+            style={{ height: '32px', cursor: 'pointer' }}
           />
         </label>
       </div>
