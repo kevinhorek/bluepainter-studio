@@ -25,32 +25,24 @@ export class LearningLoop {
 
   log(eventType, data = {}) {
     const events = this._readAll();
-    const baseEvent = {
+    const event = {
       type: eventType,
       timestamp: Date.now(),
       data
     };
-    
-    // v1: Enrich event with git context (for localStorage and backend)
-    const enrichedEvent = enrichEventWithContext(baseEvent);
-    
-    events.push(enrichedEvent);
+    events.push(event);
     this._write(events);
     
     // v1: Send enriched event to team audit log
     // Enabled when VITE_AUDIT_API_URL is configured
-<<<<<<< HEAD
     if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_AUDIT_API_URL) {
-=======
-    if (true) { // Temporarily enabled for testing
       const enrichedEvent = enrichEventWithContext(event);
->>>>>>> 156ae73 (feat(audit): enhance soft-fail UX and environment docs)
       sendToAuditLog(enrichedEvent).catch(err => {
         console.warn('[LearningLoop] Failed to send to audit log:', err);
       });
     }
     
-    return enrichedEvent;
+    return event;
   }
 
   logReceiptFixApplied(fixKey, nodeId, fixMeta, ruleId) {
