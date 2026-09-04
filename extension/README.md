@@ -1,94 +1,92 @@
-# BluePainter VS Code Extension
+# BluePainter for VS Code
 
-Repo-native canvas ↔ TSX sync with **Designer's Receipts** — edit visually in VS Code, write back via AST-preserving patches.
+**Visual canvas ↔ code sync with AST preservation and Designer's Receipts for React/TSX**
+
+BluePainter brings visual editing to your existing React codebase while preserving formatting, comments, and team design policy.
 
 ## Features
 
-- **Sidebar panel** — canvas preview, node inspector, and policy receipts for the active TSX/JSX file
-- **Canvas editor tab** — larger editor-area webview for visual editing
-- **AST write-back** — patches `style`, text, and `src` in place (Recast + Babel, same engine as the web app)
-- **Bootstrap** — matches Pricing/Hero demo templates by filename, or builds a node map from JSX `id` attributes
-- **Designer's Receipts** — spacing, contrast, CTA copy, and feature-count rules with one-click fixes
-- **Session persistence** — node maps saved per file between VS Code sessions
+### 🎨 Visual Canvas Editor
+- Edit React components visually in a canvas view
+- Drag, resize, and style elements directly
+- Changes write back to your TSX files with AST-based code generation
 
-## Install (local dev)
+### 🔄 Bidirectional Sync
+- **Canvas → Code**: Visual edits update your TSX files
+- **Code → Canvas**: Manual code changes reflect on canvas
+- **Formatting preserved**: Comments, spacing, and structure survive visual edits (powered by Recast/Babel)
 
-1. Install dependencies:
+### ✅ Designer's Receipts
+Live policy checks that enforce team design standards:
 
-```bash
-cd extension
-npm install
-```
+- **Spacing grid** (default 8px) — catches off-grid padding
+- **Border radius grid** (default 4px) — maintains consistent corner rounding
+- **WCAG contrast** (4.5:1 minimum) — blocks merge on low-contrast buttons
+- **CTA copy** — flags weak call-to-action text
+- **Feature clutter** — warns when lists exceed team max
 
-2. Open this repo in VS Code
-3. Press **F5** to launch an Extension Development Host — or install from folder:
-   - **Extensions: Install Extension from Location…** → select `extension/`
-4. Open a `.tsx` file (e.g. a component with `id="cta-button"` attributes)
-5. Click the **BluePainter** activity bar icon, or run **BluePainter: Open Canvas Editor**
+All rules are configurable via VS Code settings.
 
-## Commands
+### 📊 Learning Loop
+Every fix, dismiss, and policy change is logged to help improve team-specific rules over time.
 
-| Command | Description |
-|---------|-------------|
-| `BluePainter: Open Sidebar Panel` | Focus the BluePainter sidebar |
-| `BluePainter: Open Canvas Editor` | Open canvas webview in editor area |
-| `BluePainter: Sync Canvas from File` | Re-parse TSX into canvas nodes |
-| `BluePainter: Write Canvas to File` | AST-patch the active file from canvas state |
+## Usage
 
-## Workflow
+1. **Open a TSX file** with `id` attributes on elements
+2. **Open BluePainter panel** from the sidebar (paintcan icon)
+3. **Edit visually** on the canvas
+4. **Write to file** to sync changes back to code
 
-1. Open a TSX file with stable `id="node-id"` attributes (see `AST_SCOPE.md`)
-2. BluePainter bootstraps nodes from template (Pricing/Hero filenames) or from JSX ids
-3. Select nodes on the canvas → edit in **Inspector** tab
-4. Changes auto-write to the file via AST patch
-5. Edit code directly → canvas syncs on save / debounced document change
-6. Use **Receipts** tab for team policy checks and fixes
+### Commands
 
-## Settings
+- `BluePainter: Open Sidebar Panel` — Open the canvas in the sidebar
+- `BluePainter: Open Canvas Editor` — Open full canvas editor
+- `BluePainter: Sync Canvas from File` — Pull latest code changes to canvas
+- `BluePainter: Write Canvas to File` — Push canvas changes to code
 
-Configure under **BluePainter** in VS Code settings:
+## Requirements
 
-- `bluepainter.demoUrl` — web demo link
-- `bluepainter.spacingGrid`, `radiusGrid`, `minContrastRatio`, `maxFeatureCount`
-- `bluepainter.suggestedCta`, `bluepainter.contrastFixColor`
+- **VS Code** 1.85.0 or higher
+- **React/TSX files** with `id` attributes on elements you want to edit visually
 
-## Marketplace
+## Extension Settings
 
-See [MARKETPLACE.md](./MARKETPLACE.md) for the publish checklist (vsce package, listing copy, post-publish links to demo / MCP / free tools).
+This extension contributes the following settings:
 
-## Sync limits
+- `bluepainter.spacingGrid`: Spacing grid in pixels (default: 8)
+- `bluepainter.radiusGrid`: Border radius grid in pixels (default: 4)
+- `bluepainter.minContrastRatio`: Minimum WCAG contrast ratio (default: 4.5)
+- `bluepainter.maxFeatureCount`: Maximum feature list items (default: 5)
+- `bluepainter.weakCtaWords`: Weak CTA words to flag (default: ["submit", "click here", "send", "button", "ok", "enter"])
+- `bluepainter.suggestedCta`: Suggested CTA copy (default: "Start free trial")
+- `bluepainter.contrastFixColor`: Color applied by contrast fix (default: "#1e40af")
 
-See **`AST_SCOPE.md`** in the repo root. v0.2 supports inline styles, text, and image `src` on elements with matching ids. Structure add/remove and Tailwind classes are not synced yet.
+## Known Limitations
 
-## Development
+- **Inline styles only** — Tailwind/CSS modules not supported in v0.2
+- **Component instances** — Complex nested components are skipped
+- **Simple layouts** — Best for pricing cards, hero sections, and similar components
 
-```bash
-cd extension
-npm install
-# From repo root, open Run and Debug → "Extension" if launch config exists
-```
+See [AST_SCOPE.md](https://github.com/kevinhorek/bluepainter-studio/blob/main/AST_SCOPE.md) for full technical scope.
 
-### Layout
+## Live Demo
 
-```
-extension/
-  extension.js           # VS Code host: file I/O, webviews, commands
-  lib/
-    astSyncEngine.js     # Recast parse/patch (shared with web app)
-    syncEngine.js        # parseTSX / generateTSX wrappers
-    bootstrap.js         # Template + AST node bootstrap
-    receiptPolicy.js     # Designer's Receipts
-    sessionStore.js      # Per-file globalState persistence
-  media/
-    panel.css
-    panel.js             # Webview UI (canvas, inspector, receipts)
-  data/
-    pricingNodes.json
-    heroNodes.json
-```
+Try the web version at [bluepainter-studio.vercel.app](https://bluepainter-studio.vercel.app)
 
-## Roadmap
+## Feedback & Issues
 
-- [ ] Bundle full React CanvasView for Figma-parity editing
-- [ ] Component-instance / multi-file workspace
-- [ ] Marketplace publish
+- [Report issues](https://github.com/kevinhorek/bluepainter-studio/issues)
+- [Share feedback](https://github.com/kevinhorek/bluepainter-studio/discussions)
+
+## Release Notes
+
+### 0.2.0
+
+- AST-based sync with formatting preservation
+- Configurable Designer's Receipts
+- Learning loop event logging
+- Full sidebar and canvas editor views
+
+---
+
+**[View source on GitHub](https://github.com/kevinhorek/bluepainter-studio)** | **[Try the demo](https://bluepainter-studio.vercel.app)**

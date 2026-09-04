@@ -1,7 +1,7 @@
 {
   "name": "bluepainter",
   "displayName": "BluePainter",
-  "description": "Repo-native canvas ↔ TSX sync with Designer's Receipts",
+  "description": "Visual canvas ↔ code sync with AST preservation and Designer's Receipts for React/TSX",
   "version": "0.2.0",
   "publisher": "bluepainter",
   "private": false,
@@ -14,22 +14,41 @@
   "bugs": {
     "url": "https://github.com/kevinhorek/bluepainter-studio/issues"
   },
-  "homepage": "https://bluepainter-launch.vercel.app",
+  "homepage": "https://bluepainter-studio.vercel.app",
+  "qna": "https://github.com/kevinhorek/bluepainter-studio/discussions",
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": [
+    "Visualization",
     "Other"
   ],
   "keywords": [
     "react",
     "tsx",
+    "jsx",
     "design",
     "figma",
     "canvas",
+    "visual editor",
     "ast",
     "design-system",
-    "accessibility"
+    "accessibility",
+    "wcag",
+    "design-lint",
+    "component",
+    "ui"
+  ],
+  "galleryBanner": {
+    "color": "#0f172a",
+    "theme": "dark"
+  },
+  "badges": [
+    {
+      "url": "https://img.shields.io/badge/demo-live-blue",
+      "href": "https://bluepainter-studio.vercel.app",
+      "description": "Live Demo"
+    }
   ],
   "activationEvents": [
     "onLanguage:typescriptreact",
