@@ -326,6 +326,14 @@
     vscode.postMessage({ type: 'openDemo' });
   });
 
+  document.getElementById('bp-open-settings-btn').addEventListener('click', () => {
+    vscode.postMessage({ type: 'openSettings' });
+  });
+
+  document.getElementById('bp-open-config-btn').addEventListener('click', () => {
+    vscode.postMessage({ type: 'openConfigFile' });
+  });
+
   if (els.tipDismiss) {
     els.tipDismiss.addEventListener('click', () => {
       vscode.postMessage({ type: 'dismissFirstRunTip' });

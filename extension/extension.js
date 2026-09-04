@@ -94,6 +94,20 @@ function getWebviewHtml(webview, extensionUri, mode = 'sidebar') {
       <button class="bp-btn secondary" id="bp-sync-btn">Sync from file</button>
       <button class="bp-btn" id="bp-write-btn">Write to file</button>
     </footer>
+    <div class="bp-config-section">
+      <details class="bp-config-details">
+        <summary class="bp-config-summary">⚙️ Configuration</summary>
+        <div class="bp-config-content">
+          <p class="bp-config-text">Customize receipt policy for your workspace or team:</p>
+          <button class="bp-btn secondary small" id="bp-open-settings-btn">Open Extension Settings</button>
+          <button class="bp-btn secondary small" id="bp-open-config-btn">Open Team Config (.bluepainter.json)</button>
+          <p class="bp-config-help">
+            <strong>Extension Settings:</strong> Per-workspace VS Code settings<br>
+            <strong>Team Config:</strong> Shared policy in <code>.bluepainter.json</code> (version-controlled)
+          </p>
+        </div>
+      </details>
+    </div>
     <div style="padding: 0 12px 12px;">
       <button class="bp-btn secondary" id="bp-open-demo-btn">Open web demo</button>
     </div>
@@ -563,6 +577,12 @@ class BluePainterController {
       case 'openDemo':
         vscode.env.openExternal(vscode.Uri.parse(this.getDemoUrl()));
         break;
+      case 'openSettings':
+        vscode.commands.executeCommand('bluepainter.openSettings');
+        break;
+      case 'openConfigFile':
+        vscode.commands.executeCommand('bluepainter.openConfigFile');
+        break;
       default:
         break;
     }
@@ -614,6 +634,66 @@ function activate(context) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand('bluepainter.writeToFile', () => controller.writeBack())
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('bluepainter.openSettings', () => {
+      vscode.commands.executeCommand('workbench.action.openSettings', '@ext:bluepainter.bluepainter');
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('bluepainter.openConfigFile', async () => {
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (!workspaceFolders || !workspaceFolders.length) {
+        vscode.window.showWarningMessage('BluePainter: no workspace folder open.');
+        return;
+      }
+
+      const configPath = path.join(workspaceFolders[0].uri.fsPath, '.bluepainter.json');
+      const configUri = vscode.Uri.file(configPath);
+
+      try {
+        await vscode.workspace.fs.stat(configUri);
+        const doc = await vscode.workspace.openTextDocument(configUri);
+        await vscode.window.showTextDocument(doc);
+        vscode.window.showInformationMessage('BluePainter: opened .bluepainter.json');
+      } catch {
+        const createFile = await vscode.window.showInformationMessage(
+          'No .bluepainter.json found in workspace root. Create one?',
+          'Create',
+          'Cancel'
+        );
+
+        if (createFile === 'Create') {
+          const defaultConfig = {
+            receiptPolicy: {
+              spacingGrid: 8,
+              radiusGrid: 4,
+              minContrastRatio: 4.5,
+              maxFeatureCount: 5,
+              weakCtaWords: ['submit', 'click here', 'send', 'button', 'ok', 'enter'],
+              suggestedCta: 'Start free trial',
+              contrastFixColor: '#1e40af',
+              primaryColor: '#0f172a',
+              secondaryColor: '#64748b',
+              textColor: '#1e293b',
+              ruleSeverities: {}
+            },
+            learningLoopOverrides: {
+              hiddenRules: [],
+              preferredFixes: {}
+            }
+          };
+
+          const configContent = JSON.stringify(defaultConfig, null, 2);
+          await vscode.workspace.fs.writeFile(configUri, Buffer.from(configContent, 'utf8'));
+          const doc = await vscode.workspace.openTextDocument(configUri);
+          await vscode.window.showTextDocument(doc);
+          vscode.window.showInformationMessage('BluePainter: created .bluepainter.json with default team policy');
+        }
+      }
+    })
   );
 
   context.subscriptions.push(
