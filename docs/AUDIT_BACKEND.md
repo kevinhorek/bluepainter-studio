@@ -248,7 +248,9 @@ curl "http://localhost:3000/api/audit-log/query?teamId=test-team&limit=10"
 
 ### Local Development
 
-1. **Install Postgres locally:**
+**Note:** The audit backend API endpoints are Vercel serverless functions. To test them locally, you need to use `npm run dev:full` (requires Vercel CLI). If you use `npm run dev` (Vite only), the API endpoints won't be available and the Studio will show "Audit Backend Unavailable" — this is expected and the app works fine buffering events locally.
+
+1. **Install Postgres locally (optional):**
    ```bash
    # macOS
    brew install postgresql@14
@@ -265,22 +267,26 @@ curl "http://localhost:3000/api/audit-log/query?teamId=test-team&limit=10"
    VITE_AUDIT_API_URL=/api/audit-log
    ```
 
-3. **Run migration:**
+3. **Run migration (if using DATABASE_URL):**
    ```bash
    psql $DATABASE_URL -f docs/migrations/001_audit_events.sql
    ```
 
 4. **Start dev server:**
    ```bash
-   # Terminal 1: Vite dev server
+   # Option A: Vite only (no API endpoints - fastest startup)
    npm run dev
+   # → Shows "Audit Backend Unavailable" indicator (expected behavior)
    
-   # Terminal 2: Vercel dev (includes API endpoints)
+   # Option B: Vercel dev (includes API endpoints - requires Vercel CLI)
    npm run dev:full
+   # → Shows "Audit Log: Local Only" indicator in soft-fail mode (with DATABASE_URL) 
+   # → Or "Audit Log Active" if DATABASE_URL is configured
    ```
 
 5. **Test in Studio:**
    - Open http://localhost:5173
+   - Look for audit status indicator at bottom-right
    - Perform any receipt action (fix, dismiss, etc.)
    - Check browser console for `[AuditLog]` logs
    - Query buffer: `localStorage.getItem('bluepainter-audit-log-buffer')`
