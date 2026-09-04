@@ -150,6 +150,16 @@ export class LearningLoop {
   }
 
   /**
+   * Get the most recent event timestamp
+   * Returns null if no events exist
+   */
+  getLastActivityTimestamp() {
+    const events = this._readAll();
+    if (events.length === 0) return null;
+    return events[events.length - 1].timestamp;
+  }
+
+  /**
    * Generate weighted suggestions from logged events (SPEC §3)
    * Rules dismissed often → suggest downgrade severity or hide
    * Rules fixed often → suggest quick-fix preference
