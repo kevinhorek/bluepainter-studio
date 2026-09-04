@@ -1,6 +1,47 @@
 const LEARNING_LOOP_KEY = 'bluepainter.learningLoop';
 const MAX_EVENTS = 1000;
 
+/**
+ * Get workspace audit backend URL from settings
+ * Extension: reads from .vscode/settings.json or workspace config
+ */
+function getAuditBackendUrl() {
+  try {
+    const vscode = require('vscode');
+    const config = vscode.workspace.getConfiguration('bluepainter');
+    return config.get('auditBackendUrl', null);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Send event to audit backend (when configured)
+ */
+async function sendToAuditBackend(event, backendUrl) {
+  if (!backendUrl) {
+    return; // No backend configured, skip
+  }
+  
+  try {
+    const response = await fetch(`${backendUrl}/batch`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ events: [event] })
+    });
+    
+    if (!response.ok) {
+      console.warn('[LearningLoop] Backend sync failed:', await response.text());
+    } else {
+      console.log('[LearningLoop] Event synced to audit backend');
+    }
+  } catch (err) {
+    console.warn('[LearningLoop] Failed to sync event to backend:', err);
+  }
+}
+
 class LearningLoop {
   constructor(context) {
     this.context = context;
@@ -24,7 +65,49 @@ class LearningLoop {
     };
     events.push(event);
     this._write(events);
+    
+    // Optional: sync to audit backend if configured
+    const backendUrl = getAuditBackendUrl();
+    if (backendUrl) {
+      // Enrich event with extension context
+      const enrichedEvent = {
+        ...event,
+        eventId: this._generateEventId(),
+        context: this._getFileContext()
+      };
+      sendToAuditBackend(enrichedEvent, backendUrl).catch(err => {
+        console.warn('[LearningLoop] Backend sync error:', err);
+      });
+    }
+    
     return event;
+  }
+  
+  _generateEventId() {
+    // Generate UUID-like event ID for idempotency
+    return `evt-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+  }
+  
+  _getFileContext() {
+    try {
+      const vscode = require('vscode');
+      const editor = vscode.window.activeTextEditor;
+      
+      return {
+        userId: null, // TODO: detect from git config or auth
+        userName: null,
+        teamId: null, // TODO: detect from workspace config
+        repoUrl: null, // TODO: detect from git remote
+        filePath: editor?.document.uri.fsPath || null,
+        branch: null, // TODO: detect from git
+        commitSha: null,
+        surface: 'vscode-extension'
+      };
+    } catch {
+      return {
+        surface: 'vscode-extension'
+      };
+    }
   }
 
   logReceiptFixApplied(fixKey, nodeId, fixMeta, ruleId) {

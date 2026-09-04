@@ -141,7 +141,7 @@ See [FIGMA_IMPORT.md](./FIGMA_IMPORT.md) for supported node types, limitations, 
 ## Prototype limitations
 
 - Browser demo sync uses AST-first with regex fallback; Recast parse can fail on some JSX in Node (extension uses Babel generator fallback)
-- Learning loop uses localStorage only
+- Learning loop uses localStorage by default; optional team backend available (see [docs/AUDIT_BACKEND.md](./docs/AUDIT_BACKEND.md))
 - Figma import is one-way (no bidirectional sync)
 
 See [SPEC.md](./SPEC.md) for v1 scope and kill criteria.
