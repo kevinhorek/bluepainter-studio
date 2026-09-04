@@ -26,6 +26,7 @@
     "test:features": "node --import ./scripts/esm-resolve.mjs ./scripts/feature-tests.mjs",
     "test:integration": "node scripts/test-real-file-integration.mjs",
     "check:receipts": "node scripts/check-receipts.mjs extension/test-fixtures/PricingCard.tsx",
+    "package:extension": "cd extension && npm run package",
     "desktop": "concurrently -k -s first -n vite,desktop \"vite --host 127.0.0.1 --port 5173\" \"wait-on http://127.0.0.1:5173 && electron .\"",
     "desktop:prod": "npm run build && cross-env BLUEPAINTER_DESKTOP_PROD=1 electron ."
   },
