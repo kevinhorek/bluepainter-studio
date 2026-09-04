@@ -1,6 +1,7 @@
 # BluePainter — Product Spec
 
 > **Status:** v1 engineering → validation gate (per SPEC §8)  
+> **Engineering progress:** ✓ Merge-ready export (Studio + extension), ✓ Design tokens in policy, AST sync active  
 > **Live demo:** https://bluepainter-studio.vercel.app  
 > **Repo:** https://github.com/kevinhorek/bluepainter-studio
 
@@ -42,7 +43,7 @@ The product must get **strictly better with usage**. A generic model upgrade mus
 | Policy config changes | Team design tokens, grid scale, contrast floor, max features |
 | Canvas → code round-trip | Activation metric; proves sync works |
 | Code → canvas round-trip | Developer trust signal |
-| Merge-ready export (future) | What actually shipped to `src/` |
+| Merge-ready export ✓ | What actually shipped to `src/` — **implemented in Studio + extension** |
 
 ### Output over time
 
@@ -104,7 +105,9 @@ Not demo rules — a **governance layer**.
 | Button contrast | 4.5:1 WCAG AA | Min ratio | Error |
 | CTA copy | Block weak words | Word list + suggestion | Warning |
 | Feature count | Max 5 | Max count | Warning |
+| **Brand color ✓** | **Primary token** | **Team primary color** | **Info** |
 
+**Shipped in v0.2:** Design token fields (primary, secondary, text color) in `.bluepainter.json` with brand-color receipt.  
 **Future:** Block merge on error-severity receipts (CI gate). Audit log per fix/dismiss.
 
 ---
@@ -113,7 +116,7 @@ Not demo rules — a **governance layer**.
 
 Users already live in VS Code/Cursor and Git. v1 must:
 
-- Read/write files in `src/` — no export step  
+- Read/write files in `src/` — **✓ implemented:** extension write-back confirms path, Studio exports merge-ready TSX  
 - Ship as marketplace extension, not standalone app first  
 - Optional Figma import in v2, not v1 bidirectional  
 
@@ -202,4 +205,4 @@ Current demo uses regex `syncEngine.js`. **v1 must replace this** before any pai
 
 ---
 
-*Last updated: July 2026*
+*Last updated: September 2026 — v0.2 merge-ready export + design tokens shipped*
