@@ -157,16 +157,25 @@ See [CONFLICT_MODEL.md](./CONFLICT_MODEL.md) for full documentation of how BlueP
 
 ## Testing AST Sync
 
-Run the automated AST sync test:
+Run the full automated AST sync test suite:
 
 ```bash
-node scripts/test-ast-sync.mjs
+npm run test:ast
 ```
 
-Expected output:
-```
-=== ✓ All tests passed! AST sync is working correctly ===
-```
+**Coverage:**
+- Basic parsing and patching consistency (PricingCard fixture)
+- Advanced patterns: button lists, nested containers, feature lists
+- Expanded patterns: deep nesting, arrays of elements, grid layouts, boolean/null values
+- Forms & links: anchor tags, inputs, textareas, form elements
+- Card patterns: pricing cards, feature cards, testimonials, product cards
+- Hero/Form/Nav patterns: hero sections, contact forms, navigation bars, footers, stats
+- Edge cases: empty elements, self-closing tags, negative values, long text, deep nesting
+- App UI patterns: modals, data tables, sidebars, dashboards, alerts
+
+**Total:** 50 tests covering production-ready component patterns for landing pages, e-commerce, and app UIs
+
+Expected output: All tests pass with green checkmarks
 
 ## Versioning
 
