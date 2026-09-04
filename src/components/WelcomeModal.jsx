@@ -1,4 +1,8 @@
+import { isFacilitatorMode } from '../utils/facilitatorMode';
+
 export default function WelcomeModal({ onStart, onShowReceipts }) {
+  const facilitator = isFacilitatorMode();
+  
   return (
     <div className="welcome-overlay">
       <div className="welcome-modal">
@@ -7,6 +11,23 @@ export default function WelcomeModal({ onStart, onShowReceipts }) {
           <span>BluePainter</span>
         </div>
         <h1>Welcome to BluePainter Studio</h1>
+        {facilitator && (
+          <div style={{ 
+            background: '#fef3c7', 
+            border: '1px solid #fbbf24', 
+            borderRadius: '8px', 
+            padding: '12px', 
+            marginBottom: '16px',
+            fontSize: '0.85rem',
+            lineHeight: 1.5
+          }}>
+            <strong style={{ color: '#d97706' }}>🎯 Facilitator mode active</strong>
+            <p style={{ margin: '4px 0 0 0', color: '#92400e' }}>
+              You're running a validation session. Participants see the regular demo. 
+              Track metrics via <strong>··· → Session checklist</strong> and export results via <strong>··· → Session scorecard</strong>.
+            </p>
+          </div>
+        )}
         <p className="welcome-lead">
           This is a fully interactive prototype. Edit on canvas or in code — both stay in sync. 
           Designer&apos;s Receipts catch contrast, spacing, and UX issues before you ship.

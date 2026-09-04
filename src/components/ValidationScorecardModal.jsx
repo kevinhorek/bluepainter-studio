@@ -294,11 +294,45 @@ export default function ValidationScorecardModal({ isOpen, onClose }) {
               <div className="validation-empty-state-icon">📊</div>
               <h4 className="validation-empty-state-title">No validation sessions yet</h4>
               <p className="validation-empty-state-text">
-                Run facilitator mode (`?facilitator=1`) with users to collect feedback. 
+                Run facilitator mode with users to collect feedback and measure activation metrics. 
                 Target 8–10 sessions to reach kill criteria (SPEC §8).
               </p>
-              <p className="validation-empty-state-hint">
-                <strong>Quick start:</strong> Share bluepainter-studio.vercel.app → collect feedback (··· → Share feedback) → export results here
+              <div className="validation-empty-state-steps">
+                <h5 style={{ fontSize: '0.85rem', fontWeight: 600, margin: '12px 0 8px 0' }}>How to run a validation session:</h5>
+                <ol style={{ fontSize: '0.8rem', lineHeight: 1.6, paddingLeft: '20px', margin: '8px 0' }}>
+                  <li>
+                    <strong>Open as facilitator:</strong> Add <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '3px', fontFamily: 'monospace' }}>?facilitator=1</code> to the URL
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        const facilitatorUrl = window.location.origin + window.location.pathname + '?facilitator=1';
+                        navigator.clipboard.writeText(facilitatorUrl).then(() => {
+                          setShareStatus('✓ Facilitator URL copied to clipboard');
+                          setTimeout(() => setShareStatus(''), 3000);
+                        });
+                      }}
+                      style={{ 
+                        marginLeft: '8px', 
+                        padding: '2px 8px', 
+                        fontSize: '0.75rem',
+                        background: '#3b82f6',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Copy URL
+                    </button>
+                  </li>
+                  <li><strong>Share demo link with participant:</strong> Give them the regular URL (without <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '3px', fontFamily: 'monospace' }}>?facilitator=1</code>)</li>
+                  <li><strong>Let them explore:</strong> Watch metrics update in real-time via <strong>··· → Session checklist</strong></li>
+                  <li><strong>Collect feedback:</strong> Participant submits via <strong>··· → Share feedback</strong></li>
+                  <li><strong>Export results:</strong> Return here after session to export JSON or pilot pack</li>
+                </ol>
+              </div>
+              <p className="validation-empty-state-hint" style={{ marginTop: '12px', fontSize: '0.8rem', color: '#64748b' }}>
+                <strong>💡 Tip:</strong> The facilitator badge appears in the header when <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '3px', fontFamily: 'monospace' }}>?facilitator=1</code> is active. See FACILITATOR.md for a complete session guide.
               </p>
             </div>
           )}

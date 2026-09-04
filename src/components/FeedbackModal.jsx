@@ -47,8 +47,11 @@ export default function FeedbackModal({ isOpen, onClose }) {
             <h2>Thanks for your feedback!</h2>
             <p>Your response has been saved locally and helps us decide whether to build BluePainter for real.</p>
             <p className="feedback-export-note">
-              <strong>Note:</strong> Feedback is stored in your browser. No data is sent to external servers. 
-              Demo facilitators can export all responses as JSON for go/no-go decisions (see VALIDATION.md).
+              <strong>Note:</strong> Feedback is stored locally in your browser. No data is sent to external servers. 
+            </p>
+            <p className="feedback-export-note" style={{ marginTop: '8px', fontSize: '0.8rem' }}>
+              Demo facilitators can access <strong>··· → Session scorecard</strong> (with <code style={{ background: '#f1f5f9', padding: '2px 4px', borderRadius: '3px' }}>?facilitator=1</code>) 
+              to export all responses as JSON for go/no-go decisions.
             </p>
             <button type="button" className="feedback-submit-btn" onClick={handleClose}>
               Close
