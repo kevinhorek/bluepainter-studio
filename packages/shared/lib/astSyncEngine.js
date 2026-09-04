@@ -32,7 +32,12 @@ function literalForValue(val) {
   if (val === null) return t.nullLiteral();
   if (val === undefined) return t.identifier('undefined');
   if (typeof val === 'boolean') return t.booleanLiteral(val);
-  if (typeof val === 'number' && !Number.isNaN(val)) return t.numericLiteral(val);
+  if (typeof val === 'number' && !Number.isNaN(val)) {
+    if (val < 0) {
+      return t.unaryExpression('-', t.numericLiteral(Math.abs(val)));
+    }
+    return t.numericLiteral(val);
+  }
   return t.stringLiteral(String(val));
 }
 
@@ -130,7 +135,7 @@ function parseTSXWithAST(code, nodesMap) {
           node.className = classAttr.value.value;
         }
 
-        if (node.type === 'text' || node.type === 'button' || node.type === 'list-item') {
+        if (node.type === 'text' || node.type === 'button' || node.type === 'list-item' || node.type === 'link') {
           const text = readJsxText(path.node);
           if (text != null) node.text = text;
         }
@@ -140,6 +145,28 @@ function parseTSXWithAST(code, nodesMap) {
             (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'src' })
           );
           if (srcAttr && t.isStringLiteral(srcAttr.value)) node.src = srcAttr.value.value;
+        }
+
+        if (node.type === 'link' && t.isJSXIdentifier(opening.name, { name: 'a' })) {
+          const hrefAttr = opening.attributes.find(
+            (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'href' })
+          );
+          if (hrefAttr && t.isStringLiteral(hrefAttr.value)) node.href = hrefAttr.value.value;
+        }
+
+        if ((node.type === 'input' || node.type === 'textarea') && (t.isJSXIdentifier(opening.name, { name: 'input' }) || t.isJSXIdentifier(opening.name, { name: 'textarea' }))) {
+          const placeholderAttr = opening.attributes.find(
+            (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'placeholder' })
+          );
+          if (placeholderAttr && t.isStringLiteral(placeholderAttr.value)) node.placeholder = placeholderAttr.value.value;
+
+          const typeAttr = opening.attributes.find(
+            (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'type' })
+          );
+          if (typeAttr && t.isStringLiteral(typeAttr.value)) {
+            if (node.type === 'input') node.inputType = typeAttr.value.value;
+            else if (node.type === 'button') node.buttonType = typeAttr.value.value;
+          }
         }
       }
     });
@@ -170,12 +197,30 @@ function patchTSXWithAST(code, nodesMap) {
           upsertStyleAttribute(opening, node.style);
         }
 
-        if (node.type === 'text' || node.type === 'button' || node.type === 'list-item') {
-          setJsxText(path.node, node.text || '');
+        if (node.type === 'text' || node.type === 'button' || node.type === 'list-item' || node.type === 'link') {
+          if (node.text !== undefined && node.text !== null) {
+            setJsxText(path.node, node.text);
+          }
         }
 
         if (node.type === 'image' && node.src) {
           upsertStringAttribute(opening, 'src', node.src);
+        }
+
+        if (node.type === 'link' && node.href) {
+          upsertStringAttribute(opening, 'href', node.href);
+        }
+
+        if ((node.type === 'input' || node.type === 'textarea') && node.placeholder) {
+          upsertStringAttribute(opening, 'placeholder', node.placeholder);
+        }
+
+        if (node.type === 'input' && node.inputType) {
+          upsertStringAttribute(opening, 'type', node.inputType);
+        }
+
+        if (node.type === 'button' && node.buttonType) {
+          upsertStringAttribute(opening, 'type', node.buttonType);
         }
       }
     });
@@ -191,9 +236,6 @@ function astSyncAvailable() {
   return true;
 }
 
-<<<<<<< HEAD
-export {
-=======
 function detectStyleSources(code) {
   if (!code?.trim()) return { hasInlineStyles: false, hasClassNames: false, hasTailwind: false, hasCssModules: false };
 
@@ -244,8 +286,7 @@ function detectStyleSources(code) {
   }
 }
 
-module.exports = {
->>>>>>> c43ed02 (feat(ast): expand AST support for real codebase patterns)
+export {
   parseTSXWithAST,
   patchTSXWithAST,
   getJsxId,

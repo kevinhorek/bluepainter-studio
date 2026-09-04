@@ -8,10 +8,13 @@ BluePainter v1 AST sync supports the following node types for bidirectional canv
 
 | Node Type | JSX Elements | Syncable Properties | Notes |
 |-----------|--------------|---------------------|-------|
-| **Container** | `<div>`, `<section>`, `<article>` | `style` (inline) | `className` preserved but not modified by canvas |
-| **Text** | `<p>`, `<span>`, `<h1>`–`<h6>` | `text` content, `style` (inline) | `className` preserved but not modified by canvas |
-| **Button** | `<button>` | `text` content, `style` (inline) | `className` preserved but not modified by canvas |
+| **Container** | `<div>`, `<section>`, `<article>`, `<header>`, `<footer>`, `<nav>`, `<form>` | `style` (inline) | `className` preserved but not modified by canvas |
+| **Text** | `<p>`, `<span>`, `<h1>`–`<h6>`, `<label>` | `text` content, `style` (inline) | `className` preserved but not modified by canvas |
+| **Button** | `<button>` | `text` content, `type` attribute, `style` (inline) | `className` preserved but not modified by canvas |
+| **Link** | `<a>` | `text` content, `href` attribute, `style` (inline) | `className` preserved but not modified by canvas |
 | **Image** | `<img>` | `src`, `alt`, `style` (inline) | `className` preserved but not modified by canvas |
+| **Input** | `<input>`, `<textarea>` | `type`, `placeholder`, `style` (inline) | Text content not synced (controlled by value/onChange) |
+| **Table** | `<table>`, `<thead>`, `<tbody>`, `<tr>`, `<th>`, `<td>` | `text` content (th/td), `style` (inline) | Full table structure support |
 | **Line** | `<hr>` | `style` (inline) | `className` preserved but not modified by canvas |
 | **Shape** | `<div role="presentation">` | `style` (inline) | `className` preserved but not modified by canvas |
 | **List** | `<ul>`, `<ol>` | `style` (inline) | `className` preserved but not modified by canvas |
@@ -34,11 +37,12 @@ All inline styles are synced via the `style={{ ... }}` JSX attribute. Supported 
 - `border`, `borderWidth`, `borderColor`, `borderStyle`, `borderRadius`
 - `boxShadow`
 - `opacity`
+- `objectFit` (for image elements), `overflow`
 
 ### Typography
-- `fontSize`, `fontWeight`, `fontFamily`
+- `fontSize`, `fontWeight`, `fontFamily`, `fontStyle`
 - `lineHeight`, `letterSpacing`
-- `textAlign`, `textDecoration`
+- `textAlign`, `textDecoration`, `textTransform`
 
 ### Position
 - `position`, `top`, `right`, `bottom`, `left`
@@ -157,16 +161,28 @@ See [CONFLICT_MODEL.md](./CONFLICT_MODEL.md) for full documentation of how BlueP
 
 ## Testing AST Sync
 
-Run the automated AST sync test:
+Run the full automated AST sync test suite:
 
 ```bash
-node scripts/test-ast-sync.mjs
+npm run test:ast
 ```
 
-Expected output:
-```
-=== ✓ All tests passed! AST sync is working correctly ===
-```
+**Coverage:**
+- Basic parsing and patching consistency (PricingCard fixture)
+- Advanced patterns: button lists, nested containers, feature lists
+- Expanded patterns: deep nesting, arrays of elements, grid layouts, boolean/null values
+- Card patterns: pricing cards, feature cards, testimonial cards, product cards with badges and icons
+- Hero/Form/Nav patterns: hero sections, contact forms with labels/inputs/textareas, navigation bars, footers, stats sections
+- Style source detection: Tailwind, CSS modules, inline styles, mixed
+
+**Total:** 40 tests covering production-ready component patterns for landing pages, e-commerce, and app UIs, plus edge cases and robustness
+
+**Edge cases tested:**
+- Empty elements, self-closing tags, mixed content
+- Comment preservation, negative values, very long text
+- Deep nesting (10+ levels), special characters, whitespace handling
+
+Expected output: All tests pass with green checkmarks
 
 ## Versioning
 
