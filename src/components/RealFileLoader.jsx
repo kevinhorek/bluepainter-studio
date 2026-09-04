@@ -1,11 +1,19 @@
 import { useState, useRef } from 'react';
 import { parseTSX } from '../utils/syncEngine';
 import { getEmptyFigmaImportNodes } from '../utils/figmaImport';
+import { 
+  validateFileExtension, 
+  validateFileContent, 
+  validateParsedNodes,
+  detectUnsupportedPatterns,
+  formatValidationError 
+} from '../utils/fileValidation';
 
 export default function RealFileLoader({ isOpen, onClose, onFileLoaded }) {
   const [dragActive, setDragActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [warnings, setWarnings] = useState([]);
   const fileInputRef = useRef(null);
 
   const handleDrag = (e) => {
@@ -21,56 +29,63 @@ export default function RealFileLoader({ isOpen, onClose, onFileLoaded }) {
   const parseFile = async (file) => {
     setLoading(true);
     setError(null);
+    setWarnings([]);
 
     try {
-      const text = await file.text();
-      
-      // Validate file extension
       const fileName = file.name;
-      if (!fileName.endsWith('.tsx') && !fileName.endsWith('.jsx')) {
-        throw new Error('Only .tsx and .jsx files are supported');
+      
+      // Step 1: Validate file extension
+      const extValidation = validateFileExtension(fileName);
+      if (!extValidation.valid) {
+        throw new Error(formatValidationError(extValidation));
       }
 
-      // Parse with AST engine
+      // Step 2: Read and validate content
+      const text = await file.text();
+      const contentValidation = validateFileContent(text);
+      if (!contentValidation.valid) {
+        throw new Error(formatValidationError(contentValidation));
+      }
+
+      // Step 3: Parse with AST engine
       const baseNodes = getEmptyFigmaImportNodes();
       const parsedNodes = parseTSX(text, baseNodes);
 
-      if (!parsedNodes || Object.keys(parsedNodes).length === 0) {
-        throw new Error('Failed to parse component. Ensure elements have stable id="..." attributes. See AST_SCOPE.md for requirements.');
+      // Step 4: Validate parsed nodes
+      const nodesValidation = validateParsedNodes(parsedNodes);
+      if (!nodesValidation.valid) {
+        throw new Error(formatValidationError(nodesValidation));
       }
 
-      // Check for common unsupported patterns
-      const nodeCount = Object.keys(parsedNodes).length;
-      if (nodeCount < 2) {
-        console.warn('[RealFileLoader] Only 1 node found - component may not have sufficient id attributes');
+      // Step 5: Check for warnings (non-blocking)
+      if (nodesValidation.warning) {
+        setWarnings([{ message: nodesValidation.message, suggestion: nodesValidation.suggestion }]);
       }
 
-      // Find root node (typically the first or a page-level node)
+      // Step 6: Detect unsupported patterns
+      const patternWarnings = detectUnsupportedPatterns(text);
+      if (patternWarnings.length > 0) {
+        setWarnings(prev => [...prev, ...patternWarnings]);
+      }
+
+      // Find root node
       const rootId = Object.keys(parsedNodes)[0];
       
       onFileLoaded({
         fileName,
         code: text,
         nodes: parsedNodes,
-        rootId
+        rootId,
+        warnings: patternWarnings
       });
 
-      onClose();
-    } catch (err) {
-      console.error('[RealFileLoader] Parse error:', err);
-      
-      // Provide helpful error messages for common issues
-      let errorMessage = err.message || 'Failed to parse file';
-      
-      if (err.message && err.message.includes('Unexpected token')) {
-        errorMessage = 'Syntax error in file. Please ensure the component is valid TSX/JSX.';
-      } else if (err.message && err.message.includes('Tailwind')) {
-        errorMessage = 'Tailwind-only components are not fully supported. Add inline style={{}} attributes for canvas editing. See AST_SCOPE.md.';
-      } else if (err.message && err.message.includes('CSS Modules')) {
-        errorMessage = 'CSS Modules are not supported. Use inline style={{}} for canvas-editable properties. See AST_SCOPE.md.';
+      // Don't close immediately if there are warnings - let user review
+      if (warnings.length === 0 && patternWarnings.length === 0) {
+        onClose();
       }
-      
-      setError(errorMessage);
+    } catch (err) {
+      console.error('[RealFileLoader] Validation failed:', err);
+      setError(err.message || 'Failed to load file');
     } finally {
       setLoading(false);
     }
@@ -136,18 +151,39 @@ export default function RealFileLoader({ isOpen, onClose, onFileLoaded }) {
             {loading ? (
               <div className="file-drop-message">
                 <span className="file-drop-icon">⏳</span>
-                <p>Parsing component...</p>
+                <p>Validating and parsing component...</p>
               </div>
             ) : error ? (
               <div className="file-drop-message error">
                 <span className="file-drop-icon">⚠️</span>
-                <p><strong>Error:</strong> {error}</p>
+                <pre className="error-details">{error}</pre>
                 <button
                   type="button"
                   className="btn-primary"
                   onClick={() => setError(null)}
                 >
                   Try Again
+                </button>
+              </div>
+            ) : warnings.length > 0 ? (
+              <div className="file-drop-message warning">
+                <span className="file-drop-icon">⚠️</span>
+                <div className="warnings-list">
+                  <p><strong>File loaded with warnings:</strong></p>
+                  {warnings.map((warning, idx) => (
+                    <div key={idx} className="warning-item">
+                      <p>{warning.message}</p>
+                      {warning.suggestion && <p className="warning-suggestion">💡 {warning.suggestion}</p>}
+                      {warning.example && <pre className="warning-example">{warning.example}</pre>}
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={onClose}
+                >
+                  Continue Anyway
                 </button>
               </div>
             ) : (

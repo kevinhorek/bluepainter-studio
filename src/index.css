@@ -6602,3 +6602,49 @@ input:checked + .slider-round:before {
   background: rgba(0, 0, 0, 0.05);
   color: var(--text);
 }
+
+/* File validation warnings and errors */
+.file-drop-message.warning {
+  text-align: left;
+}
+
+.warnings-list {
+  width: 100%;
+  margin: 12px 0;
+}
+
+.warning-item {
+  padding: 12px;
+  background: rgba(251, 191, 36, 0.1);
+  border-left: 3px solid #f59e0b;
+  border-radius: 4px;
+  margin: 8px 0;
+}
+
+.warning-item p {
+  margin: 4px 0;
+  font-size: 13px;
+}
+
+.warning-suggestion {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.warning-example,
+.error-details {
+  background: rgba(0, 0, 0, 0.05);
+  padding: 8px;
+  border-radius: 4px;
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+  font-size: 12px;
+  margin: 8px 0;
+  white-space: pre-wrap;
+  text-align: left;
+}
+
+.error-details {
+  color: var(--error);
+  background: rgba(239, 68, 68, 0.05);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
