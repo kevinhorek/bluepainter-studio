@@ -5,6 +5,8 @@ on:
     paths:
       - '**/*.tsx'
       - '**/*.jsx'
+      - 'scripts/check-receipts.mjs'
+      - '.bluepainter.json'
   push:
     branches:
       - main
@@ -26,16 +28,48 @@ jobs:
       - name: Install dependencies
         run: npm install
       
-      - name: Run receipt gate on passing fixtures
-        run: |
-          node scripts/check-receipts.mjs extension/test-fixtures/PricingCard.tsx
+      - name: Verify gate script works
+        run: node scripts/check-receipts.mjs --help
       
-      - name: Verify contrast error detection
+      - name: Run receipt gate on test fixtures
         run: |
+          echo "::group::Test passing fixture"
+          node scripts/check-receipts.mjs extension/test-fixtures/PricingCard.tsx
+          echo "::endgroup::"
+          
+          echo "::group::Test multiple warnings fixture"
+          node scripts/check-receipts.mjs extension/test-fixtures/MultipleWarnings.tsx
+          echo "::endgroup::"
+      
+      - name: Verify contrast error detection (negative test)
+        run: |
+          echo "::group::Verify contrast failures are detected"
           echo "Testing that low-contrast fixture correctly fails..."
           if node scripts/check-receipts.mjs extension/test-fixtures/LowContrastCard.tsx; then
             echo "❌ FAIL: LowContrastCard should have failed but passed"
             exit 1
           else
-            echo "✅ Contrast error correctly detected"
+            echo "✅ Contrast error correctly detected and blocked as expected"
           fi
+          echo "::endgroup::"
+      
+      - name: Run gate on all fixtures together
+        run: |
+          echo "::group::Batch check all passing fixtures"
+          node scripts/check-receipts.mjs \
+            extension/test-fixtures/PricingCard.tsx \
+            extension/test-fixtures/MultipleWarnings.tsx
+          echo "::endgroup::"
+      
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Receipt Gate Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Receipt gate validation complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### What was checked:" >> $GITHUB_STEP_SUMMARY
+          echo "- Error-severity receipts block merge (e.g., WCAG contrast)" >> $GITHUB_STEP_SUMMARY
+          echo "- Warning-severity receipts are non-blocking (e.g., spacing, CTA copy)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "See CI.md for integration guide" >> $GITHUB_STEP_SUMMARY

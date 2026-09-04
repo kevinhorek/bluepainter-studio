@@ -9,6 +9,14 @@
  *   node scripts/check-receipts.mjs extension/test-fixtures/*.tsx
  *   node scripts/check-receipts.mjs --config=.bluepainter.json src/components/*.tsx
  * 
+ * Exit codes:
+ *   0 = All checks passed (warnings are non-blocking)
+ *   1 = Error-severity findings detected (blocks merge)
+ * 
+ * Severity levels:
+ *   ERROR (blocks merge): WCAG contrast failures
+ *   WARNING (non-blocking): Spacing grid, border radius, CTA copy, feature count
+ * 
  * Config file:
  *   Create .bluepainter.json in repo root to customize receipt policy
  *   See .bluepainter.json for schema
@@ -56,10 +64,18 @@ function getDefaultPolicy() {
 }
 
 async function loadReceiptPolicy() {
-  const { createRequire } = await import('module');
-  const require = createRequire(import.meta.url);
-  const receiptModule = require('@bluepainter/shared/receiptPolicy');
-  return receiptModule;
+  try {
+    const { createRequire } = await import('module');
+    const require = createRequire(import.meta.url);
+    const receiptModule = require('@bluepainter/shared/receiptPolicy');
+    return receiptModule;
+  } catch (err) {
+    console.error('\n❌ FATAL: Failed to load receipt policy module');
+    console.error(`   Error: ${err.message}`);
+    console.error('   Ensure @bluepainter/shared/receiptPolicy is available in your project.');
+    console.error('   Exit code: 1');
+    process.exit(1);
+  }
 }
 
 const babelParser = {
@@ -242,7 +258,7 @@ async function checkFile(filepath, policy) {
     nodes = parseTSXToNodes(code, filename);
   } catch (err) {
     console.log(`  ⚠️  Skipped: ${err.message}`);
-    return { errors: 0, warnings: 0, skipped: true };
+    return { errors: 0, warnings: 0, skipped: true, filepath };
   }
   
   const { evaluateReceipts } = await loadReceiptPolicy();
@@ -254,18 +270,24 @@ async function checkFile(filepath, policy) {
   const warnings = result.rules.filter(r => !r.valid && r.severity === 'warning');
   
   if (errors.length > 0) {
-    console.log(`  ❌ ${errors.length} error(s):`);
+    console.log(`  ❌ ${errors.length} error(s) — BLOCKING:`);
     for (const rule of errors) {
       console.log(`     • ${rule.title}`);
       console.log(`       ${rule.desc}`);
+      if (rule.fixLabel) {
+        console.log(`       → Fix: ${rule.fixLabel}`);
+      }
     }
   }
   
   if (warnings.length > 0) {
-    console.log(`  ⚠️  ${warnings.length} warning(s):`);
+    console.log(`  ⚠️  ${warnings.length} warning(s) — non-blocking:`);
     for (const rule of warnings) {
       console.log(`     • ${rule.title}`);
       console.log(`       ${rule.desc}`);
+      if (rule.fixLabel) {
+        console.log(`       → Suggestion: ${rule.fixLabel}`);
+      }
     }
   }
   
@@ -273,17 +295,32 @@ async function checkFile(filepath, policy) {
     console.log(`  ✅ All receipts passed`);
   }
   
-  return { errors: errors.length, warnings: warnings.length, skipped: false };
+  return { errors: errors.length, warnings: warnings.length, skipped: false, filepath };
 }
 
 async function main() {
   const args = process.argv.slice(2);
   
-  if (args.length === 0) {
-    console.error('Usage: node scripts/check-receipts.mjs <file.tsx> [file2.tsx ...]');
-    console.error('       node scripts/check-receipts.mjs --config=.bluepainter.json <files>');
-    console.error('Example: node scripts/check-receipts.mjs extension/test-fixtures/*.tsx');
-    process.exit(1);
+  if (args.length === 0 || args.includes('--help') || args.includes('-h')) {
+    console.log('Designer\'s Receipts Gate — Receipt policy checker for CI/pre-merge');
+    console.log('');
+    console.log('Usage:');
+    console.log('  node scripts/check-receipts.mjs <file.tsx> [file2.tsx ...]');
+    console.log('  node scripts/check-receipts.mjs --config=.bluepainter.json <files>');
+    console.log('');
+    console.log('Examples:');
+    console.log('  node scripts/check-receipts.mjs src/components/Button.tsx');
+    console.log('  node scripts/check-receipts.mjs extension/test-fixtures/*.tsx');
+    console.log('  node scripts/check-receipts.mjs --config=custom.json src/**/*.tsx');
+    console.log('');
+    console.log('Exit Codes:');
+    console.log('  0 = All checks passed (warnings allowed)');
+    console.log('  1 = Error-severity findings detected (blocks merge)');
+    console.log('');
+    console.log('Receipt Severity:');
+    console.log('  ERROR (blocks merge): WCAG contrast failures');
+    console.log('  WARNING (non-blocking): Spacing, radius, CTA copy, feature count');
+    process.exit(args.length === 0 ? 1 : 0);
   }
   
   let configPath = '.bluepainter.json';
@@ -310,9 +347,11 @@ async function main() {
   let totalWarnings = 0;
   let checked = 0;
   let skipped = 0;
+  const results = [];
   
   for (const file of files) {
     const result = await checkFile(file, policy);
+    results.push(result);
     if (result.skipped) {
       skipped++;
     } else {
@@ -323,15 +362,35 @@ async function main() {
   }
   
   console.log('\n' + '='.repeat(60));
-  console.log(`Checked ${checked} file(s), skipped ${skipped}`);
-  console.log(`Total: ${totalErrors} error(s), ${totalWarnings} warning(s)`);
+  console.log('RECEIPT GATE SUMMARY');
+  console.log('='.repeat(60));
+  console.log(`Checked: ${checked} file(s)`);
+  if (skipped > 0) {
+    console.log(`Skipped: ${skipped} file(s)`);
+  }
+  console.log(`Errors (blocking): ${totalErrors}`);
+  console.log(`Warnings (non-blocking): ${totalWarnings}`);
+  
+  const filesWithErrors = results.filter(r => !r.skipped && r.errors > 0);
+  if (filesWithErrors.length > 0) {
+    console.log('\n❌ FILES WITH BLOCKING ERRORS:');
+    for (const result of filesWithErrors) {
+      console.log(`   • ${result.filepath} (${result.errors} error(s))`);
+    }
+  }
   
   if (totalErrors > 0) {
-    console.log('\n❌ Receipt gate FAILED — fix error-severity findings before merge');
+    console.log('\n❌ RECEIPT GATE FAILED');
+    console.log('Fix error-severity findings before merge. Warnings are non-blocking.');
+    console.log('Exit code: 1');
     process.exit(1);
   }
   
-  console.log('\n✅ Receipt gate passed');
+  console.log('\n✅ RECEIPT GATE PASSED');
+  if (totalWarnings > 0) {
+    console.log(`Note: ${totalWarnings} warning(s) present but non-blocking`);
+  }
+  console.log('Exit code: 0');
   process.exit(0);
 }
 

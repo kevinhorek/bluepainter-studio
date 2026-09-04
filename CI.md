@@ -15,6 +15,10 @@ The receipt gate:
 3. **Fails the build** on error-severity violations (e.g., WCAG contrast failures)
 4. **Warns** on non-blocking issues (e.g., off-grid spacing)
 
+**Exit codes:**
+- `0` = All checks passed (warnings are allowed and don't block)
+- `1` = Error-severity findings detected (blocks merge)
+
 **SPEC reference:** §6 "Block merge on error-severity receipts"
 
 ---
@@ -71,12 +75,30 @@ node scripts/check-receipts.mjs test-fixtures/*.tsx
 
 Expected output:
 ```
-✅ PricingCard.tsx — All receipts passed
-❌ LowContrastCard.tsx — 1 error(s):
-   • Low contrast ratio (1.24:1)
-     Fails WCAG AA. Text might be hard to read on this button color.
+✓ Loaded policy from .bluepainter.json
 
-❌ Receipt gate FAILED — fix error-severity findings before merge
+Checking PricingCard.tsx...
+  ✅ All receipts passed
+
+Checking LowContrastCard.tsx...
+  ❌ 1 error(s) — BLOCKING:
+     • Low contrast ratio (1.24:1)
+       Fails WCAG AA. Text might be hard to read on this button color.
+       → Fix: Enhance Contrast
+
+============================================================
+RECEIPT GATE SUMMARY
+============================================================
+Checked: 2 file(s)
+Errors (blocking): 1
+Warnings (non-blocking): 0
+
+❌ FILES WITH BLOCKING ERRORS:
+   • test-fixtures/LowContrastCard.tsx (1 error(s))
+
+❌ RECEIPT GATE FAILED
+Fix error-severity findings before merge. Warnings are non-blocking.
+Exit code: 1
 ```
 
 ### 5. Push and verify
@@ -90,6 +112,41 @@ git push origin your-branch
 ```
 
 Check the **Actions** tab in GitHub to see the receipt gate status.
+
+---
+
+## Understanding the output
+
+The receipt gate produces clear, actionable output:
+
+### Passing checks
+```
+Checking Button.tsx...
+  ✅ All receipts passed
+```
+
+### Warnings (non-blocking)
+```
+Checking Card.tsx...
+  ⚠️  2 warning(s) — non-blocking:
+     • Off-grid spacing warning
+       Padding of 30px is off-grid. Recommend 32px.
+       → Suggestion: Snap to 32px
+     • Weak CTA copy detected
+       "Submit" feels generic. Suggest an action-oriented copy.
+       → Suggestion: Change to "Start free trial"
+```
+**Result:** Warnings logged but build passes (exit code 0)
+
+### Errors (blocking)
+```
+Checking Hero.tsx...
+  ❌ 1 error(s) — BLOCKING:
+     • Low contrast ratio (2.1:1)
+       Fails WCAG AA. Text might be hard to read on this button color.
+       → Fix: Enhance Contrast
+```
+**Result:** Build fails (exit code 1), blocks merge
 
 ---
 
@@ -201,22 +258,49 @@ fi
 
 ## Workflow examples
 
-### Example 1: Check only changed files in PR
+### Example 1: Check only changed files in PR (recommended)
 
 ```yaml
-- name: Get changed files
-  id: changed-files
-  uses: tj-actions/changed-files@v41
-  with:
-    files: |
-      **/*.tsx
-      **/*.jsx
+name: Receipt Gate
 
-- name: Run receipt gate on changed files
-  if: steps.changed-files.outputs.any_changed == 'true'
-  run: |
-    echo "${{ steps.changed-files.outputs.all_changed_files }}" | \
-      xargs node scripts/check-receipts.mjs
+on:
+  pull_request:
+    paths:
+      - '**/*.tsx'
+      - '**/*.jsx'
+
+jobs:
+  receipt-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      
+      - name: Install dependencies
+        run: npm install
+      
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v41
+        with:
+          files: |
+            **/*.tsx
+            **/*.jsx
+      
+      - name: Run receipt gate on changed files
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: |
+          echo "${{ steps.changed-files.outputs.all_changed_files }}" | \
+            xargs node scripts/check-receipts.mjs
+      
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Receipt Gate Results" >> $GITHUB_STEP_SUMMARY
+          echo "Checked changed TSX/JSX files for design policy compliance" >> $GITHUB_STEP_SUMMARY
 ```
 
 ### Example 2: Check entire component library
@@ -227,12 +311,25 @@ fi
     node scripts/check-receipts.mjs src/components/**/*.tsx
 ```
 
-### Example 3: Custom config per environment
+### Example 3: Multiple directories with failure handling
+
+```yaml
+- name: Run receipt gate on all UI components
+  run: |
+    node scripts/check-receipts.mjs \
+      src/components/**/*.tsx \
+      src/pages/**/*.tsx \
+      src/layouts/**/*.tsx
+```
+
+### Example 4: Custom config per environment
 
 ```yaml
 - name: Run receipt gate (staging config)
   run: |
-    node scripts/check-receipts.mjs --config=.bluepainter.staging.json src/components/*.tsx
+    node scripts/check-receipts.mjs \
+      --config=.bluepainter.staging.json \
+      src/components/*.tsx
 ```
 
 ---
