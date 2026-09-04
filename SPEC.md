@@ -72,25 +72,27 @@ For every feature, answer:
 
 ---
 
-## 5. v1 scope (non-negotiable)
+## 5. v1 scope (non-negotiable) — ✅ COMPLETE
 
-### Ship
+**Status:** All v1 engineering shipped (#115–#123). See SPEC_STATUS.md for evidence.
 
-- **One surface:** VS Code / Cursor extension (Phase 1 in demo = target UX)
-- **One user job:** Edit known components (e.g. PricingCard) with receipts before merge
-- **Real AST sync:** Recast or Babel — replace regex prototype
-- **Lossless scope (v1):** Inline styles + simple component trees; document in/out explicitly
-- **Configurable receipts:** Grid, contrast floor, CTA blocklist, max features
-- **Learning loop:** Log fixes, dismissals, policy changes, round-trips
-- **Conflict model:** Document canvas vs. manual code vs. git merge behavior
+### Ship ✅
 
-### Explicitly defer (vision only in demo)
+- ✅ **One surface:** VS Code / Cursor extension (Phase 1 in demo = target UX)
+- ✅ **One user job:** Edit known components (e.g. PricingCard) with receipts before merge
+- ✅ **Real AST sync:** Recast + Babel — regex prototype replaced
+- ✅ **Lossless scope (v1):** Inline styles + simple component trees; documented in AST_SCOPE.md
+- ✅ **Configurable receipts:** Grid, contrast floor, CTA blocklist, max features
+- ✅ **Learning loop:** Logs fixes, dismissals, policy changes, round-trips to localStorage (production backend optional)
+- ✅ **Conflict model:** Documented in CONFLICT_MODEL.md + implemented (3-way resolution in Studio, prompt in extension)
 
-- Tauri desktop shell (Phase 2)
-- Figma plugin bidirectional sync (Phase 3) — v2 may allow import-only
-- Responsive multi-viewport canvas (Phase 4)
-- Hosted code runtime / proprietary lock-in
-- "AI generates whole apps from prompts"
+### Explicitly defer (vision only in demo) — ⏳ DEFERRED
+
+- ⏳ Tauri desktop shell (Phase 2) — Electron prototype exists but not v1 requirement
+- ⏳ Figma plugin bidirectional sync (Phase 3) — v2 may allow import-only; one-way import working in v0.3
+- ⏳ Responsive multi-viewport canvas (Phase 4) — prototype exists but not v1 moat requirement
+- ⏳ Hosted code runtime / proprietary lock-in — explicitly not building
+- ⏳ "AI generates whole apps from prompts" — explicitly not building
 
 ---
 
@@ -122,46 +124,60 @@ Users already live in VS Code/Cursor and Git. v1 must:
 
 ---
 
-## 8. Success metrics & kill criteria
+## 8. Success metrics & kill criteria — 🟡 HUMAN GATE
 
-### Activation
+**Status:** v1 engineering complete. Awaiting pilot validation sessions (5–10 required).
+
+### Activation (Instrumented ✅)
 
 - User completes **one full canvas ↔ code round-trip** (either direction)
+- Tracked in facilitator mode via session scorecard
 
-### Retention signal
+### Retention signal (Instrumented ✅)
 
 - User runs receipts on **3+ components** in a week (production)
 - User applies or dismisses **5+ receipt actions** (prototype demo)
+- Tracked in learning loop + exported in pilot pack
 
-### Moat signal
+### Moat signal (Instrumented ✅)
 
 - Team **customizes ≥1 receipt policy** and uses it repeatedly  
 - **Learning loop** shows repeated fix patterns (production)
+- Tracked via `.bluepainter.json` changes + learning loop events
 
-### Validation gate (current demo phase)
+### Validation gate (CURRENT PHASE — human work required)
 
 | Signal | Action |
 |--------|--------|
-| **3+ "very interested"** + willingness to pilot in real repo | Build v1 extension |
+| **3+ "very interested"** + willingness to pilot in real repo | Ship v1 to Marketplace |
 | Interest but vague | Sharpen wedge; one killer workflow |
 | Mostly "cool but…" | Refine problem; do not build platforms |
 
+**Facilitator tools ready:**
+- SELF_PILOT.md — 30-minute self-guided validation
+- FACILITATOR.md — session guide for running validation with users
+- Session scorecard + pilot pack export (`?facilitator=1` mode)
+
+**Next step:** Run 5–10 validation sessions, export pilot packs, review kill criteria dashboard.
+
 ### Kill criteria
 
-- After **10 validation sessions**, fewer than 3 would pay or pilot  
-- Bear case wins: users say Cursor/Figma "good enough" for their flow  
-- Cannot achieve AST round-trip without destroying formatting (technical kill)
+- After **10 validation sessions**, fewer than 3 would pay or pilot → NO-GO
+- Bear case wins: users say Cursor/Figma "good enough" for their flow → NO-GO
+- Cannot achieve AST round-trip without destroying formatting (technical kill) → **PASSED** (AST sync working, 7/7 tests passing)
 
 ---
 
-## 9. We are NOT building
+## 9. We are NOT building — ⏳ DEFERRED / OUT OF SCOPE
 
-- General website builder  
-- Figma replacement  
-- AI whole-app generator  
-- Four platform shells in v1  
-- Hosted proprietary runtime  
-- Features whose only defense is UI polish  
+**Status:** Scope discipline enforced. These remain deferred or permanently out of scope.
+
+- ⏳ **General website builder** — BluePainter is a component editor, not a site builder
+- ⏳ **Figma replacement** — BluePainter owns repo truth; Figma owns design truth
+- ⏳ **AI whole-app generator** — Model intelligence is a commodity; workflow + repo integration is the moat
+- ⏳ **Four platform shells in v1** — Extension only; desktop/web are validation prototypes
+- ⏳ **Hosted proprietary runtime** — No vendor lock-in; export shippable TSX
+- ⏳ **Features whose only defense is UI polish** — Every feature must pass bear case test (SPEC §4)  
 
 ---
 
@@ -197,11 +213,22 @@ Current demo uses regex `syncEngine.js`. **v1 must replace this** before any pai
 
 ---
 
-## 12. Open questions
+## 12. Open questions — 🔵 DECISIONS MADE + REMAINING
 
-- Tailwind vs. inline styles vs. CSS modules for v1 sync scope?  
-- Monorepo / design-system package detection?  
-- Pricing: per-seat vs. per-repo vs. open-core receipts?  
+### ✅ Resolved (implemented in v0.3)
+
+| Question | Decision | Evidence |
+|----------|----------|----------|
+| **Tailwind vs. inline styles vs. CSS modules for v1 sync scope?** | **Inline styles** for canvas-editable properties. Tailwind/CSS modules preserved but not modified by canvas edits. | `AST_SCOPE.md` lines 62–64; all guides specify inline style scope |
+| **Monorepo / design-system package detection?** | **Git context detection** (repo URL, branch, user, commit SHA) via URL params → localStorage (Studio) or native git CLI (extension). Design system token detection via `.bluepainter.json` in repo root. | `src/utils/gitContext.js`, `extension/lib/gitContext.js`, `src/utils/designSystemDetection.js` |
+
+### 🟡 Still open (requires pilot validation or go-to-market decision)
+
+| Question | Current Status | Decision Gate |
+|----------|----------------|---------------|
+| **Pricing: per-seat vs. per-repo vs. open-core receipts?** | Validation prototype is free. No pricing model yet. | Post-pilot validation (SPEC §8) |
+| **Team backend for learning loop?** | Optional. Default is localStorage. Teams can self-host or use SaaS backend. | Pilot feedback will determine priority |
+| **Marketplace vs. self-hosted first?** | Extension packages to VSIX; not yet published to Marketplace. | Blocked on pilot validation only |  
 
 ---
 

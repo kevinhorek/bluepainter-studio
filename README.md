@@ -18,6 +18,12 @@ BluePainter is **not** an LLM wrapper. It's a workflow bet: **AST-preserving bid
 
 This repo includes the validation prototype and production-ready extension.
 
+**Guides:**
+- [SELF_PILOT.md](./SELF_PILOT.md) — 30-minute self-guided validation on your own repo
+- [PILOT.md](./PILOT.md) — Pilot team quick-start checklist
+- [FACILITATOR.md](./FACILITATOR.md) — Session guide for running validation with users
+- [extension/MARKETPLACE.md](./extension/MARKETPLACE.md) — VS Code Marketplace publish checklist
+
 ## Quick start
 
 ### Try the Studio (web demo)
@@ -35,7 +41,10 @@ Open http://localhost:5173 — lands on demo `DashboardPage.tsx`.
 
 **Extension:** Install in VS Code → `BluePainter: Pick Component` → edit → write to file
 
-See [PILOT.md](./PILOT.md) for own-repo pilot checklist.
+**Validation workflow:**
+- [SELF_PILOT.md](./SELF_PILOT.md) — 30-minute self-guided validation
+- [PILOT.md](./PILOT.md) — Full pilot team quick-start checklist
+- [FACILITATOR.md](./FACILITATOR.md) — Run validation sessions with users
 
 ### Desktop app
 
