@@ -54,6 +54,9 @@ Opens BluePainter in a native desktop window (Electron). See [desktop/README.md]
 4. Facilitator (`?facilitator=1`): **Export** JSON after each session
 5. Apply go/no-go after **8 sessions** (see VALIDATION.md)
 
+**For self-guided pilots:** See [SELF_PILOT.md](./SELF_PILOT.md) for a 30-45 minute walkthrough on your own project.  
+**For facilitators:** See [scripts/pilot-dry-run.md](./scripts/pilot-dry-run.md) for a printable session checklist.
+
 ## Deploy
 
 ```bash
