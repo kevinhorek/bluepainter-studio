@@ -9,7 +9,9 @@ const DEFAULT_RECEIPT_POLICY = {
   maxFeatureCount: 5,
   weakCtaWords: ['submit', 'click here', 'send', 'button', 'ok', 'enter'],
   suggestedCta: 'Start free trial',
-  contrastFixColor: '#1e40af'
+  contrastFixColor: '#1e40af',
+  primaryColor: '#2563eb',
+  textColor: '#1e293b'
 };
 
 const DEFAULT_LEARNING_OVERRIDES = {
@@ -50,7 +52,9 @@ function loadReceiptPolicyFromConfig(vscodeConfig) {
     maxFeatureCount: vscodeConfig.get('maxFeatureCount', DEFAULT_RECEIPT_POLICY.maxFeatureCount),
     weakCtaWords: vscodeConfig.get('weakCtaWords', DEFAULT_RECEIPT_POLICY.weakCtaWords),
     suggestedCta: vscodeConfig.get('suggestedCta', DEFAULT_RECEIPT_POLICY.suggestedCta),
-    contrastFixColor: vscodeConfig.get('contrastFixColor', DEFAULT_RECEIPT_POLICY.contrastFixColor)
+    contrastFixColor: vscodeConfig.get('contrastFixColor', DEFAULT_RECEIPT_POLICY.contrastFixColor),
+    primaryColor: vscodeConfig.get('primaryColor', DEFAULT_RECEIPT_POLICY.primaryColor),
+    textColor: vscodeConfig.get('textColor', DEFAULT_RECEIPT_POLICY.textColor)
   } : { ...DEFAULT_RECEIPT_POLICY };
 
   if (workspacePolicy) {
