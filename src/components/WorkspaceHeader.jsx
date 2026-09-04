@@ -11,13 +11,11 @@ export default function WorkspaceHeader({
   onShowAbout,
   onOpenInterviewGuide,
   onOpenExportDeploy,
+  onExportComponent,
   onOpenMarketingKit,
   onOpenFigmaImport,
-  onOpenRealFile,
-  onDownloadRealFile,
   onOpenAI,
   onCopyLink,
-  realFileLoaded,
   facilitatorActions
 }) {
   const facilitator = isFacilitatorMode();
@@ -105,24 +103,6 @@ export default function WorkspaceHeader({
       <div className="workspace-header-right">
         <button
           type="button"
-          className="workspace-real-file-btn"
-          onClick={onOpenRealFile}
-          title="Open a .tsx/.jsx file from your project"
-        >
-          📂 Open File
-        </button>
-        {realFileLoaded && (
-          <button
-            type="button"
-            className="workspace-download-btn"
-            onClick={onDownloadRealFile}
-            title="Download edited file"
-          >
-            💾 Download
-          </button>
-        )}
-        <button
-          type="button"
           className="workspace-ai-btn"
           onClick={onOpenAI}
           title="Generate UI and marketing with AI"
@@ -161,18 +141,6 @@ export default function WorkspaceHeader({
           </button>
           {menuOpen && (
             <div className="workspace-dropdown workspace-menu-dropdown">
-              <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { onOpenRealFile?.(); setMenuOpen(false); }}>
-                📂 Open Real File
-              </button>
-              {realFileLoaded && (
-                <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { onDownloadRealFile?.(); setMenuOpen(false); }}>
-                  💾 Download File
-                </button>
-              )}
-              <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { onOpenFigmaImport?.(); setMenuOpen(false); }}>
-                Import from Figma
-              </button>
-              <div className="workspace-dropdown-divider" />
               <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { onOpenAI?.(); setMenuOpen(false); }}>
                 AI Generate
               </button>
@@ -181,6 +149,12 @@ export default function WorkspaceHeader({
               </button>
               <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { onOpenExportDeploy?.(); setMenuOpen(false); }}>
                 Export & deploy
+              </button>
+              <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { onExportComponent?.(); setMenuOpen(false); }}>
+                Export component TSX
+              </button>
+              <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { onOpenFigmaImport?.(); setMenuOpen(false); }}>
+                Import from Figma
               </button>
               <div className="workspace-dropdown-divider" />
               <button type="button" className="workspace-dropdown-item" onClick={() => { onGoHome?.(); setMenuOpen(false); }}>
