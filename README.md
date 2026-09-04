@@ -63,6 +63,35 @@ Opens BluePainter in a native desktop window (Electron). See [desktop/README.md]
 npm run deploy:vercel
 ```
 
+### Optional: Team Audit Log Backend
+
+The learning loop (receipt fixes, dismissals, policy changes) can persist to a team database for analytics and compliance. **This is optional** — the app works without it.
+
+**Without `DATABASE_URL` (demo/validation mode):**
+- Events buffer to localStorage only
+- No team-wide audit data
+- API runs in "soft-fail" mode
+
+**With `DATABASE_URL` (production mode):**
+- Events persist to Postgres for team audit trail
+- 90-day retention policy
+- Query via `/api/audit-log/query`
+
+**Quick setup for pilots:**
+```bash
+# 1. Create Postgres database (Supabase recommended)
+# 2. Set environment variable
+vercel env add DATABASE_URL  # Paste connection string
+
+# 3. Run migration
+psql $DATABASE_URL -f docs/migrations/001_audit_events.sql
+
+# 4. Redeploy
+vercel --prod
+```
+
+See [docs/migrations/README.md](./docs/migrations/README.md) for detailed setup guide and [docs/AUDIT_BACKEND.md](./docs/AUDIT_BACKEND.md) for full documentation.
+
 ## CI Receipt Gate
 
 The repo includes a **Designer's Receipts gate** for CI pipelines that blocks merge on error-severity findings (e.g., WCAG contrast failures).

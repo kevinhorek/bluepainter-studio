@@ -1250,6 +1250,81 @@ html {
   border-top: 1px solid #f1f5f9;
 }
 
+/* Learning Suggestions Callout */
+.learning-suggestions-callout {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(99, 102, 241, 0.08) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 8px;
+  animation: slideIn 0.4s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.learning-suggestions-callout-header {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  align-items: flex-start;
+}
+
+.learning-suggestions-callout-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.1);
+  }
+}
+
+.learning-suggestions-callout-content {
+  flex: 1;
+}
+
+.learning-suggestions-callout-content strong {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #3b82f6;
+  margin-bottom: 4px;
+}
+
+.learning-suggestions-callout-content p {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.receipts-suggestions-badge {
+  padding: 2px 8px;
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  cursor: help;
+}
+
 /* VS Code Shell Specifics */
 .vscode-workspace {
   display: flex;

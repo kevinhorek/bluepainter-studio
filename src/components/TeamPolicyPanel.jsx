@@ -39,12 +39,15 @@ export default function TeamPolicyPanel({ policy, onPolicyChange, learningConfig
           }
           
           if (result.receiptPolicy || result.learningConfig) {
-            alert('Config imported successfully!');
+            const items = [];
+            if (result.receiptPolicy) items.push('receipt policy');
+            if (result.learningConfig) items.push('learning overrides');
+            alert(`✓ Config imported successfully!\n\nLoaded: ${items.join(' + ')}\n\nYour receipts will now use the imported team policy settings.`);
           } else {
-            alert('Invalid .bluepainter.json format. Expected { "receiptPolicy": {...}, "learningLoopOverrides": {...} }');
+            alert('⚠️ Import failed: Invalid .bluepainter.json format.\n\nExpected structure:\n{\n  "receiptPolicy": {...},\n  "learningLoopOverrides": {...}\n}\n\nSee PILOT.md for config examples.');
           }
         } catch (err) {
-          alert(`Failed to import config: ${err.message}`);
+          alert(`❌ Failed to import config: ${err.message}\n\nMake sure the file is valid JSON and follows the .bluepainter.json schema.`);
         }
       };
       reader.readAsText(file);
