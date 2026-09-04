@@ -1,4 +1,3 @@
-// eslint-disable-next-line no-unused-vars
 import { enrichEventWithContext, sendToAuditLog } from './auditLog.js';
 
 const STORAGE_KEY = 'bluepainter-learning-loop';
@@ -35,9 +34,13 @@ export class LearningLoop {
     this._write(events);
     
     // v1: Send enriched event to team audit log
-    // Disabled in v0.2 (no team backend yet)
-    // const enrichedEvent = enrichEventWithContext(event);
-    // sendToAuditLog(enrichedEvent);
+    // Enabled when VITE_AUDIT_API_URL is configured
+    if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_AUDIT_API_URL) {
+      const enrichedEvent = enrichEventWithContext(event);
+      sendToAuditLog(enrichedEvent).catch(err => {
+        console.warn('[LearningLoop] Failed to send to audit log:', err);
+      });
+    }
     
     return event;
   }

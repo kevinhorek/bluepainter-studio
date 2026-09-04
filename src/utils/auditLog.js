@@ -107,6 +107,107 @@ export function enrichEventWithContext(event) {
 const AUDIT_BUFFER_KEY = 'bluepainter-audit-log-buffer';
 const MAX_BUFFER_SIZE = 500;
 const BATCH_SIZE = 20; // v1: events per backend batch
+const FLUSH_INTERVAL_MS = 30000; // v1: flush every 30 seconds
+const RETRY_DELAYS = [1000, 2000, 4000, 8000, 16000]; // Exponential backoff
+
+// Global flush timer
+let flushTimer = null;
+
+/**
+ * Get audit backend API URL from environment
+ */
+function getAuditBackendUrl() {
+  // Check for configured backend URL
+  // In production: set VITE_AUDIT_API_URL to your backend endpoint
+  // In development: defaults to /api/audit-log (Vercel dev server)
+  if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_AUDIT_API_URL) {
+    return import.meta.env.VITE_AUDIT_API_URL;
+  }
+  
+  // Default to local API endpoint
+  return '/api/audit-log';
+}
+
+/**
+ * Send batch of events to backend with retry logic
+ */
+async function sendBatchToBackend(events, retryCount = 0) {
+  const backendUrl = getAuditBackendUrl();
+  
+  if (!backendUrl) {
+    console.log('[AuditLog] No backend URL configured — keeping events in buffer');
+    return { success: false, keepInBuffer: true };
+  }
+  
+  try {
+    const response = await fetch(`${backendUrl}/batch`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ events })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      console.error('[AuditLog] Backend error:', errorData);
+      
+      // Retry on server errors (5xx) but not client errors (4xx)
+      if (response.status >= 500 && retryCount < RETRY_DELAYS.length) {
+        console.log(`[AuditLog] Retrying in ${RETRY_DELAYS[retryCount]}ms (attempt ${retryCount + 1})`);
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAYS[retryCount]));
+        return sendBatchToBackend(events, retryCount + 1);
+      }
+      
+      return { success: false, keepInBuffer: response.status >= 500 };
+    }
+    
+    const result = await response.json();
+    console.log(`[AuditLog] Sent ${result.accepted} events to backend`);
+    
+    return { success: true, keepInBuffer: false, result };
+    
+  } catch (err) {
+    console.error('[AuditLog] Network error:', err);
+    
+    // Retry on network errors
+    if (retryCount < RETRY_DELAYS.length) {
+      console.log(`[AuditLog] Retrying in ${RETRY_DELAYS[retryCount]}ms (attempt ${retryCount + 1})`);
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAYS[retryCount]));
+      return sendBatchToBackend(events, retryCount + 1);
+    }
+    
+    return { success: false, keepInBuffer: true };
+  }
+}
+
+/**
+ * Schedule periodic flush of buffer
+ */
+function scheduleFlush() {
+  if (flushTimer) {
+    return; // Already scheduled
+  }
+  
+  flushTimer = setInterval(async () => {
+    const buffer = getAuditBuffer();
+    if (buffer.length >= BATCH_SIZE) {
+      await flushAuditBuffer();
+    }
+  }, FLUSH_INTERVAL_MS);
+  
+  // Clear timer on page unload
+  if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', () => {
+      if (flushTimer) {
+        clearInterval(flushTimer);
+        flushTimer = null;
+      }
+      // Attempt synchronous flush (best effort)
+      flushAuditBuffer();
+    });
+  }
+}
 
 /**
  * Send event to team audit log backend (v1).
@@ -115,15 +216,6 @@ const BATCH_SIZE = 20; // v1: events per backend batch
  * @returns {Promise<void>}
  */
 export async function sendToAuditLog(enrichedEvent) {
-  // TODO v1: Implement backend integration
-  // - POST to /api/audit-log or team backend endpoint
-  // - Batch events for efficiency (buffer up to BATCH_SIZE events or 5 seconds)
-  // - Retry with exponential backoff on failure
-  // - Fallback to localStorage if backend is unreachable
-  
-  console.log('[AuditLog] Would send to backend:', enrichedEvent);
-  
-  // v0.2: Buffer to localStorage
   try {
     const buffer = getAuditBuffer();
     buffer.push({
@@ -140,6 +232,16 @@ export async function sendToAuditLog(enrichedEvent) {
     if (trimmed.length > MAX_BUFFER_SIZE * 0.8) {
       console.warn(`[AuditLog] Buffer at ${trimmed.length}/${MAX_BUFFER_SIZE} events — consider flushing or reducing event volume`);
     }
+    
+    // Auto-flush when batch size reached
+    if (trimmed.length >= BATCH_SIZE) {
+      console.log('[AuditLog] Batch size reached, flushing buffer');
+      await flushAuditBuffer();
+    }
+    
+    // Schedule periodic flush (v1)
+    scheduleFlush();
+    
   } catch (err) {
     if (err.name === 'QuotaExceededError') {
       console.error('[AuditLog] localStorage quota exceeded — attempting emergency flush');
@@ -213,18 +315,52 @@ export function clearAuditBuffer() {
  * @returns {Promise<{sent: number, failed: number}>}
  */
 export async function flushAuditBuffer() {
-  // TODO v1: Send all buffered events to backend
   const buffer = getAuditBuffer();
-  const batchCount = Math.ceil(buffer.length / BATCH_SIZE);
-  console.log(`[AuditLog] Flush buffer: ${buffer.length} events in ${batchCount} batches (not implemented in v0.2)`);
   
-  // v1 implementation will:
-  // 1. Batch events into chunks of BATCH_SIZE
-  // 2. POST /api/audit-log/batch with each batch
-  // 3. Remove successfully sent events from buffer
-  // 4. Keep failed events for retry
+  if (buffer.length === 0) {
+    return { sent: 0, failed: 0 };
+  }
   
-  return { sent: 0, failed: buffer.length };
+  console.log(`[AuditLog] Flushing ${buffer.length} events to backend`);
+  
+  let sent = 0;
+  let failed = 0;
+  const remainingBuffer = [];
+  
+  // Process buffer in batches
+  for (let i = 0; i < buffer.length; i += BATCH_SIZE) {
+    const batch = buffer.slice(i, i + BATCH_SIZE);
+    
+    // Remove bufferedAt timestamp before sending (not part of schema)
+    const cleanBatch = batch.map((event) => {
+      // eslint-disable-next-line no-unused-vars
+      const { bufferedAt: _removed, ...cleanEvent } = event;
+      return cleanEvent;
+    });
+    
+    const result = await sendBatchToBackend(cleanBatch);
+    
+    if (result.success) {
+      sent += cleanBatch.length;
+    } else {
+      failed += cleanBatch.length;
+      if (result.keepInBuffer) {
+        // Keep failed events for retry
+        remainingBuffer.push(...batch);
+      }
+    }
+  }
+  
+  // Update buffer with only failed events (if any)
+  if (remainingBuffer.length > 0) {
+    localStorage.setItem(AUDIT_BUFFER_KEY, JSON.stringify(remainingBuffer));
+    console.log(`[AuditLog] ${failed} events failed to send, kept in buffer for retry`);
+  } else {
+    localStorage.removeItem(AUDIT_BUFFER_KEY);
+    console.log(`[AuditLog] Buffer flushed successfully: ${sent} events sent`);
+  }
+  
+  return { sent, failed };
 }
 
 /**
