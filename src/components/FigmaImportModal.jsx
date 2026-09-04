@@ -47,7 +47,7 @@ export default function FigmaImportModal({ isOpen, onClose, onImported, onNotify
       }
 
       if (!result.nodes || Object.keys(result.nodes).length === 0) {
-        throw new Error('No importable content found. The frame may be empty or contain only unsupported elements (images, vectors, effects). Try a frame with text/boxes/auto-layout or check FIGMA_IMPORT.md for supported node types.');
+        throw new Error('No content could be imported from this frame. Try a frame with text boxes, rectangles, or auto-layout containers.');
       }
       
       if (result.nodeCount < 2) {

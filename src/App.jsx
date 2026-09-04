@@ -365,8 +365,7 @@ export default function App() {
     if (activeRootId && activeNodesMap) {
       const nextCode = generateTSX(activeRootId, activeNodesMap, codeRef.current);
       if (nextCode === null) {
-        // AST patch failed - show error and keep existing code (fail-loud behavior)
-        notify('AST sync failed. Ensure elements have stable id attributes. For Tailwind/CSS-only components, add inline style={{}} for canvas editability.');
+        notify('⚠️ Canvas sync paused — some edits could not update the code. Try editing simpler properties or switching to a different component.');
         return;
       }
       setCode(nextCode);
