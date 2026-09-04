@@ -1,3 +1,7 @@
+const vscode = require('vscode');
+const fs = require('fs');
+const path = require('path');
+
 const DEFAULT_RECEIPT_POLICY = {
   spacingGrid: 8,
   radiusGrid: 4,
@@ -8,9 +12,31 @@ const DEFAULT_RECEIPT_POLICY = {
   contrastFixColor: '#1e40af'
 };
 
+function loadWorkspaceConfig() {
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+  if (!workspaceFolders || workspaceFolders.length === 0) {
+    return null;
+  }
+
+  const workspaceRoot = workspaceFolders[0].uri.fsPath;
+  const configPath = path.join(workspaceRoot, '.bluepainter.json');
+
+  try {
+    if (fs.existsSync(configPath)) {
+      const content = fs.readFileSync(configPath, 'utf-8');
+      const config = JSON.parse(content);
+      return config.receiptPolicy || null;
+    }
+  } catch (err) {
+    console.error(`Failed to load .bluepainter.json: ${err.message}`);
+  }
+
+  return null;
+}
+
 function loadReceiptPolicyFromConfig(vscodeConfig) {
-  if (!vscodeConfig) return { ...DEFAULT_RECEIPT_POLICY };
-  return {
+  const workspacePolicy = loadWorkspaceConfig();
+  const settingsPolicy = vscodeConfig ? {
     spacingGrid: vscodeConfig.get('spacingGrid', DEFAULT_RECEIPT_POLICY.spacingGrid),
     radiusGrid: vscodeConfig.get('radiusGrid', DEFAULT_RECEIPT_POLICY.radiusGrid),
     minContrastRatio: vscodeConfig.get('minContrastRatio', DEFAULT_RECEIPT_POLICY.minContrastRatio),
@@ -18,7 +44,13 @@ function loadReceiptPolicyFromConfig(vscodeConfig) {
     weakCtaWords: vscodeConfig.get('weakCtaWords', DEFAULT_RECEIPT_POLICY.weakCtaWords),
     suggestedCta: vscodeConfig.get('suggestedCta', DEFAULT_RECEIPT_POLICY.suggestedCta),
     contrastFixColor: vscodeConfig.get('contrastFixColor', DEFAULT_RECEIPT_POLICY.contrastFixColor)
-  };
+  } : { ...DEFAULT_RECEIPT_POLICY };
+
+  if (workspacePolicy) {
+    return { ...DEFAULT_RECEIPT_POLICY, ...settingsPolicy, ...workspacePolicy };
+  }
+
+  return settingsPolicy;
 }
 
-module.exports = { DEFAULT_RECEIPT_POLICY, loadReceiptPolicyFromConfig };
+module.exports = { DEFAULT_RECEIPT_POLICY, loadReceiptPolicyFromConfig, loadWorkspaceConfig };
