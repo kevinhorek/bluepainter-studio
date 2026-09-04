@@ -27,6 +27,14 @@ This repo includes the validation prototype and production-ready extension.
 
 ## Quick start
 
+### Studio requires authentication
+
+BluePainter Studio now requires a free account to save and manage your projects. Sign in with:
+- Magic link (email OTP)
+- Email/password
+
+**Environment setup:** Copy `.env.example` to `.env` and add your Supabase credentials (see [docs/AUTH_PROJECTS.md](./docs/AUTH_PROJECTS.md) for details).
+
 ### Try the Studio (web demo)
 
 ```bash
@@ -34,7 +42,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173 — lands on demo `DashboardPage.tsx`.
+Open http://localhost:5173 — lands on the marketing site. Click **Try the live demo** and sign in to access Studio.
 
 ### Use on Your Own Repo
 
