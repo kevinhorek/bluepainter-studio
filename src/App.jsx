@@ -694,34 +694,6 @@ export default function App() {
     refreshLearningSummary();
   };
 
-  const handleLearningSuggestionApplied = (suggestion) => {
-    const updatedConfig = { ...learningConfig };
-
-    if (suggestion.type === 'downgrade_rule') {
-      if (!updatedConfig.hiddenRules.includes(suggestion.ruleId)) {
-        updatedConfig.hiddenRules = [...updatedConfig.hiddenRules, suggestion.ruleId];
-        learningLoop.log('learning_rule_hidden', {
-          ruleId: suggestion.ruleId,
-          reason: suggestion.reason
-        });
-      }
-    } else if (suggestion.type === 'prefer_quick_fix') {
-      updatedConfig.preferredFixes[suggestion.fixKey] = {
-        priority: 'high',
-        appliedCount: suggestion.fixCount,
-        ruleIds: suggestion.ruleIds,
-        timestamp: Date.now()
-      };
-      learningLoop.log('learning_fix_preferred', {
-        fixKey: suggestion.fixKey,
-        ruleIds: suggestion.ruleIds
-      });
-    }
-
-    setLearningConfig(updatedConfig);
-    saveLearningConfig(updatedConfig);
-    refreshLearningSummary();
-  };
 
   const handleDismissRule = (ruleId) => {
     setDismissedRules((prev) => new Set([...prev, ruleId]));

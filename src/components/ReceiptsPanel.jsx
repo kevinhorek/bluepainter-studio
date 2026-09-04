@@ -104,7 +104,6 @@ export default function ReceiptsPanel({
             onPolicyChange={onPolicyChange} 
             learningConfig={learningConfig}
             onLearningConfigChange={(config) => {
-              setLearningConfig(config);
               saveLearningConfig(config);
             }}
             compact={!facilitator} 

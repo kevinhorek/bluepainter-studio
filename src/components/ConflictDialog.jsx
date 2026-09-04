@@ -6,6 +6,7 @@ export default function ConflictDialog({
   conflictContext = {} 
 }) {
   const [showDiff, setShowDiff] = useState(false);
+  // eslint-disable-next-line no-unused-vars
   const { lastSyncedCode, currentCode, pendingUpdate, nodeId } = conflictContext;
 
   const diffInfo = useMemo(() => {

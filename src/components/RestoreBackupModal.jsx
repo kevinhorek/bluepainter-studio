@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getBackupIndex, getBackup, deleteBackup, clearAllBackups, formatBackupTimestamp } from '../utils/autoSaveBackup';
 
 export default function RestoreBackupModal({ isOpen, onClose, onRestore }) {
@@ -8,14 +8,16 @@ export default function RestoreBackupModal({ isOpen, onClose, onRestore }) {
 
   useEffect(() => {
     if (isOpen) {
-      loadBackups();
+      const index = getBackupIndex();
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setBackups(index);
     }
   }, [isOpen]);
 
-  const loadBackups = () => {
+  const loadBackups = useCallback(() => {
     const index = getBackupIndex();
     setBackups(index);
-  };
+  }, []);
 
   const handleSelectBackup = (backupId) => {
     const backup = getBackup(backupId);

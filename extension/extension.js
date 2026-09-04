@@ -196,7 +196,6 @@ class BluePainterController {
 
     const suggestions = this.learningLoop.getSuggestions();
     const showFirstRunTip = !this.context.globalState.get('bluepainter.firstRunTipDismissed', false);
-    const learningOverrides = loadLearningOverrides();
 
     return {
       fileName: path.basename(ctx.editor.document.fileName),

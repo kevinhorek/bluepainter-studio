@@ -60,7 +60,7 @@ export function exportComponentWithFixes(rootNodeId, nodesMap, policy, dismissed
       throw new Error('Failed to generate TSX after applying fixes');
     }
 
-    const componentName = getComponentName(rootId);
+    const componentName = getComponentName(rootNodeId);
     const filename = `${componentName}.tsx`;
     
     // Create and download the file
