@@ -107,9 +107,18 @@ const MAX_BUFFER_SIZE = 500;
 const BATCH_SIZE = 20; // v1: events per backend batch
 const FLUSH_INTERVAL_MS = 30000; // v1: flush every 30 seconds
 const RETRY_DELAYS = [1000, 2000, 4000, 8000, 16000]; // Exponential backoff
+const BACKEND_STATUS_KEY = 'bluepainter-audit-backend-status';
 
 // Global flush timer
 let flushTimer = null;
+
+// Backend status tracking
+let backendStatus = {
+  available: null, // null = unknown, true = available, false = unavailable
+  softFailMode: false, // true when backend returns soft-fail mode
+  lastChecked: null,
+  lastError: null
+};
 
 /**
  * Get audit backend API URL from environment
@@ -127,6 +136,41 @@ function getAuditBackendUrl() {
 }
 
 /**
+ * Update backend status tracking
+ */
+function updateBackendStatus(updates) {
+  backendStatus = { ...backendStatus, ...updates, lastChecked: Date.now() };
+  try {
+    localStorage.setItem(BACKEND_STATUS_KEY, JSON.stringify(backendStatus));
+  } catch (err) {
+    // Ignore storage errors for status tracking
+  }
+}
+
+/**
+ * Get current backend status
+ */
+export function getAuditBackendStatus() {
+  // Try to load cached status
+  if (backendStatus.lastChecked === null) {
+    try {
+      const cached = localStorage.getItem(BACKEND_STATUS_KEY);
+      if (cached) {
+        backendStatus = JSON.parse(cached);
+      }
+    } catch (err) {
+      // Ignore parse errors
+    }
+  }
+  
+  return {
+    ...backendStatus,
+    bufferSize: getAuditBuffer().length,
+    bufferAtRisk: getAuditBuffer().length > MAX_BUFFER_SIZE * 0.8
+  };
+}
+
+/**
  * Send batch of events to backend with retry logic
  */
 async function sendBatchToBackend(events, retryCount = 0) {
@@ -134,6 +178,7 @@ async function sendBatchToBackend(events, retryCount = 0) {
   
   if (!backendUrl) {
     console.log('[AuditLog] No backend URL configured — keeping events in buffer');
+    updateBackendStatus({ available: false, lastError: 'No backend URL configured' });
     return { success: false, keepInBuffer: true };
   }
   
@@ -149,6 +194,7 @@ async function sendBatchToBackend(events, retryCount = 0) {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
       console.error('[AuditLog] Backend error:', errorData);
+      updateBackendStatus({ available: false, lastError: `HTTP ${response.status}` });
       
       // Retry on server errors (5xx) but not client errors (4xx)
       if (response.status >= 500 && retryCount < RETRY_DELAYS.length) {
@@ -161,12 +207,26 @@ async function sendBatchToBackend(events, retryCount = 0) {
     }
     
     const result = await response.json();
-    console.log(`[AuditLog] Sent ${result.accepted} events to backend`);
+    
+    // Check if backend is in soft-fail mode (DATABASE_URL not configured)
+    if (result.mode === 'soft-fail') {
+      console.warn('[AuditLog] Backend in soft-fail mode — DATABASE_URL not configured. Events accepted but not persisted.');
+      console.warn('[AuditLog] For production use, set DATABASE_URL environment variable. See docs/AUDIT_BACKEND.md');
+      updateBackendStatus({ 
+        available: true, 
+        softFailMode: true, 
+        lastError: 'DATABASE_URL not configured' 
+      });
+    } else {
+      console.log(`[AuditLog] Sent ${result.accepted} events to backend`);
+      updateBackendStatus({ available: true, softFailMode: false, lastError: null });
+    }
     
     return { success: true, keepInBuffer: false, result };
     
   } catch (err) {
     console.error('[AuditLog] Network error:', err);
+    updateBackendStatus({ available: false, lastError: err.message });
     
     // Retry on network errors
     if (retryCount < RETRY_DELAYS.length) {
