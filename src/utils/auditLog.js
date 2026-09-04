@@ -45,34 +45,32 @@
  * - Audit retention period is configurable (default 90 days)
  */
 
-// Placeholder for team context detection (v1)
+import { getGitContext } from './gitContext.js';
+
+// Get team context from git context (v1)
 function getTeamContext() {
-  // TODO v1: Detect from:
-  // - VS Code workspace settings (.vscode/bluepainter.json)
-  // - Git remote URL parsing
-  // - Environment variables (CI/CD context)
-  // - User authentication state
+  const gitCtx = getGitContext();
   
   return {
-    userId: null,      // Populated when user is authenticated
-    userName: null,
-    teamId: null,      // Derived from repo or workspace config
-    repoUrl: null,     // Parsed from git remote
-    surface: typeof window !== 'undefined' ? 'web-app' : 'vscode-extension'
+    userId: gitCtx.userEmail,      // Use git email as user ID
+    userName: gitCtx.userName,
+    teamId: null,                   // TODO v1: Derive from repo or workspace config
+    repoUrl: gitCtx.repoUrl,
+    surface: 'web-app'
   };
 }
 
-// Placeholder for file context detection (v1)
+// Get file context from git context and active file state (v1)
 function getFileContext() {
-  // TODO v1: Detect from:
-  // - Active VS Code editor
-  // - Active file in web app
-  // - Git branch and commit SHA
+  const gitCtx = getGitContext();
+  
+  // TODO: Get active file path from app state if available
+  // For now, filePath will be set by callers when available
   
   return {
-    filePath: null,
-    branch: null,
-    commitSha: null
+    filePath: null,  // Set by caller context
+    branch: gitCtx.branch,
+    commitSha: gitCtx.commitSha
   };
 }
 

@@ -39,6 +39,7 @@ import FacilitatorDashboard from './components/FacilitatorDashboard';
 import AIGeneratePanel from './components/AIGeneratePanel';
 import RealFileLoader from './components/RealFileLoader';
 import RestoreBackupModal from './components/RestoreBackupModal';
+import GitContextModal from './components/GitContextModal';
 import { createNodeFromTool, canDropIntoNode } from './utils/nodeFactory';
 import { getToolByShortcut, isPlacableTool } from './data/canvasTools';
 import { applyAIUpdates, getFirstUpdateTarget } from './utils/aiApply';
@@ -128,6 +129,7 @@ export default function App() {
   const [feedbackPromptShown, setFeedbackPromptShown] = useState(false);
   const [scriptOpen, setScriptOpen] = useState(false);
   const [specOpen, setSpecOpen] = useState(false);
+  const [gitContextModalOpen, setGitContextModalOpen] = useState(false);
   const [presenterMessage, setPresenterMessage] = useState(null);
   const [presenterRunning, setPresenterRunning] = useState(false);
   const [feedbackCount, setFeedbackCount] = useState(() => getFeedbackSummary().total);
@@ -988,6 +990,7 @@ export default function App() {
         onDownloadRealFile={handleDownloadRealFile}
         onOpenAI={() => handleOpenAI('full-marketing')}
         onCopyLink={handleCopyLink}
+        onOpenGitContext={() => setGitContextModalOpen(true)}
         realFileLoaded={realFileData !== null}
         facilitatorActions={facilitator ? {
           onBreakDesign: handleBreakDesign,
@@ -1096,6 +1099,7 @@ export default function App() {
       {facilitator && <DemoScriptModal isOpen={scriptOpen} onClose={() => setScriptOpen(false)} />}
       {facilitator && <SpecModal isOpen={specOpen} onClose={() => setSpecOpen(false)} />}
       {facilitator && <PresenterToast message={presenterMessage} />}
+      <GitContextModal key={gitContextModalOpen ? 'open' : 'closed'} isOpen={gitContextModalOpen} onClose={() => setGitContextModalOpen(false)} />
       
       <ConflictDialog
         isOpen={conflictDialogOpen}
