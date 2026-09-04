@@ -564,14 +564,31 @@ export default function App() {
   };
 
   const handleExportFeedback = () => {
-    downloadValidationExport();
+    const result = downloadValidationExport();
+    if (result.success) {
+      if (result.isEmpty) {
+        notify('⚠️ Export created — no session data yet. Run validation sessions and collect feedback.');
+      } else {
+        notify(`✓ Validation export complete — ${result.sessionCount} session(s), ${result.eventCount} learning events`);
+      }
+    } else {
+      notify(`❌ Export failed: ${result.error}`);
+    }
     setFeedbackCount(getFeedbackSummary().total);
     refreshLearningSummary();
   };
 
   const handleExportLearningLoop = () => {
-    downloadLearningLoopExport(learningLoop);
-    notify(`Learning loop exported — ${learningLoop.getStatistics().total} events`);
+    const result = downloadLearningLoopExport(learningLoop);
+    if (result.success) {
+      if (result.isEmpty) {
+        notify('⚠️ Learning loop exported — no events yet. Interact with receipts to log events.');
+      } else {
+        notify(`✓ Learning loop exported — ${result.eventCount} event(s)`);
+      }
+    } else {
+      notify(`❌ Export failed: ${result.error}`);
+    }
   };
 
   const handleRunPresenter = () => {
