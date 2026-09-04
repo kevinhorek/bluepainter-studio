@@ -130,7 +130,7 @@
         <strong>Learning Suggestions</strong>
       </div>
       <div class="bp-suggestions-list">
-        ${suggestions.map((suggestion, index) => {
+        ${suggestions.map((suggestion) => {
           const key = `${suggestion.type}-${suggestion.ruleId || suggestion.fixKey}`;
           const isApplied = state.appliedSuggestions.has(key);
           const icon = isApplied ? '✓' : (suggestion.type === 'downgrade_rule' ? '📉' : '⚡');
