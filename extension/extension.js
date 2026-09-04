@@ -5,7 +5,7 @@ const traverseModule = require('@babel/traverse');
 const { bootstrapFromFile, mergeNodeUpdate } = require('./lib/bootstrap');
 const { parseTSX, generateTSX } = require('./lib/syncEngine');
 const { evaluateReceipts, applyReceiptFix } = require('@bluepainter/shared/receiptPolicy');
-const { loadReceiptPolicyFromConfig } = require('./lib/defaultReceiptPolicy');
+const { loadReceiptPolicyFromConfig, loadLearningOverrides } = require('./lib/defaultReceiptPolicy');
 const { SessionStore } = require('./lib/sessionStore');
 const { LearningLoop } = require('./lib/learningLoop');
 const { detectWorkspaceType, getWorkspaceRecommendations } = require('./lib/designSystemDetection');
@@ -185,12 +185,18 @@ class BluePainterController {
     const selected = ctx.state.selectedNodeId ? ctx.state.nodesMap[ctx.state.selectedNodeId] : null;
     const policy = this.getConfig();
     const dismissedRules = ctx.state.dismissedRules || new Set();
+    
+    // Load learning overrides and merge with dismissed rules (SPEC §3 extension parity)
+    const learningOverrides = loadLearningOverrides();
+    const allDismissedRules = new Set([...dismissedRules, ...learningOverrides.hiddenRules]);
+    
     const receiptResult = selected
-      ? evaluateReceipts(ctx.state.nodesMap, selected, policy, dismissedRules)
+      ? evaluateReceipts(ctx.state.nodesMap, selected, policy, allDismissedRules)
       : { rules: [], scores: { design: 100, accessibility: 100, buildability: 100, total: 100 } };
 
     const suggestions = this.learningLoop.getSuggestions();
     const showFirstRunTip = !this.context.globalState.get('bluepainter.firstRunTipDismissed', false);
+    const learningOverrides = loadLearningOverrides();
 
     return {
       fileName: path.basename(ctx.editor.document.fileName),
@@ -205,7 +211,8 @@ class BluePainterController {
       mode: 'sidebar',
       status: '',
       suggestions,
-      showFirstRunTip
+      showFirstRunTip,
+      learningOverrides
     };
   }
 
