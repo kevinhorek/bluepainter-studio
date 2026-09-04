@@ -1,6 +1,6 @@
 // syncEngine.js - Canvas ↔ TSX sync (AST-first with regex fallback)
 import { getComponentName, getWorkspaceFile, getImportPath, collectComponentRefs } from '../data/workspaceFiles';
-import { parseTSXWithAST, patchTSXWithAST } from '@bluepainter/shared/astSyncEngine';
+import { parseTSXWithAST, patchTSXWithAST, getASTMeta } from '@bluepainter/shared/astSyncEngine';
 
 function formatStyleAttr(styleObj) {
   const styleEntries = Object.entries(styleObj || {})
@@ -108,10 +108,12 @@ export function parseTSX(code, nodesMap) {
   if (!code || !nodesMap) return nodesMap;
 
   const astResult = parseTSXWithAST(code, nodesMap);
-  if (astResult) return astResult;
+  if (astResult && !astResult._astError) return astResult;
 
   return parseTSXWithRegex(code, nodesMap);
 }
+
+export { getASTMeta };
 
 function parseTSXWithRegex(code, nodesMap) {
 

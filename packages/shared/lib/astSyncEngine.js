@@ -108,6 +108,12 @@ function parseTSXWithAST(code, nodesMap) {
   if (!code?.trim() || !nodesMap) return null;
 
   const updated = JSON.parse(JSON.stringify(nodesMap));
+  let foundIdsCount = 0;
+  const detectedIssues = {
+    hasComputedIds: false,
+    hasTailwindOnly: false,
+    missingIds: false
+  };
 
   try {
     const ast = recast.parse(code, { parser: babelParser });
@@ -116,8 +122,32 @@ function parseTSXWithAST(code, nodesMap) {
       JSXElement(path) {
         const opening = path.node.openingElement;
         const id = getJsxId(opening);
-        if (!id || !updated[id]) return;
-
+        
+        if (!id) {
+          detectedIssues.missingIds = true;
+          return;
+        }
+        
+        const idAttr = opening.attributes.find(
+          (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'id' })
+        );
+        if (idAttr && t.isJSXExpressionContainer(idAttr.value) && !t.isStringLiteral(idAttr.value.expression)) {
+          detectedIssues.hasComputedIds = true;
+        }
+        
+        const styleAttrPresent = opening.attributes.find(
+          (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'style' })
+        );
+        const classAttrPresent = opening.attributes.find(
+          (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'className' })
+        );
+        if (!styleAttrPresent && classAttrPresent) {
+          detectedIssues.hasTailwindOnly = true;
+        }
+        
+        if (!updated[id]) return;
+        
+        foundIdsCount++;
         const node = updated[id];
 
         const styleAttr = opening.attributes.find(
@@ -182,12 +212,19 @@ function parseTSXWithAST(code, nodesMap) {
       }
     });
 
+    if (foundIdsCount > 0) {
+      updated._astMeta = { issues: detectedIssues, foundIds: foundIdsCount };
+    }
+
     return updated;
   } catch (err) {
-    console.error('[astSync] parse failed:', err.message);
+    const errorMsg = err.message || 'Unknown error';
+    console.error('[astSync] parse failed:', errorMsg);
     console.error('[astSync] Hint: Check for syntax errors, unclosed tags, or malformed JSX');
     console.error('[astSync] Common issues: missing closing tags, invalid attribute syntax, computed id attributes');
-    return null;
+    
+    const errorResult = { _astError: { message: errorMsg, type: 'parse_error', detectedIssues } };
+    return errorResult;
   }
 }
 
@@ -304,4 +341,11 @@ function detectStyleSources(code) {
   }
 }
 
-export { parseTSXWithAST, patchTSXWithAST, getJsxId, astSyncAvailable, detectStyleSources };
+function getASTMeta(nodesMap) {
+  if (!nodesMap) return null;
+  if (nodesMap._astMeta) return nodesMap._astMeta;
+  if (nodesMap._astError) return { error: nodesMap._astError };
+  return null;
+}
+
+export { parseTSXWithAST, patchTSXWithAST, getJsxId, astSyncAvailable, detectStyleSources, getASTMeta };
