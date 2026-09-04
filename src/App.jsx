@@ -44,7 +44,8 @@ const facilitator = isFacilitatorMode();
 
 function parseHash() {
   const hash = window.location.hash.replace(/^#\/?/, '');
-  if (!hash || hash === 'app' || hash === 'studio') return { phase: 'phase1', startTour: false };
+  if (!hash) return { phase: 'landing', startTour: false };
+  if (hash === 'app' || hash === 'studio') return { phase: 'phase1', startTour: false };
   if (hash === 'home' || hash === 'landing') return { phase: 'landing', startTour: false };
   if (hash === 'about') return { phase: 'phase1', startTour: false, openAbout: true };
   if (hash === 'demo') {
@@ -259,7 +260,7 @@ export default function App() {
 
   useEffect(() => {
     if (!window.location.hash || window.location.hash === '#/' || window.location.hash === '#') {
-      window.location.hash = '#/app';
+      window.location.hash = '#/home';
     }
   }, []);
 

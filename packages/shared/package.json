@@ -2,7 +2,7 @@
   "name": "@bluepainter/shared",
   "version": "0.1.0",
   "description": "Shared AST sync and receipt policy logic for BluePainter Studio and VS Code extension",
-  "type": "commonjs",
+  "type": "module",
   "main": "./lib/index.js",
   "exports": {
     ".": "./lib/index.js",
