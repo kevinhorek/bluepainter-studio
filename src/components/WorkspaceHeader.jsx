@@ -11,6 +11,7 @@ export default function WorkspaceHeader({
   onOpenInterviewGuide,
   onOpenExportDeploy,
   onExportComponent,
+  onExportPageBundle,
   onOpenMarketingKit,
   onOpenFigmaImport,
   onOpenRealFile,
