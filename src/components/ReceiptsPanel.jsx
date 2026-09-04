@@ -98,6 +98,23 @@ export default function ReceiptsPanel({
       </div>
 
       <div className="receipts-scroll">
+        {learningLoop && suggestionsCount > 0 && (
+          <div className="learning-suggestions-callout">
+            <div className="learning-suggestions-callout-header">
+              <span className="learning-suggestions-callout-icon">💡</span>
+              <div className="learning-suggestions-callout-content">
+                <strong>Policy Suggestions Available</strong>
+                <p>Based on your fix/dismiss patterns, the learning loop has {suggestionsCount} {suggestionsCount === 1 ? 'suggestion' : 'suggestions'} to optimize your team policy.</p>
+              </div>
+            </div>
+            <LearningSuggestions 
+              learningLoop={learningLoop} 
+              lightMode={lightMode}
+              onApplySuggestion={onApplySuggestion}
+            />
+          </div>
+        )}
+
         {policyOpen && onPolicyChange && (
           <TeamPolicyPanel 
             policy={policy} 
@@ -120,14 +137,6 @@ export default function ReceiptsPanel({
               </span>
             )}
           </div>
-        )}
-
-        {learningLoop && (
-          <LearningSuggestions 
-            learningLoop={learningLoop} 
-            lightMode={lightMode}
-            onApplySuggestion={onApplySuggestion}
-          />
         )}
 
         <div className="score-metrics">
