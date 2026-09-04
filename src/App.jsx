@@ -390,6 +390,32 @@ export default function App() {
     };
   }, [activeCanvasTool]);
 
+  const handleExportLearningLoop = () => {
+    const result = downloadLearningLoopExport(learningLoop);
+    if (result.success) {
+      if (result.isEmpty) {
+        notify('⚠️ Learning loop exported — no events yet. Interact with receipts to log events.');
+      } else {
+        notify(`✓ Learning loop exported — ${result.eventCount} event(s)`);
+      }
+    } else {
+      notify(`❌ Export failed: ${result.error}`);
+    }
+  };
+
+  const handleExportPilotPack = () => {
+    const result = downloadPilotPackExport();
+    if (result.success) {
+      if (result.isEmpty) {
+        notify('⚠️ Pilot pack created — no session data yet. Run validation sessions first.');
+      } else {
+        notify(`✓ Pilot pack exported — ${result.sessionCount} session(s), ${result.recommendation} recommendation`);
+      }
+    } else {
+      notify(`❌ Export failed: ${result.error}`);
+    }
+  };
+
   // Facilitator keyboard shortcuts
   useEffect(() => {
     if (!facilitator || phase === 'landing') return;
@@ -819,32 +845,6 @@ export default function App() {
     }
     setFeedbackCount(getFeedbackSummary().total);
     refreshLearningSummary();
-  };
-
-  const handleExportLearningLoop = () => {
-    const result = downloadLearningLoopExport(learningLoop);
-    if (result.success) {
-      if (result.isEmpty) {
-        notify('⚠️ Learning loop exported — no events yet. Interact with receipts to log events.');
-      } else {
-        notify(`✓ Learning loop exported — ${result.eventCount} event(s)`);
-      }
-    } else {
-      notify(`❌ Export failed: ${result.error}`);
-    }
-  };
-
-  const handleExportPilotPack = () => {
-    const result = downloadPilotPackExport();
-    if (result.success) {
-      if (result.isEmpty) {
-        notify('⚠️ Pilot pack created — no session data yet. Run validation sessions first.');
-      } else {
-        notify(`✓ Pilot pack exported — ${result.sessionCount} session(s), ${result.recommendation} recommendation`);
-      }
-    } else {
-      notify(`❌ Export failed: ${result.error}`);
-    }
   };
 
   const handleExportComponent = () => {
