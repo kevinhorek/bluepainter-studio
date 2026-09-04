@@ -104,6 +104,10 @@ export function enrichEventWithContext(event) {
   };
 }
 
+const AUDIT_BUFFER_KEY = 'bluepainter-audit-log-buffer';
+const MAX_BUFFER_SIZE = 500;
+const BATCH_SIZE = 20; // v1: events per backend batch
+
 /**
  * Send event to team audit log backend (v1).
  * 
@@ -113,21 +117,90 @@ export function enrichEventWithContext(event) {
 export async function sendToAuditLog(enrichedEvent) {
   // TODO v1: Implement backend integration
   // - POST to /api/audit-log or team backend endpoint
-  // - Batch events for efficiency (buffer up to 10 events or 5 seconds)
+  // - Batch events for efficiency (buffer up to BATCH_SIZE events or 5 seconds)
   // - Retry with exponential backoff on failure
   // - Fallback to localStorage if backend is unreachable
   
   console.log('[AuditLog] Would send to backend:', enrichedEvent);
   
-  // Placeholder: store in localStorage as fallback
+  // v0.2: Buffer to localStorage
   try {
-    const key = 'bluepainter-audit-log-buffer';
-    const buffer = JSON.parse(localStorage.getItem(key) || '[]');
-    buffer.push(enrichedEvent);
-    localStorage.setItem(key, JSON.stringify(buffer.slice(-100))); // Keep last 100 events
+    const buffer = getAuditBuffer();
+    buffer.push({
+      ...enrichedEvent,
+      bufferedAt: Date.now()
+    });
+    
+    // Trim to max size (FIFO)
+    const trimmed = buffer.slice(-MAX_BUFFER_SIZE);
+    
+    localStorage.setItem(AUDIT_BUFFER_KEY, JSON.stringify(trimmed));
+    
+    // Log buffer size warnings
+    if (trimmed.length > MAX_BUFFER_SIZE * 0.8) {
+      console.warn(`[AuditLog] Buffer at ${trimmed.length}/${MAX_BUFFER_SIZE} events — consider flushing or reducing event volume`);
+    }
   } catch (err) {
-    console.warn('[AuditLog] Failed to buffer event:', err);
+    if (err.name === 'QuotaExceededError') {
+      console.error('[AuditLog] localStorage quota exceeded — attempting emergency flush');
+      await emergencyFlush();
+    } else {
+      console.warn('[AuditLog] Failed to buffer event:', err);
+    }
   }
+}
+
+/**
+ * Get current audit buffer from localStorage.
+ * 
+ * @returns {Array} Buffered events
+ */
+export function getAuditBuffer() {
+  try {
+    const raw = localStorage.getItem(AUDIT_BUFFER_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (err) {
+    console.warn('[AuditLog] Failed to read buffer:', err);
+    return [];
+  }
+}
+
+/**
+ * Get audit buffer statistics.
+ * 
+ * @returns {Object} Buffer stats
+ */
+export function getAuditBufferStats() {
+  const buffer = getAuditBuffer();
+  const now = Date.now();
+  const oneHourAgo = now - 60 * 60 * 1000;
+  const oneDayAgo = now - 24 * 60 * 60 * 1000;
+  
+  return {
+    totalEvents: buffer.length,
+    eventsLastHour: buffer.filter(e => e.bufferedAt > oneHourAgo).length,
+    eventsLastDay: buffer.filter(e => e.bufferedAt > oneDayAgo).length,
+    oldestEvent: buffer[0]?.bufferedAt || null,
+    newestEvent: buffer[buffer.length - 1]?.bufferedAt || null,
+    bufferUsage: (buffer.length / MAX_BUFFER_SIZE * 100).toFixed(1) + '%',
+    eventTypes: buffer.reduce((acc, e) => {
+      acc[e.type] = (acc[e.type] || 0) + 1;
+      return acc;
+    }, {})
+  };
+}
+
+/**
+ * Clear audit buffer (use with caution).
+ * 
+ * @returns {number} Number of events cleared
+ */
+export function clearAuditBuffer() {
+  const buffer = getAuditBuffer();
+  const count = buffer.length;
+  localStorage.removeItem(AUDIT_BUFFER_KEY);
+  console.log(`[AuditLog] Cleared ${count} buffered events`);
+  return count;
 }
 
 /**
@@ -136,10 +209,37 @@ export async function sendToAuditLog(enrichedEvent) {
  * - App close / extension deactivate
  * - Buffer reaches batch size
  * - Periodic interval (every 30 seconds)
+ * 
+ * @returns {Promise<{sent: number, failed: number}>}
  */
 export async function flushAuditBuffer() {
   // TODO v1: Send all buffered events to backend
-  console.log('[AuditLog] Flush buffer (not implemented in v0.2)');
+  const buffer = getAuditBuffer();
+  const batchCount = Math.ceil(buffer.length / BATCH_SIZE);
+  console.log(`[AuditLog] Flush buffer: ${buffer.length} events in ${batchCount} batches (not implemented in v0.2)`);
+  
+  // v1 implementation will:
+  // 1. Batch events into chunks of BATCH_SIZE
+  // 2. POST /api/audit-log/batch with each batch
+  // 3. Remove successfully sent events from buffer
+  // 4. Keep failed events for retry
+  
+  return { sent: 0, failed: buffer.length };
+}
+
+/**
+ * Emergency flush when localStorage quota is exceeded.
+ * Exports buffer to console and clears to free space.
+ */
+async function emergencyFlush() {
+  const buffer = getAuditBuffer();
+  console.error('[AuditLog] Emergency flush triggered — exporting buffer to console');
+  console.log(JSON.stringify({ 
+    timestamp: Date.now(),
+    reason: 'localStorage quota exceeded',
+    events: buffer 
+  }));
+  clearAuditBuffer();
 }
 
 /**
