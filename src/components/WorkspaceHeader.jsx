@@ -19,6 +19,7 @@ export default function WorkspaceHeader({
   onDownloadRealFile,
   onOpenAI,
   onCopyLink,
+  onOpenGitContext,
   realFileLoaded,
   facilitatorActions
 }) {
@@ -192,6 +193,10 @@ export default function WorkspaceHeader({
               </button>
               <button type="button" className="workspace-dropdown-item" onClick={() => { onShowAbout?.(); setMenuOpen(false); }}>
                 About
+              </button>
+              <div className="workspace-dropdown-divider" />
+              <button type="button" className="workspace-dropdown-item" onClick={() => { onOpenGitContext?.(); setMenuOpen(false); }}>
+                Git context settings
               </button>
               {facilitator && facilitatorActions && (
                 <>
