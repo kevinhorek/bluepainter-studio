@@ -39,11 +39,8 @@ import FacilitatorDashboard from './components/FacilitatorDashboard';
 import AIGeneratePanel from './components/AIGeneratePanel';
 import RealFileLoader from './components/RealFileLoader';
 import RestoreBackupModal from './components/RestoreBackupModal';
-<<<<<<< HEAD
 import ExportConfirmationModal from './components/ExportConfirmationModal';
-=======
 import GitContextModal from './components/GitContextModal';
->>>>>>> origin/main
 import { createNodeFromTool, canDropIntoNode } from './utils/nodeFactory';
 import { getToolByShortcut, isPlacableTool } from './data/canvasTools';
 import { applyAIUpdates, getFirstUpdateTarget } from './utils/aiApply';
