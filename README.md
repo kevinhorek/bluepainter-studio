@@ -22,6 +22,7 @@ This repo includes the validation prototype and production-ready extension.
 - [SELF_PILOT.md](./SELF_PILOT.md) — 30-minute self-guided validation on your own repo
 - [PILOT.md](./PILOT.md) — Pilot team quick-start checklist
 - [FACILITATOR.md](./FACILITATOR.md) — Session guide for running validation with users
+- [PRICING.md](./PRICING.md) — Draft pricing options (per-seat vs. per-repo vs. open-core)
 - [extension/MARKETPLACE.md](./extension/MARKETPLACE.md) — VS Code Marketplace publish checklist
 
 ## Quick start

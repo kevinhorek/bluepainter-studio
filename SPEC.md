@@ -226,7 +226,7 @@ Current demo uses regex `syncEngine.js`. **v1 must replace this** before any pai
 
 | Question | Current Status | Decision Gate |
 |----------|----------------|---------------|
-| **Pricing: per-seat vs. per-repo vs. open-core receipts?** | Validation prototype is free. No pricing model yet. | Post-pilot validation (SPEC §8) |
+| **Pricing: per-seat vs. per-repo vs. open-core receipts?** | Validation prototype is free. No pricing model yet. **See [PRICING.md](./PRICING.md) for draft options + recommended default (open-core).** | Post-pilot validation (SPEC §8) |
 | **Team backend for learning loop?** | Optional. Default is localStorage. Teams can self-host or use SaaS backend. | Pilot feedback will determine priority |
 | **Marketplace vs. self-hosted first?** | Extension packages to VSIX; not yet published to Marketplace. | Blocked on pilot validation only |  
 
