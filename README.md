@@ -58,6 +58,29 @@ node scripts/check-receipts.mjs extension/test-fixtures/*.tsx
 
 **Configure team policy:** Create `.bluepainter.json` in your repo root (see [CI.md](./CI.md#configuration)).
 
+## Extension (VS Code)
+
+The VS Code extension brings BluePainter's canvas editor and Designer's Receipts directly into your editor.
+
+### Development
+```bash
+cd extension && npm install
+# Test in VS Code: press F5 to launch Extension Development Host
+```
+
+### Package for distribution
+```bash
+cd extension && npm run package
+# Creates: extension/bluepainter-0.2.0.vsix
+```
+
+### Install locally
+```bash
+code --install-extension extension/bluepainter-0.2.0.vsix
+```
+
+**Marketplace checklist:** See [extension/MARKETPLACE.md](./extension/MARKETPLACE.md)
+
 ## Key features (demo)
 
 | Feature | Where |
