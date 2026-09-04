@@ -155,38 +155,48 @@ export default function ReceiptsPanel({
         </div>
 
         <div className="rules-list">
-          {rules.map((rule) => (
-            <div
-              key={rule.id}
-              ref={(el) => { ruleRefs.current[rule.id] = el; }}
-              className={`rule-card ${rule.valid ? 'success' : rule.severity === 'error' ? 'warning error-rule' : 'warning'} ${highlightRuleId === rule.id ? 'rule-card-highlight' : ''}`}
-            >
-              <span className="rule-icon">{rule.valid ? '✓' : rule.severity === 'error' ? '!' : '·'}</span>
-              <div className="rule-content">
-                <div className="rule-title">{rule.title}</div>
-                <div className="rule-desc">{rule.desc}</div>
-                {rule.valid ? (
-                  <span className="rule-tag">{rule.tag}</span>
-                ) : (
-                  <div className="rule-actions">
-                    {rule.fixLabel && (
-                      <button
-                        type="button"
-                        className="rule-action-btn"
-                        style={rule.severity === 'error' ? { background: 'var(--danger-color)' } : undefined}
-                        onClick={() => handleFix(rule)}
-                      >
-                        {rule.fixLabel}
-                      </button>
-                    )}
-                    <button type="button" className="rule-dismiss-btn" onClick={() => handleDismiss(rule.id)}>
-                      Dismiss
-                    </button>
-                  </div>
-                )}
+          {rules.length === 0 ? (
+            <div className="receipts-empty-state">
+              <div className="receipts-empty-icon">✨</div>
+              <div className="receipts-empty-title">All checks passing!</div>
+              <div className="receipts-empty-text">
+                This component meets all design policy requirements. Make edits on canvas or in code to see receipts update live.
               </div>
             </div>
-          ))}
+          ) : (
+            rules.map((rule) => (
+              <div
+                key={rule.id}
+                ref={(el) => { ruleRefs.current[rule.id] = el; }}
+                className={`rule-card ${rule.valid ? 'success' : rule.severity === 'error' ? 'warning error-rule' : 'warning'} ${highlightRuleId === rule.id ? 'rule-card-highlight' : ''}`}
+              >
+                <span className="rule-icon">{rule.valid ? '✓' : rule.severity === 'error' ? '!' : '·'}</span>
+                <div className="rule-content">
+                  <div className="rule-title">{rule.title}</div>
+                  <div className="rule-desc">{rule.desc}</div>
+                  {rule.valid ? (
+                    <span className="rule-tag">{rule.tag}</span>
+                  ) : (
+                    <div className="rule-actions">
+                      {rule.fixLabel && (
+                        <button
+                          type="button"
+                          className="rule-action-btn"
+                          style={rule.severity === 'error' ? { background: 'var(--danger-color)' } : undefined}
+                          onClick={() => handleFix(rule)}
+                        >
+                          {rule.fixLabel}
+                        </button>
+                      )}
+                      <button type="button" className="rule-dismiss-btn" onClick={() => handleDismiss(rule.id)}>
+                        Dismiss
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
