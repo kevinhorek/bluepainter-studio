@@ -8,10 +8,12 @@ BluePainter v1 AST sync supports the following node types for bidirectional canv
 
 | Node Type | JSX Elements | Syncable Properties | Notes |
 |-----------|--------------|---------------------|-------|
-| **Container** | `<div>`, `<section>`, `<article>` | `style` (inline) | `className` preserved but not modified by canvas |
-| **Text** | `<p>`, `<span>`, `<h1>`–`<h6>` | `text` content, `style` (inline) | `className` preserved but not modified by canvas |
-| **Button** | `<button>` | `text` content, `style` (inline) | `className` preserved but not modified by canvas |
+| **Container** | `<div>`, `<section>`, `<article>`, `<header>`, `<footer>`, `<nav>`, `<form>` | `style` (inline) | `className` preserved but not modified by canvas |
+| **Text** | `<p>`, `<span>`, `<h1>`–`<h6>`, `<label>` | `text` content, `style` (inline) | `className` preserved but not modified by canvas |
+| **Button** | `<button>` | `text` content, `type` attribute, `style` (inline) | `className` preserved but not modified by canvas |
+| **Link** | `<a>` | `text` content, `href` attribute, `style` (inline) | `className` preserved but not modified by canvas |
 | **Image** | `<img>` | `src`, `alt`, `style` (inline) | `className` preserved but not modified by canvas |
+| **Input** | `<input>`, `<textarea>` | `type`, `placeholder`, `style` (inline) | Text content not synced (controlled by value/onChange) |
 | **Line** | `<hr>` | `style` (inline) | `className` preserved but not modified by canvas |
 | **Shape** | `<div role="presentation">` | `style` (inline) | `className` preserved but not modified by canvas |
 | **List** | `<ul>`, `<ol>` | `style` (inline) | `className` preserved but not modified by canvas |
