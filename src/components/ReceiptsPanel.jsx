@@ -29,6 +29,8 @@ export default function ReceiptsPanel({
     : { rules: [], scores: { total: 0, design: 0, buildability: 0, accessibility: 0 } };
   const { rules, scores } = receiptResult;
 
+  const suggestionsCount = learningLoop ? learningLoop.getSuggestions().length : 0;
+
   useEffect(() => {
     if (highlightRuleId && ruleRefs.current[highlightRuleId]) {
       ruleRefs.current[highlightRuleId].scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -62,6 +64,11 @@ export default function ReceiptsPanel({
       <div className="receipts-header">
         <div className="receipts-title">
           <span>Receipts</span>
+          {suggestionsCount > 0 && (
+            <span className="receipts-suggestions-badge" title={`${suggestionsCount} learning ${suggestionsCount === 1 ? 'suggestion' : 'suggestions'} available`}>
+              💡 {suggestionsCount}
+            </span>
+          )}
         </div>
         <div className="receipts-header-actions">
           {onPolicyChange && (
