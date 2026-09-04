@@ -775,7 +775,11 @@ export default function App() {
           onLaunchDemo={handleLaunchApp}
           onShowFeedback={() => setFeedbackOpen(true)}
         />
-        <FeedbackModal isOpen={feedbackOpen} onClose={handleFeedbackClose} />
+        <FeedbackModal 
+          isOpen={feedbackOpen} 
+          onClose={handleFeedbackClose}
+          onExport={facilitator ? handleExportFeedback : null}
+        />
         <AppToast message={toast} onDismiss={() => setToast(null)} />
       </div>
     );
