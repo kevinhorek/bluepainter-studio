@@ -117,7 +117,7 @@ export default function RealFileLoader({ isOpen, onClose, onFileLoaded }) {
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Open Component File</h2>
+          <h2>Open Your .tsx File</h2>
           <button
             type="button"
             className="modal-close-btn"
@@ -130,7 +130,7 @@ export default function RealFileLoader({ isOpen, onClose, onFileLoaded }) {
 
         <div className="modal-body">
           <p className="modal-description">
-            Load a .tsx or .jsx file from your project. BluePainter will parse it into the canvas for visual editing.
+            Load a real .tsx or .jsx component from your project to edit on the canvas and in code. Or close this and try the demo first.
           </p>
 
           <div
