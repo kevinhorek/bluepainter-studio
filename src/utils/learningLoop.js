@@ -141,9 +141,20 @@ export class LearningLoop {
   exportJSON() {
     const events = this._readAll();
     const stats = this.getStatistics();
+    
     return {
       version: '1.0',
       exportedAt: Date.now(),
+      surface: 'web-studio',
+      context: {
+        userId: null,
+        userName: null,
+        teamId: null,
+        repoUrl: null,
+        branch: null,
+        commitSha: null,
+        filePath: null
+      },
       stats,
       events
     };

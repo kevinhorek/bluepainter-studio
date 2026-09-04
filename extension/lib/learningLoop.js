@@ -211,9 +211,21 @@ class LearningLoop {
   exportJSON() {
     const events = this._readAll();
     const stats = this.getStatistics();
+    const context = this._getFileContext();
+    
     return {
       version: '1.0',
       exportedAt: Date.now(),
+      surface: 'vscode-extension',
+      context: {
+        userId: context.userId,
+        userName: context.userName,
+        teamId: context.teamId,
+        repoUrl: context.repoUrl,
+        branch: context.branch,
+        commitSha: context.commitSha,
+        filePath: context.filePath
+      },
       stats,
       events
     };

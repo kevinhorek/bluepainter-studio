@@ -561,7 +561,17 @@ class BluePainterController {
         break;
       case 'exportLearningLoop': {
         const loopData = this.learningLoop.exportJSON();
-        vscode.window.showInformationMessage(`Learning loop: ${loopData.stats.total} events`);
+        const fileName = `bluepainter-learning-loop-${new Date().toISOString().slice(0, 10)}.json`;
+        const uri = await vscode.window.showSaveDialog({
+          defaultUri: vscode.Uri.file(fileName),
+          filters: { 'JSON': ['json'] }
+        });
+        
+        if (uri) {
+          const fs = require('fs');
+          fs.writeFileSync(uri.fsPath, JSON.stringify(loopData, null, 2));
+          vscode.window.showInformationMessage(`✓ Learning loop exported: ${loopData.stats.total} events → ${path.basename(uri.fsPath)}`);
+        }
         break;
       }
       case 'dismissFirstRunTip':
