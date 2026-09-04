@@ -43,6 +43,16 @@ export const WORKSPACE_FILES = {
     viewport: { width: 1280, height: 800 },
     defaultSelection: 'figma-import-page',
     isFigmaImport: true
+  },
+  'real-file': {
+    id: 'real-file',
+    label: 'RealFile.tsx',
+    rootId: 'real-file-root',
+    componentName: 'RealFile',
+    isPage: false,
+    defaultSelection: 'real-file-root',
+    isRealFile: true,
+    viewport: { width: 1280, height: 800 }
   }
 };
 

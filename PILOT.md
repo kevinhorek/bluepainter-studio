@@ -17,60 +17,97 @@ Quick-start guide for pilot teams evaluating BluePainter in your real codebase.
 
 ## 1. Install Extension
 
-**From VSIX file:**
+**Option A: From pre-built VSIX (recommended for pilots):**
 
 ```bash
-# Download bluepainter-X.X.X.vsix from releases
-code --install-extension bluepainter-X.X.X.vsix
+# Download bluepainter-0.2.0.vsix from releases
+code --install-extension bluepainter-0.2.0.vsix
 ```
 
-**Or build from source:**
+**Option B: Build from source:**
 
 ```bash
 cd extension
 npm install
-# Press F5 in VS Code to launch Extension Development Host
+npm run package
+# Then install: code --install-extension bluepainter-0.2.0.vsix
+```
+
+**Option C: Development mode (for contributors):**
+
+```bash
+cd extension
+npm install
+# Open extension/ folder in VS Code, press F5 to launch Extension Development Host
 ```
 
 ---
 
-## 2. Pick a Component
+## 2. Pick a Component from Your Real Repo
 
-Open any `.tsx` or `.jsx` file in your workspace.
+**Prerequisites:**
+- Open your React/TSX project workspace in VS Code
+- Ensure components have `id="..."` attributes on elements you want to edit
 
-**Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`):**
+**Steps:**
 
-```
-BluePainter: Pick Component
-```
+1. **Open any `.tsx` or `.jsx` file** from your project
+2. **Command Palette** (`Cmd+Shift+P` / `Ctrl+Shift+P`) → `BluePainter: Pick Component`
+3. Select your component from the list
 
-Select a component from the list. The extension will:
-- Parse the component AST
-- Show syncable node count
-- Display Designer's Receipts in the sidebar
+The extension will:
+- Parse the component AST with Babel
+- Count syncable nodes (elements with `id="..."` attributes)
+- Display the canvas in the sidebar
+- Evaluate Designer's Receipts against your team policy
+
+**What if no components appear?**
+- Ensure your workspace has `.tsx` or `.jsx` files
+- Check that components export a function/class that returns JSX
+- Verify `id` attributes exist on elements (required for sync)
 
 ---
 
-## 3. Review Receipts
+## 3. Edit on Canvas → Write Back to File
 
-**Receipts Panel** shows live policy checks:
+**Canvas Tab:**
+- See your component rendered with live preview
+- Click elements to select and edit properties
+- Changes update the canvas immediately
 
-| Receipt | What it checks |
-|---------|----------------|
-| Spacing grid | Padding aligns to 8px (configurable) |
-| Contrast | Button text meets WCAG AA (4.5:1) |
-| CTA copy | Avoids weak words ("click here", "submit") |
-| Border radius | Corners fit 4px scale (configurable) |
-| Feature count | Lists stay under 5 items (configurable) |
+**Inspector Tab:**
+- Edit padding, background, text, border-radius
+- Changes write back to your TSX file
+- AST sync preserves formatting (Recast engine)
+
+**Write to File:**
+1. Make edits on canvas
+2. Click **Write to file** button in sidebar footer
+3. Extension updates your `.tsx` file with changes
+4. Check git diff to verify formatting preserved
+
+**Important:** Text edits round-trip reliably. Some style edits (e.g., text color via inline style) may require manual verification. See [AST_SCOPE.md](./AST_SCOPE.md) for full scope.
+
+## 4. Review Receipts (Designer's Policy Checks)
+
+**Receipts Tab** shows live policy violations:
+
+| Receipt | What it checks | Default |
+|---------|----------------|---------|
+| Spacing grid | Padding aligns to grid | 8px |
+| Contrast | Button text meets WCAG AA | 4.5:1 |
+| CTA copy | Avoids weak words | "click here", "submit" |
+| Border radius | Corners fit grid | 4px |
+| Feature count | Lists stay under max | 5 items |
 
 **Actions:**
-- **Apply fix** — one-click remediation
+- **Apply fix** — one-click remediation (updates canvas + code)
 - **Dismiss** — hide rule for this session
 - **Learning suggestions** — after 3+ dismisses, option to downgrade rule severity
 
 ---
 
-## 4. Customize Policy (Optional)
+## 5. Customize Policy for Your Team (Optional)
 
 Create `.bluepainter.json` in repo root:
 
@@ -98,7 +135,7 @@ Create `.bluepainter.json` in repo root:
 
 ---
 
-## 5. Enable CI Gate (Recommended)
+## 6. Enable CI Gate for Pull Requests (Recommended)
 
 Add **Designer's Receipts Gate** to your CI pipeline.
 
@@ -130,7 +167,7 @@ See `CI.md` for GitLab CI, Bitbucket Pipelines, and other systems.
 
 ---
 
-## 6. Run Validation Session (Facilitator Mode)
+## 7. Product Validation (Optional — for facilitators only)
 
 For product validation feedback:
 
@@ -158,7 +195,7 @@ Share exported JSON with Kevin for go/no-go review.
 
 ---
 
-## 7. Expected Behavior
+## 8. Expected Behavior (v0.2)
 
 **✓ What works (v0.2):**
 - Parse React/TSX files with Babel AST
@@ -178,7 +215,34 @@ See `README.md` "Prototype limitations" for full list.
 
 ---
 
-## 8. Feedback
+## 9. Real Repo Workflow Summary
+
+**Day-to-day usage on your own projects:**
+
+1. Open your repo in VS Code
+2. Pick a component with `BluePainter: Pick Component`
+3. Edit visually on canvas (padding, colors, text, layout)
+4. Apply receipt fixes for design policy violations
+5. **Write to file** to sync changes back to code
+6. Review git diff (formatting should be preserved)
+7. Commit and push to your branch
+8. CI gate blocks merge on error-severity receipts (if enabled)
+
+**What makes receipts before merge?**
+- Canvas edits update code with AST sync (preserves comments, spacing)
+- Receipts catch policy violations before code review
+- Learning loop tracks your fixes to improve team rules
+- CI gate blocks merge on contrast failures (configurable)
+
+**Typical pilot tasks:**
+- Edit existing pricing card padding to align to 8px grid
+- Fix low-contrast button before merge
+- Update hero section CTA copy per team guidelines
+- Add new component instance to dashboard page
+
+See [EXTENSION_PILOT.md](./EXTENSION_PILOT.md) for a detailed first-session guide with step-by-step instructions.
+
+## 10. Feedback
 
 Report bugs, suggest features, or request policy additions:
 
@@ -188,7 +252,7 @@ Report bugs, suggest features, or request policy additions:
 
 ---
 
-## Quick Troubleshooting
+## 11. Quick Troubleshooting
 
 **"No components found"**
 → Ensure workspace has `.tsx` or `.jsx` files. Extension scans recursively.
