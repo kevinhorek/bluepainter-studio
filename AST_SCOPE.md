@@ -158,16 +158,22 @@ See [CONFLICT_MODEL.md](./CONFLICT_MODEL.md) for full documentation of how BlueP
 
 ## Testing AST Sync
 
-Run the automated AST sync test:
+Run the full automated AST sync test suite:
 
 ```bash
-node scripts/test-ast-sync.mjs
+npm run test:ast
 ```
 
-Expected output:
-```
-=== ✓ All tests passed! AST sync is working correctly ===
-```
+**Coverage:**
+- Basic parsing and patching consistency (PricingCard fixture)
+- Advanced patterns: button lists, nested containers, feature lists
+- Expanded patterns: deep nesting, arrays of elements, grid layouts, boolean/null values
+- Card patterns: pricing cards, feature cards, testimonial cards, product cards with badges and icons
+- Style source detection: Tailwind, CSS modules, inline styles, mixed
+
+**Total:** 25 tests covering real-world component patterns including e-commerce and marketing card layouts
+
+Expected output: All tests pass with green checkmarks
 
 ## Versioning
 
