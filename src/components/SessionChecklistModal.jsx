@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { buildCurrentSessionMetrics } from '../utils/feedbackStorage';
-import { downloadValidationExport, downloadPilotPackExport } from '../utils/validationExport';
+import { downloadValidationExport } from '../utils/validationExport';
 
 const CHECKLIST_ITEMS = [
   {
