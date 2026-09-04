@@ -132,6 +132,16 @@ export default function FacilitatorDashboard({ isOpen, onClose, learningLoop }) 
           </section>
 
           <section className="facilitator-section">
+            <h3>Keyboard Shortcuts</h3>
+            <ul className="facilitator-shortcuts-list">
+              <li><kbd>Cmd/Ctrl</kbd> + <kbd>K</kbd> → Toggle session checklist</li>
+              <li><kbd>Cmd/Ctrl</kbd> + <kbd>E</kbd> → Quick export pilot pack</li>
+              <li><kbd>Cmd/Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>L</kbd> → Export learning loop</li>
+              <li><kbd>S</kbd> → Open scorecard</li>
+            </ul>
+          </section>
+
+          <section className="facilitator-section">
             <h3>Open PRs</h3>
             <p className="facilitator-link-description">
               View all open pull requests for this repository:
