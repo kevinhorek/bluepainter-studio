@@ -6,7 +6,7 @@
   "publisher": "bluepainter",
   "private": false,
   "license": "MIT",
-  "icon": "media/icon.png",
+  "icon": "media/icon.svg",
   "repository": {
     "type": "git",
     "url": "https://github.com/kevinhorek/bluepainter-studio.git"

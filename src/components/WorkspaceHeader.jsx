@@ -46,8 +46,7 @@ export default function WorkspaceHeader({
       <div className="workspace-header-left">
         <div className="workspace-brand">
           <button type="button" className="workspace-brand-btn" onClick={onGoHome} title="Back to marketing site">
-            <div className="logo-icon"><div className="logo-dot" /></div>
-            <span className="workspace-brand-name">BluePainter</span>
+            <img src="/logo.svg" alt="BluePainter" height="24" className="workspace-brand-logo" />
           </button>
         <span className="workspace-prototype-badge">Prototype</span>
         {facilitator && <span className="workspace-facilitator-badge" title="Facilitator mode active — access session tools via ··· menu">Facilitator</span>}

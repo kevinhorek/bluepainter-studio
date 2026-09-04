@@ -164,8 +164,7 @@ export default function MarketingPage({ onLaunchDemo, onShowFeedback }) {
       <header className="landing-header-bar">
         <div className="landing-header">
           <div className="landing-logo">
-            <div className="logo-icon"><div className="logo-dot" /></div>
-            <span>BluePainter</span>
+            <img src="/logo.svg" alt="BluePainter" height="32" />
           </div>
           <nav className="landing-nav">
             <button type="button" onClick={() => scrollTo('features')}>Features</button>
@@ -321,8 +320,7 @@ export default function MarketingPage({ onLaunchDemo, onShowFeedback }) {
 
       <footer className="landing-footer landing-footer-v2">
         <div className="landing-footer-brand">
-          <div className="logo-icon"><div className="logo-dot" /></div>
-          <span>BluePainter</span>
+          <img src="/logo.svg" alt="BluePainter" height="24" />
         </div>
         <span className="landing-footer-note">Validation prototype · July 2026</span>
         <div className="landing-footer-links">
