@@ -9,6 +9,27 @@ on:
       - main
 
 jobs:
+  conflict-markers:
+    name: Check for conflict markers
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Scan for conflict markers
+        run: |
+          echo "Scanning for Git conflict markers..."
+          if git grep -n "^<<<<<<<" -- ':!*.md' ':!CI.md'; then
+            echo "❌ Found conflict markers in code files"
+            exit 1
+          fi
+          if git grep -n "^>>>>>>>" -- ':!*.md' ':!CI.md'; then
+            echo "❌ Found conflict markers in code files"
+            exit 1
+          fi
+          echo "✅ No conflict markers found"
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
