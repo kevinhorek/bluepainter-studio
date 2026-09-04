@@ -416,27 +416,6 @@ html {
   cursor: pointer;
 }
 
-.team-policy-divider {
-  height: 1px;
-  background: rgba(255, 255, 255, 0.06);
-  margin: 12px 0;
-}
-
-.team-policy-section-label {
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #94a3b8;
-  margin-bottom: 8px;
-}
-
-.team-policy-grid input[type="color"] {
-  height: 32px;
-  padding: 2px;
-  cursor: pointer;
-}
-
 .learning-loop-strip {
   display: flex;
   justify-content: space-between;
@@ -6733,6 +6712,7 @@ input:checked + .slider-round:before {
   color: var(--text);
 }
 
+<<<<<<< HEAD
 /* File validation warnings and errors */
 .file-drop-message.warning {
   text-align: left;
@@ -6787,20 +6767,59 @@ input:checked + .slider-round:before {
 .conflict-v2 .modal-body {
   max-height: 500px;
   overflow-y: auto;
+
+.conflict-v2 .modal-body {
+  max-height: 500px;
+  overflow-y: auto;
+>>>>>>> 28c6a6d (feat: implement conflict model v2 with three-way diff UI)
+=======
+/* Validation Scorecard Enhancements */
+.validation-scorecard-stat-success {
+  background: rgba(16, 185, 129, 0.1) !important;
+  border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
-/* Learning suggestions badge in receipts header */
-.receipts-suggestions-badge {
-  display: inline-flex;
+.validation-scorecard-conflict-summary {
+  margin: 16px 0;
+  padding: 12px;
+  background: rgba(59, 130, 246, 0.05);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 6px;
+}
+
+.conflict-resolution-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.conflict-resolution-item {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 4px;
-  margin-left: 8px;
-  padding: 2px 8px;
-  font-size: 0.7rem;
-  font-weight: 600;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+}
+
+.conflict-resolution-count {
+  font-size: 1.5rem;
+  font-weight: 700;
   color: #3b82f6;
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  border-radius: 12px;
-  cursor: help;
+}
+
+.conflict-resolution-label {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  text-align: center;
+  margin-top: 4px;
+}
+
+.validation-scorecard-receipt-compliance {
+  margin: 16px 0;
+  padding: 12px;
+  background: rgba(16, 185, 129, 0.05);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 6px;
+>>>>>>> 05825ff (feat: facilitator validation scorecard enhancements)
 }

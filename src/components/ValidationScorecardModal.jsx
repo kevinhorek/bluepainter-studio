@@ -23,25 +23,48 @@ export default function ValidationScorecardModal({ isOpen, onClose }) {
     return loop.getSuggestions();
   }, [isOpen]);
 
-  const lastLearningActivity = useMemo(() => {
+  const conflictStats = useMemo(() => {
     if (!isOpen) return null;
     const loop = new LearningLoop();
-    return loop.getLastActivityTimestamp();
+    const allEvents = loop.getAll();
+    const conflicts = allEvents.filter(e => e.type === 'conflict_resolved');
+    
+    const resolutions = {
+      overwrite_with_canvas: 0,
+      discard_canvas: 0,
+      show_both_manual_fix: 0,
+      cancel: 0
+    };
+    
+    conflicts.forEach(c => {
+      const resolution = c.data?.resolution;
+      if (resolution && resolutions[resolution] !== undefined) {
+        resolutions[resolution]++;
+      }
+    });
+    
+    return {
+      total: conflicts.length,
+      resolutions
+    };
   }, [isOpen]);
 
-  const formatTimestamp = (timestamp) => {
-    if (!timestamp) return '';
-    const now = Date.now();
-    const diff = now - timestamp;
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
+  const receiptCompliance = useMemo(() => {
+    if (!isOpen) return null;
+    const loop = new LearningLoop();
+    const stats = loop.getStatistics();
     
-    if (minutes < 1) return 'just now';
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    return `${days}d ago`;
-  };
+    const fixesApplied = Object.values(stats.mostAppliedFixes || {}).reduce((a, b) => a + b, 0);
+    const rulesDismissed = Object.values(stats.mostDismissedRules || {}).reduce((a, b) => a + b, 0);
+    const total = fixesApplied + rulesDismissed;
+    
+    return {
+      fixesApplied,
+      rulesDismissed,
+      total,
+      complianceRate: total > 0 ? (fixesApplied / total * 100).toFixed(0) : 0
+    };
+  }, [isOpen]);
 
   const interestLabels = {
     very: 'Very — I\'d pay for this',
@@ -114,6 +137,18 @@ export default function ValidationScorecardModal({ isOpen, onClose }) {
               <span className="validation-scorecard-stat-value">{scorecard.learning.roundTripsCanvas + scorecard.learning.roundTripsCode}</span>
               <span className="validation-scorecard-stat-label">Round-trips</span>
             </div>
+            {conflictStats && conflictStats.total > 0 && (
+              <div className="validation-scorecard-stat">
+                <span className="validation-scorecard-stat-value">{conflictStats.total}</span>
+                <span className="validation-scorecard-stat-label">Conflicts resolved</span>
+              </div>
+            )}
+            {receiptCompliance && receiptCompliance.total > 0 && (
+              <div className={`validation-scorecard-stat ${receiptCompliance.complianceRate >= 70 ? 'validation-scorecard-stat-success' : ''}`}>
+                <span className="validation-scorecard-stat-value">{receiptCompliance.complianceRate}%</span>
+                <span className="validation-scorecard-stat-label">Receipt compliance</span>
+              </div>
+            )}
           </div>
 
           {learningSuggestions.length > 0 && (
@@ -123,15 +158,52 @@ export default function ValidationScorecardModal({ isOpen, onClose }) {
                 <span className="validation-scorecard-suggestions-title">
                   {learningSuggestions.length} policy {learningSuggestions.length === 1 ? 'suggestion' : 'suggestions'} available
                 </span>
-                {lastLearningActivity && (
-                  <span className="validation-scorecard-timestamp" title="Last learning event">
-                    {formatTimestamp(lastLearningActivity)}
-                  </span>
-                )}
               </div>
               <p className="validation-scorecard-suggestions-desc">
                 Based on fix/dismiss patterns, the learning loop has suggestions to optimize your team policy. 
                 View them in the Receipts panel during your next session.
+              </p>
+            </div>
+          )}
+
+          {conflictStats && conflictStats.total > 0 && (
+            <div className="validation-scorecard-conflict-summary">
+              <h4 style={{ margin: '0 0 8px 0', fontSize: '0.85rem', fontWeight: 600 }}>Conflict Resolution (SPEC §10)</h4>
+              <div className="conflict-resolution-grid">
+                <div className="conflict-resolution-item">
+                  <span className="conflict-resolution-count">{conflictStats.resolutions.overwrite_with_canvas}</span>
+                  <span className="conflict-resolution-label">Keep Canvas</span>
+                </div>
+                <div className="conflict-resolution-item">
+                  <span className="conflict-resolution-count">{conflictStats.resolutions.discard_canvas}</span>
+                  <span className="conflict-resolution-label">Keep Code</span>
+                </div>
+                <div className="conflict-resolution-item">
+                  <span className="conflict-resolution-count">{conflictStats.resolutions.show_both_manual_fix || 0}</span>
+                  <span className="conflict-resolution-label">Manual Fix</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {receiptCompliance && receiptCompliance.total > 0 && (
+            <div className="validation-scorecard-receipt-compliance">
+              <h4 style={{ margin: '0 0 8px 0', fontSize: '0.85rem', fontWeight: 600 }}>
+                Receipt Compliance Badge
+                <span style={{ 
+                  marginLeft: '8px',
+                  padding: '2px 8px',
+                  background: receiptCompliance.complianceRate >= 70 ? '#10b981' : receiptCompliance.complianceRate >= 50 ? '#f59e0b' : '#ef4444',
+                  color: '#fff',
+                  borderRadius: '4px',
+                  fontSize: '0.75rem',
+                  fontWeight: 700
+                }}>
+                  {receiptCompliance.complianceRate}%
+                </span>
+              </h4>
+              <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '4px 0' }}>
+                {receiptCompliance.fixesApplied} fixes applied, {receiptCompliance.rulesDismissed} rules dismissed (total: {receiptCompliance.total})
               </p>
             </div>
           )}
