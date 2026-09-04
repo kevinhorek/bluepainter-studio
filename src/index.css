@@ -6373,3 +6373,13 @@ input:checked + .slider-round:before {
   background: rgba(0, 0, 0, 0.05);
   color: var(--text);
 }
+
+/* Conflict Dialog v2 Styles */
+.conflict-v2 {
+  max-width: 650px;
+}
+
+.conflict-v2 .modal-body {
+  max-height: 500px;
+  overflow-y: auto;
+}
