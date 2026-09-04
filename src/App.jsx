@@ -38,9 +38,11 @@ import FigmaImportModal from './components/FigmaImportModal';
 import FacilitatorDashboard from './components/FacilitatorDashboard';
 import AIGeneratePanel from './components/AIGeneratePanel';
 import RealFileLoader from './components/RealFileLoader';
+import RestoreBackupModal from './components/RestoreBackupModal';
 import { createNodeFromTool, canDropIntoNode } from './utils/nodeFactory';
 import { getToolByShortcut, isPlacableTool } from './data/canvasTools';
 import { applyAIUpdates, getFirstUpdateTarget } from './utils/aiApply';
+import { createBackup, AUTO_SAVE_INTERVAL_MS } from './utils/autoSaveBackup';
 
 const VALID_PHASES = ['landing', 'phase1', 'phase2', 'phase3', 'phase4'];
 const TOUR_SEEN_KEY = 'bluepainter-tour-seen';
@@ -93,6 +95,7 @@ export default function App() {
   const [aiInitialType, setAiInitialType] = useState('full-marketing');
   const [figmaImportOpen, setFigmaImportOpen] = useState(false);
   const [realFileLoaderOpen, setRealFileLoaderOpen] = useState(false);
+  const [restoreBackupOpen, setRestoreBackupOpen] = useState(false);
   const [realFileData, setRealFileData] = useState(null);
   const [fileViewports, setFileViewports] = useState({});
   const [activeViewportMode, setActiveViewportMode] = useState(() => {
@@ -255,6 +258,26 @@ export default function App() {
     setFocusedPanel('canvas');
     learningLoop.log('real_file_loaded', { fileName, nodeCount: Object.keys(nodes).length });
     notify(`Loaded "${fileName}" — ${Object.keys(nodes).length} nodes`);
+  }, [learningLoop, notify]);
+
+  const handleRestoreBackup = useCallback((backup) => {
+    if (!backup) return;
+    
+    // Update the workspace file definition for real-file
+    const workspaceFile = getWorkspaceFile('real-file');
+    workspaceFile.label = backup.fileName;
+    workspaceFile.rootId = backup.rootId;
+    workspaceFile.defaultSelection = backup.rootId;
+    
+    setRealFileData({ fileName: backup.fileName, code: backup.code, rootId: backup.rootId });
+    setNodesByFile((prev) => ({ ...prev, 'real-file': backup.nodes }));
+    setCode(backup.code);
+    setLastSyncedCode(backup.code);
+    setActiveFile('real-file');
+    setSelectedNodeId(backup.rootId);
+    setFocusedPanel('canvas');
+    learningLoop.log('backup_restored', { fileName: backup.fileName, backupId: backup.id });
+    notify(`Restored "${backup.fileName}" from backup`);
   }, [learningLoop, notify]);
 
   const handleDownloadRealFile = useCallback(() => {
@@ -461,6 +484,28 @@ export default function App() {
   useEffect(() => {
     codeRef.current = code;
   }, [code]);
+
+  // Auto-save backup for crash recovery (SPEC §5)
+  useEffect(() => {
+    if (!realFileData || activeFile !== 'real-file' || !code || !activeNodesMap) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const result = createBackup(
+        realFileData.fileName,
+        code,
+        activeNodesMap,
+        realFileData.rootId
+      );
+      
+      if (result.success) {
+        console.log('[AutoSave] Backup created:', result.backupId);
+      }
+    }, AUTO_SAVE_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [realFileData, activeFile, code, activeNodesMap]);
 
   useEffect(() => {
     if (!facilitator) return;
@@ -935,6 +980,7 @@ export default function App() {
         onOpenMarketingKit={handleOpenMarketingKit}
         onOpenFigmaImport={() => setFigmaImportOpen(true)}
         onOpenRealFile={() => setRealFileLoaderOpen(true)}
+        onRestoreBackup={() => setRestoreBackupOpen(true)}
         onDownloadRealFile={handleDownloadRealFile}
         onOpenAI={() => handleOpenAI('full-marketing')}
         onCopyLink={handleCopyLink}
@@ -1028,6 +1074,11 @@ export default function App() {
         isOpen={realFileLoaderOpen}
         onClose={() => setRealFileLoaderOpen(false)}
         onFileLoaded={handleRealFileLoaded}
+      />
+      <RestoreBackupModal
+        isOpen={restoreBackupOpen}
+        onClose={() => setRestoreBackupOpen(false)}
+        onRestore={handleRestoreBackup}
       />
       <AIGeneratePanel
         isOpen={aiPanelOpen}

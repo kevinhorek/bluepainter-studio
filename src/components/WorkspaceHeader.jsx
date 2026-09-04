@@ -15,6 +15,7 @@ export default function WorkspaceHeader({
   onOpenMarketingKit,
   onOpenFigmaImport,
   onOpenRealFile,
+  onRestoreBackup,
   onDownloadRealFile,
   onOpenAI,
   onCopyLink,
@@ -90,6 +91,14 @@ export default function WorkspaceHeader({
           title="Open a .tsx/.jsx file from your project"
         >
           📂 Open File
+        </button>
+        <button
+          type="button"
+          className="workspace-restore-btn"
+          onClick={onRestoreBackup}
+          title="Restore from auto-save backup"
+        >
+          ⏮️ Restore
         </button>
         {realFileLoaded && (
           <button
