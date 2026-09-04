@@ -130,9 +130,18 @@ function parseTSXWithAST(code, nodesMap) {
           node.className = classAttr.value.value;
         }
 
-        if (node.type === 'text' || node.type === 'button' || node.type === 'list-item') {
+        if (node.type === 'text' || node.type === 'button' || node.type === 'list-item' || node.type === 'link') {
           const text = readJsxText(path.node);
           if (text != null) node.text = text;
+        }
+
+        if (node.type === 'link' && t.isJSXIdentifier(opening.name, { name: 'a' })) {
+          const hrefAttr = opening.attributes.find(
+            (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'href' })
+          );
+          if (hrefAttr && t.isStringLiteral(hrefAttr.value)) {
+            node.href = hrefAttr.value.value;
+          }
         }
 
         if (node.type === 'image' && t.isJSXIdentifier(opening.name, { name: 'img' })) {
@@ -140,6 +149,30 @@ function parseTSXWithAST(code, nodesMap) {
             (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'src' })
           );
           if (srcAttr && t.isStringLiteral(srcAttr.value)) node.src = srcAttr.value.value;
+        }
+
+        if (node.type === 'input') {
+          const typeAttr = opening.attributes.find(
+            (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'type' })
+          );
+          if (typeAttr && t.isStringLiteral(typeAttr.value)) {
+            node.inputType = typeAttr.value.value;
+          }
+          const placeholderAttr = opening.attributes.find(
+            (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'placeholder' })
+          );
+          if (placeholderAttr && t.isStringLiteral(placeholderAttr.value)) {
+            node.placeholder = placeholderAttr.value.value;
+          }
+        }
+
+        if (node.type === 'textarea') {
+          const placeholderAttr = opening.attributes.find(
+            (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'placeholder' })
+          );
+          if (placeholderAttr && t.isStringLiteral(placeholderAttr.value)) {
+            node.placeholder = placeholderAttr.value.value;
+          }
         }
       }
     });
@@ -172,12 +205,33 @@ function patchTSXWithAST(code, nodesMap) {
           upsertStyleAttribute(opening, node.style);
         }
 
-        if (node.type === 'text' || node.type === 'button' || node.type === 'list-item') {
+        if ((node.type === 'text' || node.type === 'button' || node.type === 'link') && node.text !== undefined) {
           setJsxText(path.node, node.text || '');
+        }
+        
+        if (node.type === 'list-item' && node.text !== undefined && node.text !== null) {
+          setJsxText(path.node, node.text);
+        }
+
+        if (node.type === 'link' && node.href) {
+          upsertStringAttribute(opening, 'href', node.href);
         }
 
         if (node.type === 'image' && node.src) {
           upsertStringAttribute(opening, 'src', node.src);
+        }
+
+        if (node.type === 'input') {
+          if (node.inputType) {
+            upsertStringAttribute(opening, 'type', node.inputType);
+          }
+          if (node.placeholder) {
+            upsertStringAttribute(opening, 'placeholder', node.placeholder);
+          }
+        }
+
+        if (node.type === 'textarea' && node.placeholder) {
+          upsertStringAttribute(opening, 'placeholder', node.placeholder);
         }
       }
     });
