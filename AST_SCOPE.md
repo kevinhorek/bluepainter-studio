@@ -175,8 +175,20 @@ This document describes **AST Scope v1.0** (BluePainter prototype → v1 launch)
 Future versions may expand support to:
 - Tailwind class merging
 - Multi-file component graphs
-- Responsive breakpoints (canvas multi-viewport)
 - Advanced layout (Grid, absolute positioning)
+
+### Responsive Multi-Viewport Canvas
+
+BluePainter v1 includes a **responsive multi-viewport canvas** that allows previewing and editing at different screen sizes (Desktop 1280px, Tablet 768px, Mobile 375px). See [RESPONSIVE.md](./docs/RESPONSIVE.md) for full documentation.
+
+**What is synced:**
+- ✅ All element structure, inline styles, text content, and code ↔ canvas AST sync work identically across all viewports
+- ✅ The same `nodesMap` is used for all viewports, so edits at any size are reflected in the code
+
+**What is NOT synced:**
+- ❌ Responsive CSS media queries are not generated
+- ❌ Per-viewport style overrides (there is only one `style={{}}` object, not one per breakpoint)
+- ❌ Automatic layout adaptation (elements do not automatically reflow or stack for mobile)
 
 ---
 
