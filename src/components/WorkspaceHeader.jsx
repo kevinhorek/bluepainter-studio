@@ -43,6 +43,7 @@ export default function WorkspaceHeader({
             <span className="workspace-brand-name">BluePainter</span>
           </button>
         <span className="workspace-prototype-badge">Prototype</span>
+        {facilitator && <span className="workspace-facilitator-badge" title="Facilitator mode active — access session tools via ··· menu">Facilitator</span>}
         </div>
 
         <div className="workspace-file-picker" ref={fileRef}>

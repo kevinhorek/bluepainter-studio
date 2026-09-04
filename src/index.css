@@ -4366,6 +4366,29 @@ input:checked + .slider-round:before {
   margin-left: 6px;
 }
 
+.workspace-facilitator-badge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.15);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+  animation: pulse-facilitator 2s ease-in-out infinite;
+}
+
+@keyframes pulse-facilitator {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(251, 191, 36, 0);
+  }
+}
+
 .app-toast {
   position: fixed;
   bottom: 24px;
