@@ -6129,3 +6129,64 @@ input:checked + .slider-round:before {
   padding: 8px;
   text-align: center;
 }
+
+/* Viewport Switcher */
+.viewport-switcher {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 6px;
+  z-index: 50;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+}
+
+.viewport-switcher-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: var(--font-sans);
+  white-space: nowrap;
+}
+
+.viewport-switcher-btn:hover {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.2);
+  color: #cbd5e1;
+}
+
+.viewport-switcher-btn.active {
+  background: var(--blue-primary);
+  border-color: var(--blue-primary);
+  color: #ffffff;
+}
+
+.viewport-switcher-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.viewport-switcher-label {
+  font-weight: 600;
+}
+
+.viewport-switcher-width {
+  opacity: 0.7;
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+}

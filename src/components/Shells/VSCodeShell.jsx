@@ -28,7 +28,9 @@ export default function VSCodeShell({
   fileConfig,
   componentLibrary,
   onOpenComponentFile,
-  receiptsConfig
+  receiptsConfig,
+  activeViewportMode,
+  onViewportChange
 }) {
   const node = nodesMap[selectedNodeId];
   const [paneLayout, setPaneLayout] = useState('split');
@@ -117,6 +119,8 @@ export default function VSCodeShell({
                   pageViewport={fileConfig?.isPage ? fileConfig.viewport : null}
                   componentLibrary={componentLibrary}
                   onOpenComponentFile={onOpenComponentFile}
+                  activeViewportMode={activeViewportMode}
+                  onViewportChange={onViewportChange}
                 />
 
                 <ReceiptMessageBar
