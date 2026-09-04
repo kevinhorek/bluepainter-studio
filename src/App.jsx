@@ -678,7 +678,8 @@ export default function App() {
     dismissedRules,
     onDismissRule: handleDismissRule,
     onFixApplied: handleReceiptFix,
-    learningSummary
+    learningSummary,
+    learningLoop
   };
 
   const shellProps = {
