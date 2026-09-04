@@ -2,6 +2,16 @@
 
 This guide explains how to configure the production team audit log backend for BluePainter.
 
+## Quick Start
+
+**TL;DR for production setup:**
+1. Create a Postgres database (Supabase or Vercel Postgres)
+2. Set `DATABASE_URL` environment variable in Vercel dashboard
+3. Run migration: `psql $DATABASE_URL -f docs/migrations/001_audit_events.sql`
+4. Deploy: `vercel --prod`
+
+**The app works without this setup** — events buffer to localStorage in "soft-fail" mode.
+
 ## Overview
 
 The audit backend implements SPEC §3 requirement: "Audit log: who changed what, via canvas or code, which receipt fired."
@@ -9,9 +19,9 @@ The audit backend implements SPEC §3 requirement: "Audit log: who changed what,
 **Features:**
 - Batch event submission (`POST /api/audit-log/batch`)
 - Event queries with team-scoping (`GET /api/audit-log/query`)
-- Graceful degradation when database is not configured
+- Graceful degradation when database is not configured (soft-fail mode)
 - Automatic retry with exponential backoff
-- localStorage buffer fallback
+- localStorage buffer fallback when backend unavailable
 
 ## Architecture
 
@@ -33,20 +43,30 @@ The audit backend implements SPEC §3 requirement: "Audit log: who changed what,
 
 ## Environment Variables
 
-### Required for Production Backend
+### Required for Production Audit Persistence
 
-#### `DATABASE_URL` or `POSTGRES_URL`
-PostgreSQL connection string for audit events storage.
+#### `DATABASE_URL` (or `POSTGRES_URL`)
+
+**What it is:** PostgreSQL connection string for audit events storage.
+
+**Required:** Only for production audit persistence. Without it, the app runs in "soft-fail" mode (events buffer locally).
 
 **Format:**
 ```
 postgresql://[user]:[password]@[host]:[port]/[database]
 ```
 
-**Example:**
+**Where to set:**
+- **Vercel:** Project Settings → Environment Variables → Add Variable
+  - Name: `DATABASE_URL`
+  - Value: Your Postgres connection string
+  - Environments: Production, Preview, Development (as needed)
+- **Local dev:** Create a `.env` file in project root (see `.env.example`)
+
+**Examples:**
 ```bash
-# Supabase
-DATABASE_URL=postgresql://postgres:[PASSWORD]@db.[PROJECT].supabase.co:5432/postgres
+# Supabase (recommended for pilots)
+DATABASE_URL=postgresql://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
 
 # Vercel Postgres
 POSTGRES_URL=postgresql://[USER]:[PASSWORD]@[HOST]/[DATABASE]?sslmode=require
@@ -55,45 +75,42 @@ POSTGRES_URL=postgresql://[USER]:[PASSWORD]@[HOST]/[DATABASE]?sslmode=require
 DATABASE_URL=postgresql://localhost:5432/bluepainter_dev
 ```
 
-**Where to set:**
-- **Vercel:** Project Settings → Environment Variables
-- **Supabase:** Project Settings → Database → Connection String
-- **Local dev:** `.env` file (add to `.gitignore`)
+**How to get it:**
+- **Supabase:** Project Settings → Database → Connection String → URI
+- **Vercel Postgres:** Storage → Postgres → `.env.local` tab → Copy `POSTGRES_URL`
+- **Local:** Create database with `createdb bluepainter_dev`, then use localhost connection
 
-**Required permissions:**
+**Required database permissions:**
 - `CREATE TABLE` (for schema migration)
 - `INSERT` (for event submission)
 - `SELECT` (for queries)
-- `DELETE` (for retention cleanup)
+- `DELETE` (for retention cleanup — optional)
 
-### Optional - Studio Configuration
+### Optional Configuration
 
 #### `VITE_AUDIT_API_URL`
-Base URL for the audit backend API.
 
-**Default:** `/api/audit-log` (uses Vercel dev server in development)
+**What it is:** Base URL for the audit backend API endpoints.
 
-**When to set:**
-- Custom backend deployment (non-Vercel)
-- Separate audit service
-- Cross-origin API
+**Default:** `/api/audit-log` (correct for standard Vercel deployments)
 
-**Example:**
+**When to set:** Only if you're using a custom backend deployment or separate audit service. For most teams, leave this unset.
+
+**Examples:**
 ```bash
-# Production deployment
+# Custom production backend
 VITE_AUDIT_API_URL=https://audit.example.com/api/audit-log
 
 # Staging environment
 VITE_AUDIT_API_URL=https://staging-api.example.com/audit-log
 
-# Local development (default)
-# VITE_AUDIT_API_URL=/api/audit-log  # (implicit default)
+# Default (implicit, no need to set)
+# VITE_AUDIT_API_URL=/api/audit-log
 ```
 
 **Where to set:**
-- **Vercel:** Project Settings → Environment Variables → Add `VITE_` prefix
-- **Local dev:** `.env` file
-- **Build time:** Injected during `vite build`
+- **Vercel:** Project Settings → Environment Variables (note the `VITE_` prefix)
+- **Local dev:** `.env` file (see `.env.example`)
 
 ### Optional - VS Code Extension Configuration
 
@@ -351,17 +368,24 @@ localStorage.getItem('bluepainter-audit-log-buffer');
 
 ### Soft-fail mode (no DATABASE_URL)
 
-**Symptom:** API returns `{ mode: "soft-fail" }`
+**Symptom:** API returns `{ "mode": "soft-fail" }` and the Studio shows "Audit Log: Local Only" indicator.
 
-**Behavior:**
-- API accepts events but doesn't persist
-- Studio continues buffering to localStorage
-- No queries available
+**What this means:**
+- The audit API is running but `DATABASE_URL` is not configured
+- API accepts events but doesn't persist them to a database
+- Studio continues buffering events to localStorage only
+- Queries return empty results
+- **This is normal for demo/validation deployments** — the app works fine without a database
 
-**Fix:**
-1. Set `DATABASE_URL` environment variable
-2. Redeploy Vercel project
-3. Manually flush buffer after redeployment
+**When to fix:**
+Fix this when you're moving from validation to production and want team-wide audit trail.
+
+**How to fix:**
+1. Create a Postgres database (see "Database Setup" section below)
+2. Set `DATABASE_URL` environment variable in Vercel dashboard
+3. Run schema migration: `psql $DATABASE_URL -f docs/migrations/001_audit_events.sql`
+4. Redeploy: `vercel --prod`
+5. Existing buffered events will auto-flush to backend on next app load
 
 ### Extension not syncing
 

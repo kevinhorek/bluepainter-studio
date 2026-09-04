@@ -284,10 +284,10 @@ export default function AuditLogAdminPanel({ onClose }) {
               <strong>Error:</strong> {error}
               <p style={{ margin: '8px 0 0 0', fontSize: '12px' }}>
                 {error.includes('Backend not configured') && (
-                  <>Set <code>VITE_AUDIT_API_URL</code> environment variable or use <code>/api/audit-log</code> default.</>
+                  <>Backend URL not configured. Set <code>VITE_AUDIT_API_URL</code> environment variable or use default <code>/api/audit-log</code>. See <a href="/docs/AUDIT_BACKEND.md" target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6' }}>docs/AUDIT_BACKEND.md</a></>
                 )}
-                {error.includes('not configured') && (
-                  <>Backend is in soft-fail mode. Set <code>DATABASE_URL</code> to persist events. See docs/AUDIT_BACKEND.md</>
+                {(error.includes('not configured') || error === 'soft-fail') && !error.includes('Backend not configured') && (
+                  <>Audit backend in soft-fail mode (normal for demo/validation). Events buffer locally. For production audit trail, set <code>DATABASE_URL</code> in Vercel. <a href="/docs/AUDIT_BACKEND.md" target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6' }}>Setup guide →</a></>
                 )}
               </p>
             </div>
