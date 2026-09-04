@@ -43,6 +43,7 @@ export default function WorkspaceHeader({
             <span className="workspace-brand-name">BluePainter</span>
           </button>
         <span className="workspace-prototype-badge">Prototype</span>
+        {facilitator && <span className="workspace-facilitator-badge" title="Facilitator mode active — access session tools via ··· menu">Facilitator</span>}
         </div>
 
         <div className="workspace-file-picker" ref={fileRef}>
@@ -158,11 +159,17 @@ export default function WorkspaceHeader({
                   <button type="button" className="workspace-dropdown-item" onClick={() => { facilitatorActions.onStartTour(); setMenuOpen(false); }}>Tour</button>
                   <button type="button" className="workspace-dropdown-item" onClick={() => { facilitatorActions.onOpenScript(); setMenuOpen(false); }}>Script</button>
                   <button type="button" className="workspace-dropdown-item" onClick={() => { facilitatorActions.onOpenSpec(); setMenuOpen(false); }}>Spec</button>
+                  <button type="button" className="workspace-dropdown-item" onClick={() => { facilitatorActions.onOpenSessionChecklist?.(); setMenuOpen(false); }}>
+                    Session checklist
+                  </button>
                   <button type="button" className="workspace-dropdown-item" onClick={() => { facilitatorActions.onOpenScorecard?.(); setMenuOpen(false); }}>
                     Session scorecard
                   </button>
                   <button type="button" className="workspace-dropdown-item" onClick={() => { facilitatorActions.onExportFeedback(); setMenuOpen(false); }}>
                     Export{facilitatorActions.feedbackCount > 0 ? ` (${facilitatorActions.feedbackCount})` : ''}
+                  </button>
+                  <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { facilitatorActions.onExportPilotPack?.(); setMenuOpen(false); }}>
+                    Export pilot pack
                   </button>
                   <button type="button" className="workspace-dropdown-item" onClick={() => { facilitatorActions.onExportLearningLoop(); setMenuOpen(false); }}>
                     Export learning loop

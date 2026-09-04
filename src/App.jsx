@@ -4,7 +4,7 @@ import { applyBrokenDesignScenario, applyFixedDesignScenario, getFreshHeroNodes,
 import { getFreshMarketingNodes } from './data/marketingPage';
 import { captureCanvasPageFrame } from './utils/canvasCapture';
 import { getWorkspaceFile } from './data/workspaceFiles';
-import { downloadValidationExport, downloadLearningLoopExport, getFeedbackSummary } from './utils/validationExport';
+import { downloadValidationExport, downloadLearningLoopExport, downloadPilotPackExport, getFeedbackSummary } from './utils/validationExport';
 import { loadReceiptPolicy, saveReceiptPolicy } from './data/defaultReceiptPolicy';
 import { LearningLoop, getLearningSummary } from './utils/learningLoop';
 import { runPresenterSequence } from './utils/presenterMode';
@@ -15,6 +15,7 @@ import FigmaShell from './components/Shells/FigmaShell';
 import ResponsiveShell from './components/Shells/ResponsiveShell';
 import ValidationScriptModal from './components/ValidationScriptModal';
 import ValidationScorecardModal from './components/ValidationScorecardModal';
+import SessionChecklistModal from './components/SessionChecklistModal';
 import WelcomeModal from './components/WelcomeModal';
 import { hasSeenWelcome, markWelcomeSeen } from './utils/welcomeStorage';
 import AppToast from './components/AppToast';
@@ -76,6 +77,7 @@ export default function App() {
   const [aboutOpen, setAboutOpen] = useState(Boolean(initialRoute.openAbout));
   const [validationScriptOpen, setValidationScriptOpen] = useState(false);
   const [scorecardOpen, setScorecardOpen] = useState(false);
+  const [sessionChecklistOpen, setSessionChecklistOpen] = useState(false);
   const [exportDeployOpen, setExportDeployOpen] = useState(false);
   const [marketingKitOpen, setMarketingKitOpen] = useState(false);
   const [marketingActiveFieldId, setMarketingActiveFieldId] = useState(null);
@@ -664,6 +666,19 @@ export default function App() {
     }
   };
 
+  const handleExportPilotPack = () => {
+    const result = downloadPilotPackExport();
+    if (result.success) {
+      if (result.isEmpty) {
+        notify('⚠️ Pilot pack created — no session data yet. Run validation sessions first.');
+      } else {
+        notify(`✓ Pilot pack exported — ${result.sessionCount} session(s), ${result.recommendation} recommendation`);
+      }
+    } else {
+      notify(`❌ Export failed: ${result.error}`);
+    }
+  };
+
   const handleRunPresenter = () => {
     if (presenterRunning) return;
 
@@ -778,8 +793,10 @@ export default function App() {
           onOpenScript: () => setScriptOpen(true),
           onOpenSpec: () => setSpecOpen(true),
           onOpenScorecard: () => setScorecardOpen(true),
+          onOpenSessionChecklist: () => setSessionChecklistOpen(true),
           onExportFeedback: handleExportFeedback,
           onExportLearningLoop: handleExportLearningLoop,
+          onExportPilotPack: handleExportPilotPack,
           feedbackCount,
           presenterRunning
         } : null}
@@ -820,6 +837,7 @@ export default function App() {
       <FeedbackModal isOpen={feedbackOpen} onClose={handleFeedbackClose} />
       <ValidationScriptModal isOpen={validationScriptOpen} onClose={() => setValidationScriptOpen(false)} />
       <ValidationScorecardModal isOpen={scorecardOpen} onClose={() => setScorecardOpen(false)} />
+      <SessionChecklistModal isOpen={sessionChecklistOpen} onClose={() => setSessionChecklistOpen(false)} />
       <ExportDeployModal
         isOpen={exportDeployOpen}
         onClose={() => setExportDeployOpen(false)}
