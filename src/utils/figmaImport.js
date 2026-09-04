@@ -199,21 +199,52 @@ function convertNode(figmaNode, nodes, parentBox, index, { useAbsolute }) {
 
 /** Convert Figma REST API file JSON (or nodes endpoint) to BluePainter nodes map. */
 export function figmaFileToNodes(figmaFile, { nodeId, pageName = 'FigmaImport' } = {}) {
+  if (!figmaFile || typeof figmaFile !== 'object') {
+    throw new Error('Invalid Figma file data: expected an object with document or nodes field');
+  }
+  
   const found = findImportRoot(figmaFile, nodeId);
   if (!found?.node) {
-    throw new Error('No frame found in Figma file. Ensure the file has at least one top-level frame on the first page, or use a specific node URL (right-click frame → Copy link).');
+    if (nodeId) {
+      throw new Error(`Frame not found: node ${nodeId} does not exist or is not a valid frame. Right-click a frame in Figma → Copy link to get the correct node URL.`);
+    }
+    throw new Error('No frames found in Figma file. The file must have at least one top-level frame on the first page. Create a frame in Figma before importing, or use a specific node URL (right-click frame → Copy link).');
   }
 
   const rootFigma = found.node;
-  const box = rootFigma.absoluteBoundingBox || { width: 1280, height: 800, x: 0, y: 0 };
+  
+  if (rootFigma.type === 'DOCUMENT') {
+    throw new Error('Cannot import DOCUMENT node. Navigate to a page in Figma, right-click a frame → Copy link, then use that URL.');
+  }
+  
+  if (rootFigma.type === 'PAGE') {
+    throw new Error('Cannot import PAGE node. Drill into the page, right-click a specific frame or component → Copy link, then use that URL.');
+  }
+  
+  const box = rootFigma.absoluteBoundingBox || rootFigma.size || { width: 1280, height: 800, x: 0, y: 0 };
+  
+  if (!box.width || box.width < 1 || box.width > 10000) {
+    console.warn(`Unusual frame width: ${box.width}. Using 1280px as fallback.`);
+    box.width = 1280;
+  }
+  if (!box.height || box.height < 1 || box.height > 10000) {
+    console.warn(`Unusual frame height: ${box.height}. Using 800px as fallback.`);
+    box.height = 800;
+  }
+  
   const rootId = 'figma-import-page';
   const nodes = {};
 
   const childIds = [];
-  (rootFigma.children || []).forEach((child, i) => {
+  const children = Array.isArray(rootFigma.children) ? rootFigma.children : [];
+  children.forEach((child, i) => {
     if (child && child.visible !== false) {
-      const cid = convertNode(child, nodes, box, i, { useAbsolute: !rootFigma.layoutMode || rootFigma.layoutMode === 'NONE' });
-      if (cid) childIds.push(cid);
+      try {
+        const cid = convertNode(child, nodes, box, i, { useAbsolute: !rootFigma.layoutMode || rootFigma.layoutMode === 'NONE' });
+        if (cid) childIds.push(cid);
+      } catch (err) {
+        console.warn(`Failed to convert node ${child.id || i}:`, err.message);
+      }
     }
   });
 
@@ -243,6 +274,16 @@ export function figmaFileToNodes(figmaFile, { nodeId, pageName = 'FigmaImport' }
     _hasAutoLayout: Boolean(rootFigma.layoutMode && rootFigma.layoutMode !== 'NONE')
   };
 
+  const nodeCount = Object.keys(nodes).length;
+  
+  if (nodeCount === 1 && childIds.length === 0) {
+    console.warn('Import resulted in only the root node. The frame may be empty or contain only unsupported node types (images, gradients, vectors). See FIGMA_IMPORT.md for supported types.');
+  }
+  
+  if (nodeCount > 1000) {
+    console.warn(`Large import: ${nodeCount} nodes. Canvas may render slowly. Consider importing smaller frames.`);
+  }
+  
   return {
     nodes,
     rootId,
@@ -252,9 +293,10 @@ export function figmaFileToNodes(figmaFile, { nodeId, pageName = 'FigmaImport' }
       height: Math.max(Math.round(box.height) || 800, 400)
     },
     frameName: found.name,
-    nodeCount: Object.keys(nodes).length,
+    nodeCount,
     childCount: childIds.length,
-    hasContent: childIds.length > 0
+    hasContent: childIds.length > 0,
+    warnings: nodeCount === 1 ? ['Frame appears empty or contains only unsupported node types'] : []
   };
 }
 

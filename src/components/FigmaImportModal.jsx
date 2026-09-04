@@ -24,34 +24,55 @@ export default function FigmaImportModal({ isOpen, onClose, onImported, onNotify
     setError('');
     setImporting(true);
     try {
-      saveFigmaToken(token.trim());
       let result;
 
       if (tab === 'url') {
-        if (!token.trim()) {
-          throw new Error('Figma personal access token is required. See FIGMA_TOKEN.md for setup instructions.');
+        const trimmedToken = token.trim();
+        const trimmedFileUrl = fileUrl.trim();
+        const trimmedNodeUrl = nodeUrl.trim();
+        
+        if (!trimmedToken) {
+          throw new Error('Figma personal access token is required. Get one at figma.com/developers/api#access-tokens with file_content:read scope. See FIGMA_TOKEN.md for detailed setup.');
         }
-        if (!parseFigmaFileKey(fileUrl)) {
-          throw new Error('Paste a valid Figma file URL (e.g. https://www.figma.com/design/ABC123/My-File)');
+        if (!trimmedFileUrl) {
+          throw new Error('Figma file URL is required. Paste a URL like https://www.figma.com/design/ABC123/My-File');
         }
+        if (!parseFigmaFileKey(trimmedFileUrl)) {
+          throw new Error('Invalid Figma file URL format. Expected: https://www.figma.com/design/ABC123/My-File (or /file/ or /proto/). Copy the URL from your browser address bar.');
+        }
+        
+        saveFigmaToken(trimmedToken);
+        
         result = await importFromFigmaUrl({
-          token: token.trim(),
-          fileUrl: fileUrl.trim(),
-          nodeUrl: nodeUrl.trim() || undefined
+          token: trimmedToken,
+          fileUrl: trimmedFileUrl,
+          nodeUrl: trimmedNodeUrl || undefined
         });
       } else {
-        if (!jsonPaste.trim()) {
-          throw new Error('Paste Figma JSON from the API (GET /v1/files/:key) or plugin export');
+        const trimmedJson = jsonPaste.trim();
+        
+        if (!trimmedJson) {
+          throw new Error('Figma JSON is required. Paste the response from GET /v1/files/:key API call or a Figma plugin export.');
         }
-        result = importFromFigmaJsonString(jsonPaste);
+        if (trimmedJson.length < 100) {
+          throw new Error('JSON is too short (expected at least 100 characters). Ensure you copied the complete API response, not just a fragment.');
+        }
+        
+        result = importFromFigmaJsonString(trimmedJson);
       }
 
       if (!result.nodes || Object.keys(result.nodes).length === 0) {
-        throw new Error('No content could be imported from this frame. Try a frame with text boxes, rectangles, or auto-layout containers.');
+        throw new Error('Import returned no nodes. The frame may be empty or contain only unsupported node types (images, gradients, vectors). See FIGMA_IMPORT.md for supported types.');
       }
       
-      if (result.nodeCount < 2) {
-        console.warn('Import resulted in only 1 node (root). Frame may be empty or have unsupported children.');
+      if (result.nodeCount === 1) {
+        console.warn('Import resulted in only 1 node (root). Frame appears empty or contains only unsupported children.');
+        onNotify?.(`⚠️ Imported "${result.frameName || 'frame'}" but it appears empty. Check that the frame contains text, shapes, or auto-layout containers.`);
+      } else if (result.nodeCount > 1000) {
+        console.warn(`Large import: ${result.nodeCount} nodes. Canvas may render slowly.`);
+        onNotify?.(`Imported "${result.frameName || 'frame'}" — ${result.nodeCount} layers (large import, may be slow)`);
+      } else {
+        onNotify?.(`✓ Imported "${result.frameName || 'frame'}" — ${result.nodeCount} layers`);
       }
 
       onImported?.({
@@ -62,11 +83,20 @@ export default function FigmaImportModal({ isOpen, onClose, onImported, onNotify
         frameName: result.frameName,
         nodeCount: result.nodeCount
       });
-      onNotify?.(`Imported "${result.frameName || 'frame'}" — ${result.nodeCount} layers`);
+      
       onClose();
     } catch (e) {
-      setError(e.message);
-      onNotify?.(e.message);
+      console.error('Figma import error:', e);
+      const errorMsg = e.message || 'Import failed with unknown error';
+      setError(errorMsg);
+      
+      if (errorMsg.includes('API not found') || errorMsg.includes('endpoint')) {
+        onNotify?.('⚠️ API unavailable. Use "Paste JSON" tab or deploy API.');
+      } else if (errorMsg.includes('timeout') || errorMsg.includes('rate limit')) {
+        onNotify?.('⚠️ ' + errorMsg.split('.')[0]);
+      } else {
+        onNotify?.('❌ Import failed: ' + errorMsg.split('.')[0]);
+      }
     } finally {
       setImporting(false);
     }
@@ -159,18 +189,47 @@ export default function FigmaImportModal({ isOpen, onClose, onImported, onNotify
             </>
           )}
 
-          {error && <p className="export-error">{error}</p>}
+          {error && (
+            <div className="export-error" style={{ 
+              whiteSpace: 'pre-wrap', 
+              maxHeight: '150px', 
+              overflowY: 'auto',
+              padding: '12px',
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: '4px'
+            }}>
+              <strong>Import failed:</strong>
+              <div style={{ marginTop: '4px', fontSize: '0.9em' }}>{error}</div>
+              {error.includes('token') && (
+                <div style={{ marginTop: '8px', fontSize: '0.85em', color: '#dc2626' }}>
+                  💡 Get a token at <a href="https://www.figma.com/developers/api#access-tokens" target="_blank" rel="noreferrer" style={{ color: '#dc2626', textDecoration: 'underline' }}>figma.com/developers</a>
+                </div>
+              )}
+              {(error.includes('API not found') || error.includes('endpoint')) && (
+                <div style={{ marginTop: '8px', fontSize: '0.85em', color: '#dc2626' }}>
+                  💡 Use the "Paste JSON" tab to import without API access
+                </div>
+              )}
+            </div>
+          )}
 
-          <button type="button" className="export-download-btn" onClick={handleImport} disabled={importing}>
+          <button 
+            type="button" 
+            className="export-download-btn" 
+            onClick={handleImport} 
+            disabled={importing || (tab === 'url' && (!token.trim() || !fileUrl.trim()))}
+            style={{ opacity: importing || (tab === 'url' && (!token.trim() || !fileUrl.trim())) ? 0.6 : 1 }}
+          >
             {importing ? 'Importing from Figma…' : 'Import to canvas'}
           </button>
 
           <p className="export-modal-note deploy-api-note">
-            URL import requires <code>/api/figma-import</code>. On localhost run <code>npx vercel dev</code> or use the live demo. If API unavailable, use <strong>Paste JSON</strong> tab.
+            <strong>URL import</strong> requires <code>/api/figma-import</code>. On localhost run <code>npx vercel dev</code> or use the live demo. If API unavailable, use <strong>Paste JSON</strong> tab (no API required).
           </p>
           
           <p className="export-modal-note" style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '8px' }}>
-            <strong>Note:</strong> BluePainter v2 is <strong>import-only</strong>. Changes in BluePainter do NOT sync back to Figma (see SPEC.md for roadmap).
+            <strong>⚠️ Import-only:</strong> BluePainter v2 is <strong>one-way</strong>. Changes in BluePainter do NOT sync back to Figma. See <a href="https://github.com/kevinhorek/bluepainter-studio/blob/main/FIGMA_IMPORT.md" target="_blank" rel="noreferrer" style={{ color: '#64748b' }}>FIGMA_IMPORT.md</a> for limits and <a href="https://github.com/kevinhorek/bluepainter-studio/blob/main/SPEC.md" target="_blank" rel="noreferrer" style={{ color: '#64748b' }}>SPEC.md</a> for roadmap.
           </p>
         </div>
       </div>
