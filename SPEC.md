@@ -1,6 +1,6 @@
 # BluePainter — Product Spec
 
-> **Status:** Validation prototype → v1 planning  
+> **Status:** v1 engineering → validation gate (per SPEC §8)  
 > **Live demo:** https://bluepainter-studio.vercel.app  
 > **Repo:** https://github.com/kevinhorek/bluepainter-studio
 
