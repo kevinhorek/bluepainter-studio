@@ -171,8 +171,9 @@
     }
   },
   "scripts": {
-    "package": "vsce package --no-dependencies",
-    "publish:marketplace": "vsce publish --no-dependencies"
+    "package": "vsce package --no-dependencies && echo '\n✅ Package created: bluepainter-0.2.0.vsix' && echo '\n📦 Next steps:' && echo '   1. Test locally: code --install-extension bluepainter-0.2.0.vsix' && echo '   2. See MARKETPLACE.md for publishing instructions' && echo '   3. Or run: npm run publish:marketplace (requires vsce login)\n'",
+    "publish:marketplace": "vsce publish --no-dependencies",
+    "package:check": "vsce ls --no-dependencies"
   },
   "devDependencies": {
     "@vscode/vsce": "^3.9.2"
