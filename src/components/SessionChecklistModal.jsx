@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { buildCurrentSessionMetrics } from '../utils/feedbackStorage';
+import { downloadValidationExport, downloadPilotPackExport } from '../utils/validationExport';
 
 const CHECKLIST_ITEMS = [
   {
@@ -176,9 +177,16 @@ export default function SessionChecklistModal({ isOpen, onClose }) {
                   ))}
                 </ul>
                 {allMetricsComplete && (
-                  <p className="session-metrics-complete">
-                    ✓ All activation metrics met! Proceed to feedback collection.
-                  </p>
+                  <div className="session-metrics-complete-box">
+                    <div className="session-metrics-complete-header">
+                      <span className="session-metrics-complete-icon">✓</span>
+                      <span className="session-metrics-complete-title">All activation metrics met!</span>
+                    </div>
+                    <p className="session-metrics-complete-text">
+                      Proceed to feedback collection (··· → Share feedback). After the participant submits, 
+                      export session data using the button below.
+                    </p>
+                  </div>
                 )}
               </div>
 
@@ -220,6 +228,19 @@ export default function SessionChecklistModal({ isOpen, onClose }) {
               <div className="demo-script-actions">
                 <button type="button" className="landing-cta-primary" onClick={handleEndSession}>
                   End session
+                </button>
+                <button 
+                  type="button" 
+                  className="feedback-cancel-btn"
+                  onClick={() => {
+                    const result = downloadValidationExport();
+                    if (result.success) {
+                      alert(`✓ Exported ${result.sessionCount} session(s) with ${result.eventCount} learning events`);
+                    }
+                  }}
+                  title="Export session data as JSON"
+                >
+                  📥 Export session
                 </button>
                 <button type="button" className="feedback-cancel-btn" onClick={onClose}>
                   Close
