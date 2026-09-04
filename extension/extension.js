@@ -261,30 +261,38 @@ class BluePainterController {
       return false;
     }
 
-    // Conflict detection: check if document has changed since last sync
+    // Conflict detection: check if document has changed since last sync (CONFLICT_MODEL.md §3)
     const currentVersion = ctx.editor.document.version;
     const hasConflict = ctx.state.lastSyncedVersion && currentVersion !== ctx.state.lastSyncedVersion && !options.forceOverwrite;
 
     if (hasConflict && !options.quiet) {
       const choice = await vscode.window.showWarningMessage(
-        'The file has been modified externally. How do you want to proceed?',
-        { modal: true },
-        'Overwrite with canvas',
-        'Discard canvas changes',
+        '⚠️ Simultaneous Edit Conflict: The file has unsaved or external changes while you edited the canvas. Choose how to resolve (see CONFLICT_MODEL.md for details):',
+        { modal: true, detail: 'Recommendation: Choose "Review Manually" to avoid losing work from either side.' },
+        'Review Manually (Recommended)',
+        'Keep Canvas (Discard Code)',
+        'Keep Code (Discard Canvas)',
         'Cancel'
       );
 
-      if (choice === 'Discard canvas changes') {
+      if (choice === 'Keep Code (Discard Canvas)') {
         this.syncFromFile(editor);
         this.learningLoop.log('conflict_resolved', {
           resolution: 'discard_canvas',
           fileName: path.basename(ctx.editor.document.fileName)
         });
         return false;
+      } else if (choice === 'Review Manually (Recommended)') {
+        this.learningLoop.log('conflict_resolved', {
+          resolution: 'review_manually',
+          fileName: path.basename(ctx.editor.document.fileName)
+        });
+        vscode.window.showInformationMessage('Review the file diff and manually resolve the conflict. See CONFLICT_MODEL.md for guidance.');
+        return false;
       } else if (choice === 'Cancel' || !choice) {
         return false;
       }
-      // If 'Overwrite with canvas', continue with write
+      // If 'Keep Canvas (Discard Code)', continue with write
       this.learningLoop.log('conflict_resolved', {
         resolution: 'overwrite_with_canvas',
         fileName: path.basename(ctx.editor.document.fileName)

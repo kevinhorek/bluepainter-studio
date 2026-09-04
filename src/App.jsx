@@ -39,7 +39,11 @@ import FacilitatorDashboard from './components/FacilitatorDashboard';
 import AIGeneratePanel from './components/AIGeneratePanel';
 import RealFileLoader from './components/RealFileLoader';
 import RestoreBackupModal from './components/RestoreBackupModal';
+<<<<<<< HEAD
 import ExportConfirmationModal from './components/ExportConfirmationModal';
+=======
+import GitContextModal from './components/GitContextModal';
+>>>>>>> origin/main
 import { createNodeFromTool, canDropIntoNode } from './utils/nodeFactory';
 import { getToolByShortcut, isPlacableTool } from './data/canvasTools';
 import { applyAIUpdates, getFirstUpdateTarget } from './utils/aiApply';
@@ -131,6 +135,7 @@ export default function App() {
   const [feedbackPromptShown, setFeedbackPromptShown] = useState(false);
   const [scriptOpen, setScriptOpen] = useState(false);
   const [specOpen, setSpecOpen] = useState(false);
+  const [gitContextModalOpen, setGitContextModalOpen] = useState(false);
   const [presenterMessage, setPresenterMessage] = useState(null);
   const [presenterRunning, setPresenterRunning] = useState(false);
   const [feedbackCount, setFeedbackCount] = useState(() => getFeedbackSummary().total);
@@ -300,8 +305,12 @@ export default function App() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    learningLoop.log('real_file_downloaded', { fileName: realFileData.fileName });
-    notify(`Downloaded ${realFileData.fileName}`);
+    const linesChanged = currentCode.split('\n').length;
+    learningLoop.log('real_file_downloaded', { 
+      fileName: realFileData.fileName,
+      linesOfCode: linesChanged
+    });
+    notify(`✓ ${realFileData.fileName} saved (${linesChanged} lines)`);
   }, [realFileData, activeFile, code, learningLoop, notify]);
 
   const handleApplyAI = useCallback(({ type, updates, message, source }) => {
@@ -396,6 +405,20 @@ export default function App() {
         return;
       }
       
+      // Cmd/Ctrl + E: Quick export pilot pack
+      if ((e.metaKey || e.ctrlKey) && e.key === 'e' && !e.shiftKey) {
+        e.preventDefault();
+        handleExportPilotPack();
+        return;
+      }
+      
+      // Cmd/Ctrl + Shift + L: Export learning loop
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'L') {
+        e.preventDefault();
+        handleExportLearningLoop();
+        return;
+      }
+      
       // Cmd/Ctrl + Shift + K: Toggle scorecard
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'K') {
         e.preventDefault();
@@ -406,7 +429,7 @@ export default function App() {
     
     window.addEventListener('keydown', handleFacilitatorShortcuts);
     return () => window.removeEventListener('keydown', handleFacilitatorShortcuts);
-  }, [facilitator, phase, sessionChecklistOpen, scorecardOpen]);
+  }, [facilitator, phase, sessionChecklistOpen, scorecardOpen, handleExportPilotPack, handleExportLearningLoop]);
 
   const handleGoHome = useCallback(() => {
     setMarketingKitOpen(false);
@@ -988,6 +1011,7 @@ export default function App() {
         onDownloadRealFile={handleDownloadRealFile}
         onOpenAI={() => handleOpenAI('full-marketing')}
         onCopyLink={handleCopyLink}
+        onOpenGitContext={() => setGitContextModalOpen(true)}
         realFileLoaded={realFileData !== null}
         facilitatorActions={facilitator ? {
           onBreakDesign: handleBreakDesign,
@@ -1101,6 +1125,7 @@ export default function App() {
       {facilitator && <DemoScriptModal isOpen={scriptOpen} onClose={() => setScriptOpen(false)} />}
       {facilitator && <SpecModal isOpen={specOpen} onClose={() => setSpecOpen(false)} />}
       {facilitator && <PresenterToast message={presenterMessage} />}
+      <GitContextModal key={gitContextModalOpen ? 'open' : 'closed'} isOpen={gitContextModalOpen} onClose={() => setGitContextModalOpen(false)} />
       
       <ConflictDialog
         isOpen={conflictDialogOpen}

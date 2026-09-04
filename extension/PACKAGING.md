@@ -25,7 +25,14 @@ This creates `bluepainter-0.2.0.vsix` in the `extension/` directory.
 
 **Output:**
 ```
-DONE  Packaged: /workspace/extension/bluepainter-0.2.0.vsix (23 files, 27.48 KB)
+DONE  Packaged: /workspace/extension/bluepainter-0.2.0.vsix (29 files, 40.94 KB)
+
+✅ Package created: bluepainter-0.2.0.vsix
+
+📦 Next steps:
+   1. Test locally: code --install-extension bluepainter-0.2.0.vsix
+   2. See MARKETPLACE.md for publishing instructions
+   3. Or run: npm run publish:marketplace (requires vsce login)
 ```
 
 ### 3. Test locally
@@ -53,11 +60,13 @@ Or from VS Code:
 The VSIX includes:
 
 ```
-bluepainter-0.2.0.vsix (27.48 KB)
-├─ extension.js (16.83 KB) — main extension entry point
-├─ package.json (4.24 KB) — extension manifest
+bluepainter-0.2.0.vsix (40.94 KB)
+├─ extension.js (27.07 KB) — main extension entry point
+├─ package.json (6.59 KB) — extension manifest
 ├─ README.md — marketplace listing
+├─ CHANGELOG.md — version history
 ├─ MARKETPLACE.md — publish checklist
+├─ LICENSE — MIT license
 ├─ data/ — default component fixtures
 │  ├─ heroNodes.json
 │  └─ pricingNodes.json
@@ -123,15 +132,16 @@ npm install --save-dev @vscode/vsce
 
 ### Package size too large
 
-**Current size:** 27.48 KB (well under 50 MB limit).
+**Current size:** 40.94 KB (well under 50 MB limit).
 
 If you add large dependencies, use `--no-dependencies` flag (already set in `npm run package`).
 
 ## Version Bumps
 
 1. Update `version` in `extension/package.json`
-2. Add release notes to `extension/README.md`
-3. Re-package:
+2. Add release notes to `extension/CHANGELOG.md`
+3. Update `extension/README.md` release notes section
+4. Re-package:
 
 ```bash
 cd extension
