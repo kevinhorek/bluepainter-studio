@@ -4763,6 +4763,112 @@ input:checked + .slider-round:before {
   background: #e5e7eb;
 }
 
+/* Session checklist modal */
+.session-checklist-modal {
+  max-width: 700px;
+}
+
+.session-timer {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  background: rgba(251, 191, 36, 0.15);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 4px;
+  color: #fbbf24;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-left: auto;
+  margin-right: 8px;
+}
+
+.session-metrics-summary {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.session-metrics-complete {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  color: #059669;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.session-phase {
+  margin-bottom: 16px;
+}
+
+.session-phase-header {
+  margin-bottom: 8px;
+}
+
+.session-phase-btn {
+  width: 100%;
+  text-align: left;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.session-phase-btn:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.session-phase-btn.active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
+
+.session-phase-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.session-phase-items li {
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.session-phase-items li:last-child {
+  border-bottom: none;
+}
+
+.session-phase-item-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.session-phase-item-check input[type="checkbox"] {
+  margin-top: 2px;
+  cursor: pointer;
+}
+
+.session-phase-item-check input[type="checkbox"]:checked + span {
+  color: #94a3b8;
+  text-decoration: line-through;
+}
+
 /* Mobile */
 @media (max-width: 900px) {
   .studio-main {

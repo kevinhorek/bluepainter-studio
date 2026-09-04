@@ -15,6 +15,7 @@ import FigmaShell from './components/Shells/FigmaShell';
 import ResponsiveShell from './components/Shells/ResponsiveShell';
 import ValidationScriptModal from './components/ValidationScriptModal';
 import ValidationScorecardModal from './components/ValidationScorecardModal';
+import SessionChecklistModal from './components/SessionChecklistModal';
 import WelcomeModal from './components/WelcomeModal';
 import { hasSeenWelcome, markWelcomeSeen } from './utils/welcomeStorage';
 import AppToast from './components/AppToast';
@@ -76,6 +77,7 @@ export default function App() {
   const [aboutOpen, setAboutOpen] = useState(Boolean(initialRoute.openAbout));
   const [validationScriptOpen, setValidationScriptOpen] = useState(false);
   const [scorecardOpen, setScorecardOpen] = useState(false);
+  const [sessionChecklistOpen, setSessionChecklistOpen] = useState(false);
   const [exportDeployOpen, setExportDeployOpen] = useState(false);
   const [marketingKitOpen, setMarketingKitOpen] = useState(false);
   const [marketingActiveFieldId, setMarketingActiveFieldId] = useState(null);
@@ -778,6 +780,7 @@ export default function App() {
           onOpenScript: () => setScriptOpen(true),
           onOpenSpec: () => setSpecOpen(true),
           onOpenScorecard: () => setScorecardOpen(true),
+          onOpenSessionChecklist: () => setSessionChecklistOpen(true),
           onExportFeedback: handleExportFeedback,
           onExportLearningLoop: handleExportLearningLoop,
           feedbackCount,
@@ -820,6 +823,7 @@ export default function App() {
       <FeedbackModal isOpen={feedbackOpen} onClose={handleFeedbackClose} />
       <ValidationScriptModal isOpen={validationScriptOpen} onClose={() => setValidationScriptOpen(false)} />
       <ValidationScorecardModal isOpen={scorecardOpen} onClose={() => setScorecardOpen(false)} />
+      <SessionChecklistModal isOpen={sessionChecklistOpen} onClose={() => setSessionChecklistOpen(false)} />
       <ExportDeployModal
         isOpen={exportDeployOpen}
         onClose={() => setExportDeployOpen(false)}

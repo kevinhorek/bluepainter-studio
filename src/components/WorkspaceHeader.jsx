@@ -159,6 +159,9 @@ export default function WorkspaceHeader({
                   <button type="button" className="workspace-dropdown-item" onClick={() => { facilitatorActions.onStartTour(); setMenuOpen(false); }}>Tour</button>
                   <button type="button" className="workspace-dropdown-item" onClick={() => { facilitatorActions.onOpenScript(); setMenuOpen(false); }}>Script</button>
                   <button type="button" className="workspace-dropdown-item" onClick={() => { facilitatorActions.onOpenSpec(); setMenuOpen(false); }}>Spec</button>
+                  <button type="button" className="workspace-dropdown-item" onClick={() => { facilitatorActions.onOpenSessionChecklist?.(); setMenuOpen(false); }}>
+                    Session checklist
+                  </button>
                   <button type="button" className="workspace-dropdown-item" onClick={() => { facilitatorActions.onOpenScorecard?.(); setMenuOpen(false); }}>
                     Session scorecard
                   </button>
