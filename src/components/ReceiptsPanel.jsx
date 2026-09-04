@@ -17,7 +17,8 @@ export default function ReceiptsPanel({
   onDismissRule,
   onFixApplied,
   learningSummary,
-  learningLoop
+  learningLoop,
+  onApplySuggestion
 }) {
   const [policyOpen, setPolicyOpen] = useState(false);
   const facilitator = isFacilitatorMode();
@@ -87,7 +88,11 @@ export default function ReceiptsPanel({
         )}
 
         {learningLoop && (
-          <LearningSuggestions learningLoop={learningLoop} lightMode={lightMode} />
+          <LearningSuggestions 
+            learningLoop={learningLoop} 
+            lightMode={lightMode}
+            onApplySuggestion={onApplySuggestion}
+          />
         )}
 
         <div className="score-metrics">

@@ -584,6 +584,37 @@ export default function App() {
     refreshLearningSummary();
   };
 
+  const handleApplySuggestion = (suggestion) => {
+    if (suggestion.type === 'downgrade_rule') {
+      setDismissedRules((prev) => new Set([...prev, suggestion.ruleId]));
+      learningLoop.log('learning_suggestion_applied', {
+        type: 'downgrade_rule',
+        ruleId: suggestion.ruleId,
+        weight: suggestion.weight
+      });
+      notify(`Rule "${suggestion.ruleId}" hidden from receipts`);
+    } else if (suggestion.type === 'prefer_quick_fix') {
+      try {
+        const prefs = JSON.parse(localStorage.getItem('bluepainter-quick-fix-prefs') || '{}');
+        prefs[suggestion.fixKey] = {
+          preferred: true,
+          appliedAt: Date.now(),
+          weight: suggestion.weight
+        };
+        localStorage.setItem('bluepainter-quick-fix-prefs', JSON.stringify(prefs));
+        learningLoop.log('learning_suggestion_applied', {
+          type: 'prefer_quick_fix',
+          fixKey: suggestion.fixKey,
+          weight: suggestion.weight
+        });
+        notify(`Quick-fix preference saved for "${suggestion.fixKey}"`);
+      } catch (err) {
+        notify(`Failed to save preference: ${err.message}`);
+      }
+    }
+    refreshLearningSummary();
+  };
+
   const handleTourComplete = () => {
     setTourActive(false);
     setTourStep(0);
@@ -679,7 +710,8 @@ export default function App() {
     onDismissRule: handleDismissRule,
     onFixApplied: handleReceiptFix,
     learningSummary,
-    learningLoop
+    learningLoop,
+    onApplySuggestion: handleApplySuggestion
   };
 
   const shellProps = {
