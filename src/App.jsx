@@ -34,6 +34,7 @@ import MarketingKitModal from './components/MarketingKitModal';
 import { getEmptyFigmaImportNodes } from './utils/figmaImport';
 import FigmaImportModal from './components/FigmaImportModal';
 import AIGeneratePanel from './components/AIGeneratePanel';
+import RealFileLoader from './components/RealFileLoader';
 import { createNodeFromTool, canDropIntoNode } from './utils/nodeFactory';
 import { getToolByShortcut, isPlacableTool } from './data/canvasTools';
 import { applyAIUpdates, getFirstUpdateTarget } from './utils/aiApply';
@@ -87,6 +88,8 @@ export default function App() {
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
   const [aiInitialType, setAiInitialType] = useState('full-marketing');
   const [figmaImportOpen, setFigmaImportOpen] = useState(false);
+  const [realFileLoaderOpen, setRealFileLoaderOpen] = useState(false);
+  const [realFileData, setRealFileData] = useState(null);
   const [fileViewports, setFileViewports] = useState({});
   const [activeViewportMode, setActiveViewportMode] = useState(() => {
     const saved = localStorage.getItem('bluepainter-viewport-mode');
@@ -104,7 +107,8 @@ export default function App() {
     hero: getFreshHeroNodes(),
     dashboard: getFreshDashboardNodes(),
     marketing: getFreshMarketingNodes(),
-    figma: getEmptyFigmaImportNodes()
+    figma: getEmptyFigmaImportNodes(),
+    'real-file': null
   }));
   const [code, setCode] = useState('');
   const [lastSyncedCode, setLastSyncedCode] = useState('');
@@ -229,6 +233,45 @@ export default function App() {
     learningLoop.log('figma_import', { targetFile, nodeCount, frameName });
     notify(`Imported "${frameName || 'frame'}" — ${nodeCount} layers`);
   }, [learningLoop, notify]);
+
+  const handleRealFileLoaded = useCallback(({ fileName, code, nodes, rootId }) => {
+    // Update the workspace file definition for real-file
+    const workspaceFile = getWorkspaceFile('real-file');
+    workspaceFile.label = fileName;
+    workspaceFile.rootId = rootId;
+    workspaceFile.defaultSelection = rootId;
+    
+    setRealFileData({ fileName, code, rootId });
+    setNodesByFile((prev) => ({ ...prev, 'real-file': nodes }));
+    setCode(code);
+    setLastSyncedCode(code);
+    setActiveFile('real-file');
+    setSelectedNodeId(rootId);
+    setFocusedPanel('canvas');
+    learningLoop.log('real_file_loaded', { fileName, nodeCount: Object.keys(nodes).length });
+    notify(`Loaded "${fileName}" — ${Object.keys(nodes).length} nodes`);
+  }, [learningLoop, notify]);
+
+  const handleDownloadRealFile = useCallback(() => {
+    if (!realFileData || activeFile !== 'real-file') {
+      notify('No real file loaded');
+      return;
+    }
+
+    const currentCode = code;
+    const blob = new Blob([currentCode], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = realFileData.fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    learningLoop.log('real_file_downloaded', { fileName: realFileData.fileName });
+    notify(`Downloaded ${realFileData.fileName}`);
+  }, [realFileData, activeFile, code, learningLoop, notify]);
 
   const handleApplyAI = useCallback(({ type, updates, message, source }) => {
     const { nodesByFile: next, applied } = applyAIUpdates(nodesByFile, updates, type);
@@ -793,8 +836,11 @@ export default function App() {
         onOpenExportDeploy={() => setExportDeployOpen(true)}
         onOpenMarketingKit={handleOpenMarketingKit}
         onOpenFigmaImport={() => setFigmaImportOpen(true)}
+        onOpenRealFile={() => setRealFileLoaderOpen(true)}
+        onDownloadRealFile={handleDownloadRealFile}
         onOpenAI={() => handleOpenAI('full-marketing')}
         onCopyLink={handleCopyLink}
+        realFileLoaded={realFileData !== null}
         facilitatorActions={facilitator ? {
           onBreakDesign: handleBreakDesign,
           onFixAll: handleFixAll,
@@ -877,6 +923,11 @@ export default function App() {
         onClose={() => setFigmaImportOpen(false)}
         onImported={handleFigmaImported}
         onNotify={notify}
+      />
+      <RealFileLoader
+        isOpen={realFileLoaderOpen}
+        onClose={() => setRealFileLoaderOpen(false)}
+        onFileLoaded={handleRealFileLoaded}
       />
       <AIGeneratePanel
         isOpen={aiPanelOpen}
