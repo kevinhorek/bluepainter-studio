@@ -45,7 +45,11 @@ export default function FeedbackModal({ isOpen, onClose }) {
           <>
             <div className="feedback-modal-icon">✓</div>
             <h2>Thanks for your feedback!</h2>
-            <p>Your response helps us decide whether to build out BluePainter fully.</p>
+            <p>Your response has been saved locally and helps us decide whether to build BluePainter for real.</p>
+            <p className="feedback-export-note">
+              <strong>Note:</strong> Feedback is stored in your browser. No data is sent to external servers. 
+              Demo facilitators can export all responses as JSON for go/no-go decisions (see VALIDATION.md).
+            </p>
             <button type="button" className="feedback-submit-btn" onClick={handleClose}>
               Close
             </button>
@@ -54,7 +58,7 @@ export default function FeedbackModal({ isOpen, onClose }) {
           <>
             <h2>Would you use BluePainter?</h2>
             <p className="feedback-subtitle">
-              We're validating this concept. Your honest take matters — this takes 30 seconds.
+              We're validating this concept. Your honest feedback matters — this takes 30 seconds.
             </p>
 
             <form onSubmit={handleSubmit}>
