@@ -160,6 +160,7 @@ export default function TeamPolicyPanel({ policy, onPolicyChange, learningConfig
           />
         </label>
       </div>
+<<<<<<< HEAD
       
       {!compact && (
         <>
@@ -185,6 +186,40 @@ export default function TeamPolicyPanel({ policy, onPolicyChange, learningConfig
                 </div>
               );
             })}
+=======
+      {!compact && (
+        <>
+          <div className="team-policy-divider" />
+          <div className="team-policy-section-label">Design Tokens</div>
+          <div className="team-policy-grid">
+            <label>
+              Primary color
+              <input
+                type="color"
+                value={policy.primaryColor || '#2563eb'}
+                onChange={(e) => update('primaryColor', e.target.value)}
+                title="Brand/theme primary color"
+              />
+            </label>
+            <label>
+              Secondary color
+              <input
+                type="color"
+                value={policy.secondaryColor || '#64748b'}
+                onChange={(e) => update('secondaryColor', e.target.value)}
+                title="Secondary/accent color"
+              />
+            </label>
+            <label>
+              Text color
+              <input
+                type="color"
+                value={policy.textColor || '#1e293b'}
+                onChange={(e) => update('textColor', e.target.value)}
+                title="Default text color"
+              />
+            </label>
+>>>>>>> 63de0e5 (feat: add design tokens to policy config with receipt integration)
           </div>
           <div className="team-policy-divider" />
           <div className="team-policy-section-label">Design Tokens</div>
