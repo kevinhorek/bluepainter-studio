@@ -4,7 +4,7 @@ import { applyBrokenDesignScenario, applyFixedDesignScenario, getFreshHeroNodes,
 import { getFreshMarketingNodes } from './data/marketingPage';
 import { captureCanvasPageFrame } from './utils/canvasCapture';
 import { getWorkspaceFile } from './data/workspaceFiles';
-import { downloadValidationExport, downloadLearningLoopExport, getFeedbackSummary } from './utils/validationExport';
+import { downloadValidationExport, downloadLearningLoopExport, downloadPilotPackExport, getFeedbackSummary } from './utils/validationExport';
 import { loadReceiptPolicy, saveReceiptPolicy } from './data/defaultReceiptPolicy';
 import { LearningLoop, getLearningSummary } from './utils/learningLoop';
 import { runPresenterSequence } from './utils/presenterMode';
@@ -666,6 +666,19 @@ export default function App() {
     }
   };
 
+  const handleExportPilotPack = () => {
+    const result = downloadPilotPackExport();
+    if (result.success) {
+      if (result.isEmpty) {
+        notify('⚠️ Pilot pack created — no session data yet. Run validation sessions first.');
+      } else {
+        notify(`✓ Pilot pack exported — ${result.sessionCount} session(s), ${result.recommendation} recommendation`);
+      }
+    } else {
+      notify(`❌ Export failed: ${result.error}`);
+    }
+  };
+
   const handleRunPresenter = () => {
     if (presenterRunning) return;
 
@@ -783,6 +796,7 @@ export default function App() {
           onOpenSessionChecklist: () => setSessionChecklistOpen(true),
           onExportFeedback: handleExportFeedback,
           onExportLearningLoop: handleExportLearningLoop,
+          onExportPilotPack: handleExportPilotPack,
           feedbackCount,
           presenterRunning
         } : null}
