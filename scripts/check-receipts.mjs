@@ -7,15 +7,48 @@
  * Usage:
  *   node scripts/check-receipts.mjs [file1.tsx] [file2.tsx]
  *   node scripts/check-receipts.mjs extension/test-fixtures/*.tsx
+ *   node scripts/check-receipts.mjs --config=.bluepainter.json src/components/*.tsx
+ * 
+ * Config file:
+ *   Create .bluepainter.json in repo root to customize receipt policy
+ *   See .bluepainter.json for schema
  */
 
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join, resolve } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const repoRoot = resolve(__dirname, '..');
+
+function loadConfig(configPath) {
+  const fullPath = resolve(repoRoot, configPath);
+  if (!existsSync(fullPath)) {
+    return null;
+  }
+  
+  try {
+    const content = readFileSync(fullPath, 'utf-8');
+    const config = JSON.parse(content);
+    return config.receiptPolicy || null;
+  } catch (err) {
+    console.error(`⚠️  Failed to load config from ${configPath}: ${err.message}`);
+    return null;
+  }
+}
+
+function getDefaultPolicy() {
+  return {
+    spacingGrid: 8,
+    radiusGrid: 4,
+    minContrastRatio: 4.5,
+    maxFeatureCount: 5,
+    weakCtaWords: ['submit', 'click here', 'send', 'button', 'ok', 'enter'],
+    suggestedCta: 'Start free trial',
+    contrastFixColor: '#1e40af'
+  };
+}
 
 async function loadReceiptEngine() {
   const receiptPolicyPath = join(repoRoot, 'src/utils/receiptPolicy.js');
@@ -86,7 +119,7 @@ function parseTSXToNodes(code, filename) {
   return nodes;
 }
 
-async function checkFile(filepath) {
+async function checkFile(filepath, policy) {
   const code = readFileSync(filepath, 'utf-8');
   const filename = filepath.split('/').pop();
   
@@ -101,16 +134,6 @@ async function checkFile(filepath) {
   }
   
   const { evaluateReceipts } = await loadReceiptEngine();
-  
-  const policy = {
-    spacingGrid: 8,
-    radiusGrid: 4,
-    minContrastRatio: 4.5,
-    maxFeatureCount: 5,
-    weakCtaWords: ['submit', 'click here', 'send', 'button', 'ok', 'enter'],
-    suggestedCta: 'Start free trial',
-    contrastFixColor: '#1e40af'
-  };
   
   const rootNode = Object.values(nodes)[0];
   const result = evaluateReceipts(nodes, rootNode, policy, new Set());
@@ -146,8 +169,29 @@ async function main() {
   
   if (args.length === 0) {
     console.error('Usage: node scripts/check-receipts.mjs <file.tsx> [file2.tsx ...]');
+    console.error('       node scripts/check-receipts.mjs --config=.bluepainter.json <files>');
     console.error('Example: node scripts/check-receipts.mjs extension/test-fixtures/*.tsx');
     process.exit(1);
+  }
+  
+  let configPath = '.bluepainter.json';
+  let files = [];
+  
+  for (const arg of args) {
+    if (arg.startsWith('--config=')) {
+      configPath = arg.substring(9);
+    } else {
+      files.push(arg);
+    }
+  }
+  
+  const customPolicy = loadConfig(configPath);
+  const policy = customPolicy || getDefaultPolicy();
+  
+  if (customPolicy) {
+    console.log(`✓ Loaded policy from ${configPath}`);
+  } else {
+    console.log(`ℹ Using default policy (no ${configPath} found)`);
   }
   
   let totalErrors = 0;
@@ -155,8 +199,8 @@ async function main() {
   let checked = 0;
   let skipped = 0;
   
-  for (const file of args) {
-    const result = await checkFile(file);
+  for (const file of files) {
+    const result = await checkFile(file, policy);
     if (result.skipped) {
       skipped++;
     } else {

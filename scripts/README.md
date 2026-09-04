@@ -17,6 +17,9 @@ node scripts/check-receipts.mjs extension/test-fixtures/PricingCard.tsx
 # Check multiple files
 node scripts/check-receipts.mjs src/components/*.tsx
 
+# Use custom config file
+node scripts/check-receipts.mjs --config=.bluepainter.json src/components/*.tsx
+
 # Via npm script (add to package.json)
 npm run check:receipts
 ```
@@ -32,14 +35,30 @@ See `.github/workflows/receipt-gate.yml` for GitHub Actions example.
 
 ### Policy Configuration
 
-Default policy (in script):
+Create `.bluepainter.json` in repo root to customize receipt policy:
+
+```json
+{
+  "receiptPolicy": {
+    "spacingGrid": 8,
+    "radiusGrid": 4,
+    "minContrastRatio": 4.5,
+    "maxFeatureCount": 5,
+    "weakCtaWords": ["submit", "click here", "send", "button", "ok", "enter"],
+    "suggestedCta": "Start free trial",
+    "contrastFixColor": "#1e40af"
+  }
+}
+```
+
+Default policy (if no config file):
 - **Spacing grid:** 8px
 - **Border-radius grid:** 4px
 - **Min contrast ratio:** 4.5:1 (WCAG AA)
 - **Max feature count:** 5
 - **Weak CTA words:** submit, click here, send, button, ok, enter
 
-Edit `scripts/check-receipts.mjs` to customize policy or load from team config file.
+The script auto-loads `.bluepainter.json` if present, or use `--config=path/to/config.json` to specify a different file.
 
 ### Supported Checks
 
