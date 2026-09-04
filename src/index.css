@@ -310,7 +310,6 @@ html {
   line-height: 1.4;
 }
 
-<<<<<<< HEAD
 .team-policy-intro {
   font-size: 0.7rem;
   color: #94a3b8;
@@ -372,7 +371,8 @@ html {
 .team-policy-export-btn:hover {
   background: rgba(16, 185, 129, 0.1);
   border-color: rgba(16, 185, 129, 0.4);
-=======
+}
+
 .team-policy-divider {
   height: 1px;
   background: rgba(255, 255, 255, 0.06);
@@ -392,7 +392,6 @@ html {
   height: 32px;
   padding: 2px;
   cursor: pointer;
->>>>>>> 63de0e5 (feat: add design tokens to policy config with receipt integration)
 }
 
 .team-policy-divider {
@@ -6758,7 +6757,6 @@ input:checked + .slider-round:before {
   border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
-<<<<<<< HEAD
 /* Conflict Dialog v2 Styles */
 .conflict-v2 {
   max-width: 650px;
@@ -6767,12 +6765,8 @@ input:checked + .slider-round:before {
 .conflict-v2 .modal-body {
   max-height: 500px;
   overflow-y: auto;
+}
 
-.conflict-v2 .modal-body {
-  max-height: 500px;
-  overflow-y: auto;
->>>>>>> 28c6a6d (feat: implement conflict model v2 with three-way diff UI)
-=======
 /* Learning suggestions badge in receipts header */
 .receipts-suggestions-badge {
   display: inline-flex;
@@ -6787,5 +6781,4 @@ input:checked + .slider-round:before {
   border: 1px solid rgba(59, 130, 246, 0.3);
   border-radius: 12px;
   cursor: help;
->>>>>>> 1097758 (Add suggestions count badge to Receipts panel header)
 }
