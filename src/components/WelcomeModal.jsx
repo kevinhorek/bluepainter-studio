@@ -40,15 +40,15 @@ export default function WelcomeModal({ onStart, onShowReceipts }) {
         </ol>
         <div className="welcome-actions">
           <button type="button" className="welcome-primary" onClick={onStart}>
-            Start exploring
+            Try the demo
           </button>
           <button type="button" className="welcome-secondary" onClick={onShowReceipts}>
-            Show me receipts
+            Show receipts in action
           </button>
         </div>
         <p className="welcome-footnote">
-          <strong>Your feedback matters.</strong> After exploring, click <strong>··· → Share feedback</strong> in the top bar.
-          It helps us decide whether to build this for real.
+          <strong>Want to try your own .tsx file?</strong> Click <strong>📂 Open File</strong> in the top bar after entering the demo.
+          Or use <strong>⏮️ Restore</strong> to recover an auto-saved backup.
         </p>
       </div>
     </div>

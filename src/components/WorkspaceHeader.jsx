@@ -89,17 +89,17 @@ export default function WorkspaceHeader({
           type="button"
           className="workspace-real-file-btn"
           onClick={onOpenRealFile}
-          title="Open a .tsx/.jsx file from your project"
+          title="Open your own .tsx/.jsx file to edit on canvas"
         >
-          📂 Open File
+          📂 Open real .tsx
         </button>
         <button
           type="button"
           className="workspace-restore-btn"
           onClick={onRestoreBackup}
-          title="Restore from auto-save backup"
+          title="Restore a previously loaded file from auto-save backup"
         >
-          ⏮️ Restore
+          ⏮️ Restore backup
         </button>
         {realFileLoaded && (
           <>
