@@ -6,71 +6,115 @@ const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'Product',
   name: 'BluePainter',
-  description: 'AST-preserving canvas ↔ TSX sync with Designer\'s Receipts. Free demo during validation; request a pilot for facilitated sessions.',
+  description: 'AST-preserving canvas ↔ TSX sync with Designer\'s Receipts. Open-core model: free for individuals, paid tiers for teams.',
   offers: [
     {
       '@type': 'Offer',
-      name: 'Free live demo',
+      name: 'Free',
       price: '0',
       priceCurrency: 'USD',
-      description: 'Full interactive validation prototype — canvas, code, receipts, export.'
+      description: 'Core receipts, canvas ↔ code sync, VS Code extension'
     },
     {
       '@type': 'Offer',
-      name: 'Pilot program',
-      price: '0',
+      name: 'Pro',
+      price: '29',
       priceCurrency: 'USD',
-      description: 'Facilitated validation sessions with scorecard export and priority feedback. Capacity-limited during validation.'
+      description: 'Custom receipts, team policy, learning loop overrides, priority support'
+    },
+    {
+      '@type': 'Offer',
+      name: 'Enterprise',
+      description: 'CI gate, audit logs, learning analytics, SSO, custom policy engine, SLA'
     }
   ]
 };
 ---
 
 <BaseLayout
-  title="BluePainter Pricing — Free Demo & Pilot"
-  description="BluePainter is free to try during validation. Request a facilitated pilot for design–dev pairs. No paid SKUs yet."
+  title="BluePainter Pricing — Free, Pro, Enterprise"
+  description="Open-core model: free for individuals, $29/user/month for teams, enterprise for design systems orgs."
   jsonLd={jsonLd}
 >
   <section class="section">
     <p class="eyebrow">Pricing</p>
-    <h1>Free demo. Request a pilot.</h1>
+    <h1>Simple, transparent pricing</h1>
     <p class="lead">
-      During validation there are no paid plans. Anyone can use the live demo. Design–dev pairs can request a facilitated pilot with scorecard export and priority product feedback.
+      Start free. Upgrade when you need custom receipts and team policy. Enterprise for design systems at scale.
     </p>
 
-    <div class="grid-2" style="margin-top:40px">
+    <div class="grid-3" style="margin-top:48px">
       <article class="card">
         <span class="badge">Always free</span>
-        <h2>Live demo</h2>
-        <p class="muted">Full interactive prototype: canvas ↔ TSX sync, Designer's Receipts, Figma import, export/deploy, marketing kit.</p>
-        <ul class="muted">
-          <li>No credit card</li>
-          <li>Runs in the browser</li>
-          <li>Share feedback anytime</li>
+        <h2>Free</h2>
+        <div style="margin: 16px 0">
+          <div style="font-size: 2.5rem; font-weight: 800; line-height: 1">$0</div>
+          <div class="muted" style="font-size: 0.875rem">Forever</div>
+        </div>
+        <p class="muted">For individual developers exploring BluePainter.</p>
+        <ul class="muted" style="margin: 24px 0; padding-left: 20px; list-style: none">
+          <li style="margin: 8px 0">✓ Core receipts (contrast, spacing, CTA)</li>
+          <li style="margin: 8px 0">✓ Canvas ↔ code sync</li>
+          <li style="margin: 8px 0">✓ VS Code extension</li>
+          <li style="margin: 8px 0">✓ Figma import</li>
+          <li style="margin: 8px 0">✓ Export/deploy</li>
         </ul>
-        <a class="btn btn-primary" href={DEMO_APP}>Open free demo</a>
+        <a class="btn btn-primary" href={DEMO_APP} style="width: 100%; margin-top: auto">Start free</a>
       </article>
-      <article class="card">
-        <span class="badge">Limited capacity</span>
-        <h2>Pilot</h2>
-        <p class="muted">Facilitated sessions for teams evaluating BluePainter as a workflow bet before v1.</p>
-        <ul class="muted">
-          <li>Guided walkthrough + scorecard</li>
-          <li>Session export (JSON)</li>
-          <li>Priority feedback loop</li>
-          <li>Typical window: 30–45 minutes</li>
-          <li>Capacity: ~8 sessions per validation wave</li>
+      
+      <article class="card" style="border: 2px solid #00acca; position: relative">
+        <span class="badge" style="background: rgba(0, 172, 202, 0.25); color: #00acca">Most popular</span>
+        <h2>Pro</h2>
+        <div style="margin: 16px 0">
+          <div style="font-size: 2.5rem; font-weight: 800; line-height: 1">$29</div>
+          <div class="muted" style="font-size: 0.875rem">per user/month</div>
+        </div>
+        <p class="muted">For teams that need custom receipt policies.</p>
+        <ul class="muted" style="margin: 24px 0; padding-left: 20px; list-style: none">
+          <li style="margin: 8px 0">✓ Everything in Free</li>
+          <li style="margin: 8px 0">✓ <strong style="color: #fff">Custom receipts</strong></li>
+          <li style="margin: 8px 0">✓ <strong style="color: #fff">Team policy</strong> (<code style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; font-size: 0.8em">.bluepainter.json</code>)</li>
+          <li style="margin: 8px 0">✓ Learning loop overrides</li>
+          <li style="margin: 8px 0">✓ Priority support</li>
         </ul>
-        <p class="muted"><strong>What's not included:</strong> production SLAs, Marketplace billing, or guaranteed roadmap features.</p>
-        <a class="btn btn-primary" href="/pilot">Request a pilot</a>
+        <a class="btn btn-primary" href="mailto:kevinhorek@gmail.com?subject=BluePainter Pro inquiry" style="width: 100%; margin-top: auto">Contact for Pro</a>
+      </article>
+      
+      <article class="card">
+        <span class="badge">Custom</span>
+        <h2>Enterprise</h2>
+        <div style="margin: 16px 0">
+          <div style="font-size: 2.5rem; font-weight: 800; line-height: 1">Custom</div>
+          <div class="muted" style="font-size: 0.875rem">Contact us</div>
+        </div>
+        <p class="muted">For design systems orgs that ship at scale.</p>
+        <ul class="muted" style="margin: 24px 0; padding-left: 20px; list-style: none">
+          <li style="margin: 8px 0">✓ Everything in Pro</li>
+          <li style="margin: 8px 0">✓ <strong style="color: #fff">CI gate</strong></li>
+          <li style="margin: 8px 0">✓ Audit logs</li>
+          <li style="margin: 8px 0">✓ Learning analytics</li>
+          <li style="margin: 8px 0">✓ SSO</li>
+          <li style="margin: 8px 0">✓ Custom policy engine</li>
+          <li style="margin: 8px 0">✓ SLA</li>
+        </ul>
+        <a class="btn btn-ghost" href="mailto:kevinhorek@gmail.com?subject=BluePainter Enterprise inquiry" style="width: 100%; margin-top: auto">Contact for Enterprise</a>
       </article>
     </div>
 
-    <div class="prose" style="margin-top:48px">
-      <h2>Factors that affect access</h2>
-      <p>Pilots prioritize teams with an active React/TSX repo, a design–dev pair, and willingness to share structured feedback. Open seats are announced after each validation wave.</p>
-      <h2>What happens after validation?</h2>
-      <p>If we go to v1, pricing will be published here before any paid conversion. Candidates under discussion: per-seat, per-repo, or open-core (free extension + paid team policy). Nothing is locked yet.</p>
+    <div class="prose" style="margin-top: 64px; max-width: 720px; margin-left: auto; margin-right: auto">
+      <h2>Why open-core?</h2>
+      <p>BluePainter's moat is the <strong>learning loop</strong> — receipts improve with team usage. Our pricing reflects this:</p>
+      <ul>
+        <li><strong>Free tier:</strong> Lowest friction for pilots. Core receipts are free forever.</li>
+        <li><strong>Paid upgrade:</strong> Custom receipt policies and team governance unlock the learning loop's full value.</li>
+        <li><strong>Defensible:</strong> Open-core model is harder for incumbents to copy than closed SaaS.</li>
+      </ul>
+      
+      <h2>During pilot validation</h2>
+      <p class="muted">Pilot sessions are currently free while we validate product-market fit (SPEC §8). Pricing may be refined based on pilot feedback, but this open-core structure is our recommended launch model.</p>
+      
+      <h2>Questions?</h2>
+      <p>Have questions about pricing or need a custom plan? <a href="mailto:kevinhorek@gmail.com">Contact Kevin</a> or check the <a href="/faq">FAQ</a>.</p>
     </div>
   </section>
 </BaseLayout>
