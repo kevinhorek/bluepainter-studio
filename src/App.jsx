@@ -24,6 +24,7 @@ import AppToast from './components/AppToast';
 import { copyDemoLink, DEMO_URL } from './utils/shareDemo';
 import AboutPanel from './components/AboutPanel';
 import MarketingSite from './components/MarketingPage';
+import PricingPage from './components/PricingPage';
 import WorkspaceHeader from './components/WorkspaceHeader';
 import DemoTour from './components/DemoTour';
 import FeedbackModal from './components/FeedbackModal';
@@ -59,6 +60,7 @@ function parseHash() {
   if (!hash) return { phase: 'landing', startTour: false };
   if (hash === 'app' || hash === 'studio') return { phase: 'phase1', startTour: false };
   if (hash === 'home' || hash === 'landing') return { phase: 'landing', startTour: false };
+  if (hash === 'pricing') return { phase: 'pricing', startTour: false };
   if (hash === 'about') return { phase: 'phase1', startTour: false, openAbout: true };
   if (hash === 'demo') {
     return { phase: 'phase1', startTour: facilitator };
@@ -1061,8 +1063,9 @@ export default function App() {
 
   const workspacePhase = facilitator ? phase : 'phase1';
   const showLanding = phase === 'landing';
+  const showPricing = phase === 'pricing';
 
-  const requiresAuth = !showLanding && !user && !authLoading;
+  const requiresAuth = !showLanding && !showPricing && !user && !authLoading;
 
   if (requiresAuth) {
     return (
@@ -1093,6 +1096,20 @@ export default function App() {
           onClose={() => setAuthModalOpen(false)}
           onSuccess={handleAuthSuccess}
         />
+      </div>
+    );
+  }
+
+  if (showPricing) {
+    return (
+      <div className="app-container app-landing">
+        <PricingPage
+          onBackToHome={() => {
+            setPhase('landing');
+            window.location.hash = '#/home';
+          }}
+        />
+        <AppToast message={toast} onDismiss={() => setToast(null)} />
       </div>
     );
   }

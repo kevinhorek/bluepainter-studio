@@ -327,7 +327,7 @@ export default function MarketingPage({ onLaunchDemo, onShowFeedback }) {
           <button type="button" className="landing-footer-link" onClick={() => onLaunchDemo('phase1')}>
             Demo
           </button>
-          <a className="landing-footer-link" href="https://bluepainter-launch.vercel.app/pricing">
+          <a className="landing-footer-link" href="#/pricing">
             Pricing
           </a>
           <a className="landing-footer-link" href="https://bluepainter-launch.vercel.app/pilot">
