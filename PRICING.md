@@ -1,7 +1,7 @@
-# BluePainter Pricing Options — DRAFT
+# BluePainter Pricing — Recommended Launch Model
 
-> **⚠️ DRAFT — NOT A PRODUCT DECISION**  
-> This document explores pricing models for BluePainter's v1 commercial launch. It is intended for internal validation and pilot discussions only. No pricing has been finalized.
+> **✅ RECOMMENDED FOR LAUNCH**  
+> This document presents the recommended pricing model for BluePainter's v1 commercial launch: **Open-Core (Option C)**. Pricing may be refined based on pilot feedback (SPEC §8), but this structure represents our product recommendation.
 
 ---
 
@@ -84,7 +84,17 @@ See [SPEC.md](./SPEC.md) §3 (Moat) and §8 (Success Metrics) for product contex
 
 ---
 
-## Recommended Default: **Option C (Open-Core Receipts)**
+## **Launch Recommendation: Open-Core Receipts (Option C)**
+
+**This is our recommended pricing model for v1 launch.** See the [pricing page](/pricing) for the live structure.
+
+### Pricing structure (launch version):
+
+| Tier | Price | Features |
+|------|-------|----------|
+| **Free** | $0 | Core receipts (contrast, spacing, CTA copy), canvas ↔ code sync, VS Code extension |
+| **Pro** | $29/user/month | Custom receipts, team policy (`.bluepainter.json`), learning loop overrides, priority support |
+| **Enterprise** | Custom | CI gate, audit logs, learning analytics dashboard, SSO, custom policy engine, SLA |
 
 ### Why this model wins:
 
@@ -96,49 +106,43 @@ See [SPEC.md](./SPEC.md) §3 (Moat) and §8 (Success Metrics) for product contex
    - Pro tier: Team adopts custom receipt policies (`.bluepainter.json`)
    - Enterprise tier: Design systems org needs audit logs + CI gate + learning analytics
 
-### Pricing structure (illustrative):
-
-| Tier | Price | Features |
-|------|-------|----------|
-| **Free** | $0 | Core receipts (contrast, spacing, CTA copy), canvas ↔ code sync, VS Code extension |
-| **Pro** | $29/user/month | Custom receipts, team policy (`.bluepainter.json`), learning loop overrides, priority support |
-| **Enterprise** | Custom | CI gate, audit logs, learning analytics dashboard, SSO, custom policy engine, SLA |
-
 ---
 
-## Pilot Ask (SPEC §8 Validation Gate)
+## Pilot Validation (SPEC §8)
 
-For validation pilots, use the following framing:
+For validation pilots, pricing is free while we validate product-market fit:
 
-> **"We're validating product-market fit before pricing. This pilot is free."**
+> **"Pilot sessions are free while we validate. This open-core structure is our recommended launch model."**
 
 **Questions to ask pilot teams:**
 
 1. **Activation gate:** Did you complete at least one canvas ↔ code round-trip?
 2. **Retention signal:** Did you apply or dismiss 5+ receipt actions?
-3. **Upgrade trigger:** If we charged for custom receipt policies, would you pay?
-4. **Price sensitivity:** What's a fair price for your team? (per user, per repo, or per month flat)
+3. **Upgrade trigger:** Would you pay for custom receipt policies? If yes, is $29/user/month reasonable?
+4. **Free tier scope:** Is the free tier sufficient for individual use, or does it give away too much?
 
 **After 8–10 pilot sessions** (SPEC §8 kill criteria):
-- If 3+ teams say "very interested" + willing to pay → proceed with Option C (open-core)
-- If interest is high but "too expensive" objections → revisit free tier scope
-- If free tier is "good enough" and no Pro interest → pivot to Option B (usage-based)
+- If 3+ teams express willingness to pay for Pro tier → proceed with v1 launch
+- If pricing objections are strong → adjust tier splits or Pro pricing
+- If free tier is "good enough" and no Pro interest → reconsider which features belong in paid tiers
 
 ---
 
-## Open Questions
+## Open Questions (Pilot Refinement)
 
 ### For Pilot Feedback:
 
-- Would your team pay for custom receipt policies? Or is the free tier sufficient?
-- If we charged per-repo instead of per-user, would that be more attractive?
-- What's the budget approval process for adding a new SaaS tool to your stack?
+- Does $29/user/month for Pro tier feel fair? Too high? Too low?
+- Is the free tier sufficient for individual developers? Or does it need more features?
+- Would Enterprise customers prefer per-repo pricing over per-seat?
 
 ### For v1 Launch:
 
-- Should the free tier include CI gate? (Drives adoption but reduces Pro conversion)
-- How do we price learning loop analytics? (Per team vs. per user vs. flat fee)
+- Should the free tier include CI gate? (Drives adoption but may reduce Pro conversion)
+- How do we price learning loop analytics? (Per team vs. per user vs. flat enterprise fee)
 - Should we offer a "Community Edition" with all features but no support?
+
+**Note:** Pilots may refine pricing details, but the open-core structure (free core + paid team features) is our recommended launch model. See [/pricing](/pricing) for the current version.
 
 ---
 
