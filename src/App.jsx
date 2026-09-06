@@ -1068,7 +1068,8 @@ export default function App() {
     return (
       <div className="app-container">
         <AuthModal 
-          isOpen={true} 
+          isOpen={true}
+          onClose={handleGoHome}
           onSuccess={handleAuthSuccess}
         />
       </div>

@@ -41,6 +41,7 @@ export default function FeedbackModal({ isOpen, onClose }) {
   return (
     <div className="feedback-modal-overlay" onClick={handleClose}>
       <div className="feedback-modal" onClick={(e) => e.stopPropagation()}>
+        <button type="button" className="feedback-modal-close" onClick={handleClose} aria-label="Close">×</button>
         {submitted ? (
           <>
             <div className="feedback-modal-icon">✓</div>
