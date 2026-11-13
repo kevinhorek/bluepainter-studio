@@ -1,4 +1,5 @@
-// CommonJS port of src/utils/receiptPolicy.js — keep the two in sync.
+// GENERATED from src/utils/receiptPolicy.js by scripts/sync-extension-libs.mjs — do not edit.
+// Run `npm run sync:extension` after changing the source.
 const NAMED_COLORS = {
   white: '#ffffff',
   black: '#000000',
@@ -50,11 +51,59 @@ function getContrastRatio(background, foreground = '#ffffff') {
 function evaluateReceipts(nodesMap, component, policy, dismissedRules = new Set()) {
   if (!component || !nodesMap) return { rules: [], scores: { design: 100, accessibility: 100, buildability: 100, total: 100 } };
 
-  const activeRoot = nodesMap['pricing-card-frame'] || nodesMap['hero-frame'] || component;
-  const buttonNode = component.type === 'button' ? component : (nodesMap['cta-button'] || nodesMap['hero-button']);
-  const featuresListNode = nodesMap['features-list'];
-  const pricingFrameNode = nodesMap['pricing-card-frame'] || (component.type === 'frame' && component.id?.includes('pricing') ? component : null);
-  const targetSpacingNode = component.type === 'frame' ? component : activeRoot;
+  // Resolve what each rule applies to from the tree itself, so receipts work on
+  // any component — not only the demo files' well-known ids.
+  const parentOf = {};
+  Object.values(nodesMap).forEach((n) => {
+    (n?.children || []).forEach((cid) => { if (!(cid in parentOf)) parentOf[cid] = n.id; });
+  });
+  const isContainer = (n) => n && (n.type === 'frame' || n.type === 'list');
+  const ancestor = (start, test) => {
+    const guard = new Set();
+    let cur = nodesMap[parentOf[start.id]];
+    while (cur && !guard.has(cur.id)) {
+      if (test(cur)) return cur;
+      guard.add(cur.id);
+      cur = nodesMap[parentOf[cur.id]];
+    }
+    return null;
+  };
+  const findInSubtree = (start, test) => {
+    const guard = new Set();
+    const stack = [start];
+    while (stack.length) {
+      const cur = stack.shift();
+      if (!cur || guard.has(cur.id)) continue;
+      guard.add(cur.id);
+      if (cur !== start && test(cur)) return cur;
+      (cur.children || []).forEach((cid) => stack.push(nodesMap[cid]));
+    }
+    return null;
+  };
+  let treeRoot = component;
+  for (let up = ancestor(treeRoot, () => true); up; up = ancestor(treeRoot, () => true)) treeRoot = up;
+
+  const isButton = (n) => n.type === 'button';
+  const isList = (n) => n.type === 'list';
+  const isFrame = (n) => n.type === 'frame';
+
+  const buttonNode = isButton(component)
+    ? component
+    : (isContainer(component) && findInSubtree(component, isButton))
+      || nodesMap['cta-button'] || nodesMap['hero-button']
+      || findInSubtree(treeRoot, isButton);
+  const featuresListNode = isList(component)
+    ? component
+    : ancestor(component, isList)
+      || (isContainer(component) && findInSubtree(component, isList))
+      || nodesMap['features-list']
+      || findInSubtree(treeRoot, isList);
+  const nearestFrame = isFrame(component) ? component : (ancestor(component, isFrame) || (isFrame(treeRoot) ? treeRoot : null));
+  // Radius + spacing are judged on the card the selection sits in (the demo card when present).
+  const pricingFrameNode = nodesMap['pricing-card-frame'] || nearestFrame;
+  const targetSpacingNode = isFrame(component)
+    ? component
+    : (nodesMap['pricing-card-frame'] || nodesMap['hero-frame'] || nearestFrame || treeRoot);
 
   const paddingVal = targetSpacingNode.style?.padding !== undefined ? parseInt(targetSpacingNode.style.padding, 10) : 0;
   const grid = policy.spacingGrid || 8;
@@ -152,7 +201,7 @@ function evaluateReceipts(nodesMap, component, policy, dismissedRules = new Set(
       title: isFeatureCountValid ? `${featureCount} features — sweet spot` : 'High visual clutter',
       desc: isFeatureCountValid
         ? 'Features list height is optimal.'
-        : `Pricing lists with ${featureCount} items exceed team policy (max ${maxFeatures}).`,
+        : `Lists with ${featureCount} items exceed team policy (max ${maxFeatures}).`,
       tag: 'Buildability',
       severity: 'warning',
       fixLabel: `Truncate to ${maxFeatures} items`,
@@ -200,4 +249,9 @@ function applyReceiptFix(fixKey, fixMeta, nodesMap, onUpdateNode) {
   }
 }
 
-module.exports = { evaluateReceipts, applyReceiptFix, parseColor, getContrastRatio };
+module.exports = {
+  parseColor,
+  getContrastRatio,
+  evaluateReceipts,
+  applyReceiptFix
+};

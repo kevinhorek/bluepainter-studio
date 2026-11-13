@@ -14,6 +14,13 @@ export default function WorkspaceHeader({
   onOpenFigmaImport,
   onOpenAI,
   onCopyLink,
+  onUndo,
+  onRedo,
+  canUndo = false,
+  canRedo = false,
+  onOpenTsxFile,
+  onDownloadFile,
+  onResetWorkspace,
   facilitatorActions
 }) {
   const facilitator = isFacilitatorMode();
@@ -21,6 +28,7 @@ export default function WorkspaceHeader({
   const [menuOpen, setMenuOpen] = useState(false);
   const fileRef = useRef(null);
   const menuRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const active = WORKSPACE_FILES[activeFile];
 
@@ -57,7 +65,7 @@ export default function WorkspaceHeader({
           </button>
           {fileOpen && (
             <div className="workspace-dropdown">
-              {FILE_ORDER.map((fileId) => {
+              {FILE_ORDER.filter((fileId) => !WORKSPACE_FILES[fileId].hidden).map((fileId) => {
                 const file = WORKSPACE_FILES[fileId];
                 return (
                   <button
@@ -71,8 +79,39 @@ export default function WorkspaceHeader({
                   </button>
                 );
               })}
+              <div className="workspace-dropdown-divider" />
+              <button
+                type="button"
+                className="workspace-dropdown-item"
+                onClick={() => { fileInputRef.current?.click(); setFileOpen(false); }}
+              >
+                <span>Open .tsx file…</span>
+              </button>
+              <button
+                type="button"
+                className="workspace-dropdown-item"
+                onClick={() => { onDownloadFile?.(); setFileOpen(false); }}
+              >
+                <span>Download {active?.label}</span>
+              </button>
             </div>
           )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".tsx,.jsx,.ts,.js"
+            hidden
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = ''; // allow re-opening the same file
+              if (file) onOpenTsxFile?.(file);
+            }}
+          />
+        </div>
+
+        <div className="workspace-history" role="group" aria-label="History">
+          <button type="button" className="workspace-history-btn" onClick={onUndo} disabled={!canUndo} title="Undo (⌘Z)" aria-label="Undo">↶</button>
+          <button type="button" className="workspace-history-btn" onClick={onRedo} disabled={!canRedo} title="Redo (⇧⌘Z)" aria-label="Redo">↷</button>
         </div>
       </div>
 
@@ -144,6 +183,16 @@ export default function WorkspaceHeader({
               </button>
               <button type="button" className="workspace-dropdown-item" onClick={() => { onShowAbout?.(); setMenuOpen(false); }}>
                 About
+              </button>
+              <button
+                type="button"
+                className="workspace-dropdown-item"
+                onClick={() => {
+                  setMenuOpen(false);
+                  if (window.confirm('Reset the workspace to the demo files? Your saved edits and any opened file will be discarded.')) onResetWorkspace?.();
+                }}
+              >
+                Reset workspace
               </button>
               {facilitator && facilitatorActions && (
                 <>

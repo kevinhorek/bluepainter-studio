@@ -26,6 +26,22 @@ export default function CanvasView({
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const panStartRef = useRef({ x: 0, y: 0, offsetX: 0, offsetY: 0 });
+  const [zoom, setZoom] = useState(1);
+  const clampZoom = (z) => Math.min(4, Math.max(0.25, Math.round(z * 100) / 100));
+  const zoomBy = (factor) => setZoom((z) => clampZoom(z * factor));
+
+  // Ctrl/⌘ + wheel (and trackpad pinch) zooms the artboard instead of the page.
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return undefined;
+    const onWheel = (e) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      setZoom((z) => Math.min(4, Math.max(0.25, Math.round(z * (e.deltaY < 0 ? 1.1 : 1 / 1.1) * 100) / 100)));
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
   
   // Resizing state
   const [isResizing, setIsResizing] = useState(false);
@@ -106,11 +122,11 @@ export default function CanvasView({
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (isResizing) {
-        const deltaX = e.clientX - resizeStart.x;
-        const deltaY = e.clientY - resizeStart.y;
+        const deltaX = (e.clientX - resizeStart.x) / zoom;
+        const deltaY = (e.clientY - resizeStart.y) / zoom;
 
-        const newWidth = Math.max(40, resizeStart.width + deltaX);
-        const newHeight = Math.max(20, resizeStart.height + deltaY);
+        const newWidth = Math.round(Math.max(40, resizeStart.width + deltaX));
+        const newHeight = Math.round(Math.max(20, resizeStart.height + deltaY));
 
         const node = nodesMap[resizeStart.nodeId];
         if (node) {
@@ -123,11 +139,11 @@ export default function CanvasView({
           });
         }
       } else if (isDragging) {
-        const deltaX = e.clientX - dragStart.startX;
-        const deltaY = e.clientY - dragStart.startY;
+        const deltaX = (e.clientX - dragStart.startX) / zoom;
+        const deltaY = (e.clientY - dragStart.startY) / zoom;
 
-        const newLeft = dragStart.startLeft + deltaX;
-        const newTop = dragStart.startTop + deltaY;
+        const newLeft = Math.round(dragStart.startLeft + deltaX);
+        const newTop = Math.round(dragStart.startTop + deltaY);
 
         const node = nodesMap[dragStart.nodeId];
         if (node) {
@@ -156,7 +172,7 @@ export default function CanvasView({
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isResizing, isDragging, resizeStart, dragStart, nodesMap, onUpdateNode]);
+  }, [isResizing, isDragging, resizeStart, dragStart, nodesMap, onUpdateNode, zoom]);
 
   useEffect(() => {
     if (activeCanvasTool !== 'hand') return;
@@ -226,8 +242,8 @@ export default function CanvasView({
     if (!targetEl) return;
 
     const rect = targetEl.getBoundingClientRect();
-    const clickX = Math.round(e.clientX - rect.left);
-    const clickY = Math.round(e.clientY - rect.top);
+    const clickX = Math.round((e.clientX - rect.left) / zoom);
+    const clickY = Math.round((e.clientY - rect.top) / zoom);
 
     if (onAddNode) {
       onAddNode(activeCanvasTool, clickX, clickY, parentId);
@@ -240,6 +256,10 @@ export default function CanvasView({
   const handleOuterCanvasClick = (e) => {
     if (onFocus) onFocus();
     if (activeCanvasTool === 'hand') return;
+    if (activeCanvasTool === 'scale') {
+      zoomBy(e.altKey ? 1 / 1.25 : 1.25); // Zoom tool: click to zoom in, Alt-click to zoom out
+      return;
+    }
     if (!isPlacableTool(activeCanvasTool)) {
       if (activeCanvasTool === 'select') onSelectNode(null);
       return;
@@ -250,8 +270,8 @@ export default function CanvasView({
     if (!rootEl) return;
     
     const rect = rootEl.getBoundingClientRect();
-    const clickX = Math.round(e.clientX - rect.left);
-    const clickY = Math.round(e.clientY - rect.top);
+    const clickX = Math.round((e.clientX - rect.left) / zoom);
+    const clickY = Math.round((e.clientY - rect.top) / zoom);
     
     if (onAddNode) {
       onAddNode(activeCanvasTool, clickX, clickY, rootNodeId);
@@ -281,8 +301,8 @@ export default function CanvasView({
     if (!rootEl) return;
 
     const rect = rootEl.getBoundingClientRect();
-    const dropX = Math.round(e.clientX - rect.left - 40);
-    const dropY = Math.round(e.clientY - rect.top - 40);
+    const dropX = Math.round((e.clientX - rect.left) / zoom - 40);
+    const dropY = Math.round((e.clientY - rect.top) / zoom - 40);
 
     if (onAddNode) {
       onAddNode(type, dropX, dropY, rootNodeId);
@@ -399,8 +419,8 @@ export default function CanvasView({
         if (!type) return;
 
         const rect = e.currentTarget.getBoundingClientRect();
-        const dropX = Math.round(e.clientX - rect.left);
-        const dropY = Math.round(e.clientY - rect.top);
+        const dropX = Math.round((e.clientX - rect.left) / zoom);
+        const dropY = Math.round((e.clientY - rect.top) / zoom);
 
         if (onAddNode) {
           onAddNode(type, dropX, dropY, nodeId);
@@ -412,7 +432,9 @@ export default function CanvasView({
     const clickHandler = (e) => {
       e.stopPropagation();
       if (onFocus) onFocus();
-      if (activeCanvasTool && isPlacableTool(activeCanvasTool)) {
+      if (activeCanvasTool === 'scale') {
+        zoomBy(e.altKey ? 1 / 1.25 : 1.25);
+      } else if (activeCanvasTool && isPlacableTool(activeCanvasTool)) {
         handleCanvasClick(e, nodeId);
       } else {
         onSelectNode(nodeId);
@@ -572,7 +594,11 @@ export default function CanvasView({
 
         {/* Leaf values vs children components recursion */}
         {isLeaf ? (
-          node.text
+          node.text || (node.placeholder ? (
+            <span data-canvas-chrome="" contentEditable={false} className="canvas-dynamic-placeholder">{node.placeholder}</span>
+          ) : node.text)
+        ) : !(node.children || []).length && node.placeholder ? (
+          <span data-canvas-chrome="" className="canvas-dynamic-placeholder">{node.placeholder}</span>
         ) : (
           (node.children || []).map((childId) => renderASTNode(childId, sourceMap, embedRootId))
         )}
@@ -586,6 +612,7 @@ export default function CanvasView({
 
   const getCursorStyle = () => {
     if (activeCanvasTool === 'hand') return isPanning ? 'grabbing' : 'grab';
+    if (activeCanvasTool === 'scale') return 'zoom-in';
     if (isPlacableTool(activeCanvasTool)) return 'crosshair';
     return 'default';
   };
@@ -623,6 +650,7 @@ export default function CanvasView({
         minWidth: isPageView ? pageViewport.width : 800,
         minHeight: isPageView ? pageViewport.height : 600,
         flexShrink: 0,
+        zoom,
         margin: isPageView ? 0 : 'auto',
         transform: `translate(${panOffset.x}px, ${panOffset.y}px)`
       }}>
@@ -647,6 +675,14 @@ export default function CanvasView({
           )}
         </div>
       )}
+
+      <div className="canvas-zoom" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+        <button type="button" onClick={() => zoomBy(1 / 1.25)} title="Zoom out (⌘ + scroll)" aria-label="Zoom out">−</button>
+        <button type="button" className="canvas-zoom-value" onClick={() => { setZoom(1); setPanOffset({ x: 0, y: 0 }); }} title="Reset zoom and pan">
+          {Math.round(zoom * 100)}%
+        </button>
+        <button type="button" onClick={() => zoomBy(1.25)} title="Zoom in (⌘ + scroll)" aria-label="Zoom in">+</button>
+      </div>
 
       {!hideToolbar && (
         <CanvasToolbar

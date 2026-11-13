@@ -1,6 +1,6 @@
 // syncEngine.js - Canvas ↔ TSX sync (AST-first with regex fallback)
-import { getComponentName, getWorkspaceFile, getImportPath, collectComponentRefs } from '../data/workspaceFiles';
-import { parseTSXWithAST, patchTSXWithAST, jsxTextNeedsExpression } from './astSyncEngine';
+import { getComponentName, getWorkspaceFile, getImportPath, collectComponentRefs, WORKSPACE_FILES } from '../data/workspaceFiles';
+import { parseTSXWithAST, patchTSXWithAST, jsxTextNeedsExpression, prepareTSXForCanvas } from './astSyncEngine';
 
 function formatStyleValue(v) {
   if (typeof v === 'number') return v;
@@ -66,16 +66,19 @@ export function generateTSX(rootNodeId, nodesMap, existingCode = null) {
     // patcher can't express that, so regenerate from the tree.
     const expected = expectedIdOrder(rootNodeId, nodesMap);
     if (expected) {
-      const patched = patchTSXWithAST(existingCode, nodesMap, expected);
+      // The patcher inserts / removes / reorders elements for structural canvas
+      // edits, so the author's file survives; it returns null if it can't.
+      const patched = patchTSXWithAST(existingCode, nodesMap, expected, {
+        renderNode: (id, indent) => renderNodeJSX(id, nodesMap, indent)
+      });
       if (patched) return patched;
     }
   }
   return generateTSXFromTemplate(rootNodeId, nodesMap);
 }
 
-function generateTSXFromTemplate(rootNodeId, nodesMap) {
-  if (!rootNodeId || !nodesMap) return '';
-
+/** Render one node (and its subtree) as JSX source. */
+export function renderNodeJSX(rootId, nodesMap, baseIndent = '    ') {
   function renderNode(nodeId, indent = '  ') {
     const node = nodesMap[nodeId];
     if (!node) return '';
@@ -131,7 +134,13 @@ function generateTSXFromTemplate(rootNodeId, nodesMap) {
     return `${indent}<${tag}${idAttr}${styleAttr}${classAttr} />`;
   }
 
-  const renderedContent = renderNode(rootNodeId, '    ');
+  return renderNode(rootId, baseIndent);
+}
+
+function generateTSXFromTemplate(rootNodeId, nodesMap) {
+  if (!rootNodeId || !nodesMap) return '';
+
+  const renderedContent = renderNodeJSX(rootNodeId, nodesMap, '    ');
   const componentName = getComponentName(rootNodeId);
   const refs = collectComponentRefs(rootNodeId, nodesMap);
   const importLines = [...refs]
@@ -150,10 +159,21 @@ ${renderedContent}
 }
 
 // 2. PARSE TSX CODE BACK TO NODE TREE STATE
-export function parseTSX(code, nodesMap) {
+function resolveComponentByName(name) {
+  const entry = Object.values(WORKSPACE_FILES).find((f) => !f.isPage && f.componentName === name);
+  return entry ? entry.id : null;
+}
+
+/**
+ * `rootId` turns on structural sync: elements added/removed/reordered in code
+ * add/remove/reorder canvas layers. Without it only style/text/src are read.
+ */
+export function parseTSX(code, nodesMap, rootId = null) {
   if (!code || !nodesMap) return nodesMap;
 
-  const astResult = parseTSXWithAST(code, nodesMap);
+  const astResult = parseTSXWithAST(code, nodesMap, rootId
+    ? { structural: true, rootId, resolveComponent: resolveComponentByName }
+    : {});
   if (astResult) return astResult;
 
   return parseTSXWithRegex(code, nodesMap);
@@ -214,4 +234,31 @@ function parseTSXWithRegex(code, nodesMap) {
   }
 
   return updatedNodes;
+}
+
+/**
+ * Open an arbitrary TSX/JSX file on the canvas.
+ * Returns { code, nodes, rootId, componentName, addedIds } or throws with a readable message.
+ */
+export function importTSXFile(source, fileName = 'Imported.tsx') {
+  const prepared = prepareTSXForCanvas(source);
+  if (!prepared) {
+    throw new Error('Could not find JSX in that file — is it a React component (.tsx / .jsx)?');
+  }
+  const nodes = parseTSXWithAST(prepared.code, {}, {
+    structural: true,
+    rootId: prepared.rootId,
+    resolveComponent: resolveComponentByName
+  });
+  if (!nodes || !nodes[prepared.rootId]) {
+    throw new Error('That file parsed, but its JSX could not be mapped to canvas layers.');
+  }
+  const fallbackName = fileName.replace(/\.[jt]sx?$/i, '').replace(/[^A-Za-z0-9_$]/g, '') || 'Imported';
+  return {
+    code: prepared.code,
+    nodes,
+    rootId: prepared.rootId,
+    componentName: prepared.componentName || fallbackName,
+    addedIds: prepared.added
+  };
 }

@@ -7,7 +7,9 @@ export default function LayersPanel({
   selectedNodeId,
   onSelectNode,
   onUpdateNode,
-  onDeleteNode
+  onDeleteNode,
+  onMoveNode,
+  onDuplicateNode
 }) {
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
@@ -152,6 +154,21 @@ export default function LayersPanel({
             )}
           </div>
 
+          {/* Reorder / duplicate (selected, non-root layers) */}
+          {nodeId !== rootNodeId && isSelected && (onMoveNode || onDuplicateNode) && (
+            <span style={{ display: 'inline-flex', gap: 2, marginRight: 4 }}>
+              {onMoveNode && (
+                <>
+                  <button type="button" className="layer-action-btn" title="Move up" aria-label="Move layer up" onClick={(e) => { e.stopPropagation(); onMoveNode(nodeId, -1); }}>↑</button>
+                  <button type="button" className="layer-action-btn" title="Move down" aria-label="Move layer down" onClick={(e) => { e.stopPropagation(); onMoveNode(nodeId, 1); }}>↓</button>
+                </>
+              )}
+              {onDuplicateNode && (
+                <button type="button" className="layer-action-btn" title="Duplicate" aria-label="Duplicate layer" onClick={(e) => { e.stopPropagation(); onDuplicateNode(nodeId); }}>⧉</button>
+              )}
+            </span>
+          )}
+
           {/* Delete Layer button (except root frame) */}
           {nodeId !== rootNodeId && (
             <button
@@ -217,7 +234,7 @@ export default function LayersPanel({
         color: '#64748b',
         lineHeight: 1.3
       }}>
-        💡 Double-click layer name to rename. Selected layer will highlight in Canvas.
+        Double-click a name to rename. Use ↑ ↓ to reorder, ⧉ to duplicate, Delete to remove. ⌘Z undoes.
       </div>
     </div>
   );

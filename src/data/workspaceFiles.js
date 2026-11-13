@@ -43,15 +43,42 @@ export const WORKSPACE_FILES = {
     viewport: { width: 1280, height: 800 },
     defaultSelection: 'figma-import-page',
     isFigmaImport: true
+  },
+  // A TSX file the user opened from disk. Its label / root id / component name
+  // come from the file (see registerCustomFile); hidden until something is opened.
+  custom: {
+    id: 'custom',
+    label: 'Imported.tsx',
+    rootId: 'imported-root',
+    componentName: 'Imported',
+    isPage: false,
+    defaultSelection: 'imported-root',
+    isUserFile: true,
+    hidden: true
   }
 };
 
-export const FILE_ORDER = ['dashboard', 'marketing', 'figma', 'pricing', 'hero'];
+/** Point the `custom` slot at an opened file. */
+export function registerCustomFile({ label, rootId, componentName }) {
+  const file = WORKSPACE_FILES.custom;
+  file.label = label || 'Imported.tsx';
+  file.rootId = rootId;
+  file.defaultSelection = rootId;
+  file.componentName = componentName || 'Imported';
+  file.hidden = false;
+}
+
+export function getCustomFileMeta() {
+  const { label, rootId, componentName, hidden } = WORKSPACE_FILES.custom;
+  return hidden ? null : { label, rootId, componentName };
+}
+
+export const FILE_ORDER = ['dashboard', 'marketing', 'figma', 'pricing', 'hero', 'custom'];
 
 /** Files included in app export (excludes marketing meta-page). */
 export const APP_EXPORT_FILE_IDS = ['dashboard', 'pricing', 'hero'];
 
-export const LIBRARY_FILE_IDS = FILE_ORDER.filter((id) => !WORKSPACE_FILES[id].isPage);
+export const LIBRARY_FILE_IDS = FILE_ORDER.filter((id) => !WORKSPACE_FILES[id].isPage && !WORKSPACE_FILES[id].isUserFile);
 
 export function getWorkspaceFile(fileId) {
   return WORKSPACE_FILES[fileId] || WORKSPACE_FILES.pricing;

@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { generateTSX, parseTSX } from './utils/syncEngine';
-import { applyBrokenDesignScenario, applyFixedDesignScenario, getFreshHeroNodes, getFreshPricingNodes, getFreshDashboardNodes } from './utils/demoScenarios';
-import { getFreshMarketingNodes } from './data/marketingPage';
+import { useState, useEffect, useCallback, useMemo, useReducer, useRef } from 'react';
+import { generateTSX, parseTSX, importTSXFile } from './utils/syncEngine';
+import { createHistory, historyReducer, loadWorkspace, saveWorkspace, clearWorkspace, getFreshNodesByFile } from './utils/workspaceStore';
+import { registerCustomFile } from './data/workspaceFiles';
+import { applyBrokenDesignScenario, applyFixedDesignScenario } from './utils/demoScenarios';
 import { captureCanvasPageFrame } from './utils/canvasCapture';
 import { getWorkspaceFile } from './data/workspaceFiles';
 import { downloadValidationExport, getFeedbackSummary } from './utils/validationExport';
@@ -29,7 +30,6 @@ import PresenterToast from './components/PresenterToast';
 import SpecModal from './components/SpecModal';
 import ExportDeployModal from './components/ExportDeployModal';
 import MarketingKitModal from './components/MarketingKitModal';
-import { getEmptyFigmaImportNodes } from './utils/figmaImport';
 import FigmaImportModal from './components/FigmaImportModal';
 import AIGeneratePanel from './components/AIGeneratePanel';
 import { createNodeFromTool, canDropIntoNode } from './utils/nodeFactory';
@@ -44,6 +44,22 @@ const facilitator = isFacilitatorMode();
 function safeStorageGet(key) {
   try { return localStorage.getItem(key); } catch { return null; }
 }
+/**
+ * Opened files often style with Tailwind classes, which the canvas can't see
+ * without the CSS. Load the Tailwind Play CDN for preview only — with preflight
+ * off so it can't restyle the Studio's own UI.
+ */
+function enableTailwindPreview() {
+  if (typeof document === 'undefined' || document.getElementById('bp-tailwind-preview')) return;
+  window.tailwind = window.tailwind || {};
+  window.tailwind.config = { corePlugins: { preflight: false } };
+  const script = document.createElement('script');
+  script.id = 'bp-tailwind-preview';
+  script.src = 'https://cdn.tailwindcss.com';
+  script.async = true;
+  document.head.appendChild(script);
+}
+
 function safeStorageSet(key, value) {
   try { localStorage.setItem(key, value); } catch { /* storage unavailable */ }
 }
@@ -87,24 +103,27 @@ export default function App() {
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
   const [aiInitialType, setAiInitialType] = useState('full-marketing');
   const [figmaImportOpen, setFigmaImportOpen] = useState(false);
-  const [fileViewports, setFileViewports] = useState({});
+  // Restored once from localStorage (or fresh demo files on first visit).
+  const [initialWorkspace] = useState(loadWorkspace);
+  const [fileViewports, setFileViewports] = useState(initialWorkspace.fileViewports);
   const [welcomeOpen, setWelcomeOpen] = useState(() => !hasSeenWelcome());
   const [toast, setToast] = useState(null);
-  const [activeFile, setActiveFile] = useState('dashboard');
-  const [selectedNodeId, setSelectedNodeId] = useState('dashboard-page');
+  const [activeFile, setActiveFile] = useState(initialWorkspace.activeFile);
+  const [selectedNodeId, setSelectedNodeId] = useState(() => getWorkspaceFile(initialWorkspace.activeFile).defaultSelection);
   const [activeCanvasTool, setActiveCanvasTool] = useState('select');
   const [focusedPanel, setFocusedPanel] = useState('canvas');
 
-  const [nodesByFile, setNodesByFile] = useState(() => ({
-    pricing: getFreshPricingNodes(),
-    hero: getFreshHeroNodes(),
-    dashboard: getFreshDashboardNodes(),
-    marketing: getFreshMarketingNodes(),
-    figma: getEmptyFigmaImportNodes()
-  }));
+  // All file node maps live in one undo/redo history.
+  const [history, dispatchHistory] = useReducer(historyReducer, initialWorkspace.nodesByFile, createHistory);
+  const nodesByFile = history.present;
+  const canUndo = history.past.length > 0;
+  const canRedo = history.future.length > 0;
+  const setNodesByFile = useCallback((updater) => {
+    dispatchHistory({ type: 'set', updater, at: Date.now() });
+  }, []);
   // What the user last typed in the code editor, per file, with the node map it
   // parsed to. Canvas edits are patched onto this so formatting/comments survive.
-  const [codeBaseByFile, setCodeBaseByFile] = useState({});
+  const [codeBaseByFile, setCodeBaseByFile] = useState(initialWorkspace.codeBaseByFile);
 
   const [tourActive, setTourActive] = useState(initialRoute.startTour);
   const [tourStep, setTourStep] = useState(0);
@@ -122,6 +141,7 @@ export default function App() {
   const toolBeforeSpaceRef = useRef('select');
   const toastTimerRef = useRef(null);
   const lastLearningRef = useRef({ key: '', at: 0 });
+  const deleteNodeRef = useRef(null);
 
   const refreshLearningSummary = () => setLearningSummary(getLearningSummary());
 
@@ -141,12 +161,36 @@ export default function App() {
     if (activeCodeBase && activeCodeBase.nodes === activeNodesMap) return activeCodeBase.code;
     return generateTSX(activeRootId, activeNodesMap, activeCodeBase?.code);
   }, [activeRootId, activeNodesMap, activeCodeBase]);
+
+  // A restored/opened file that styles with classes needs the Tailwind preview CSS.
+  const customUsesClasses = useMemo(
+    () => Object.values(nodesByFile.custom || {}).some((n) => typeof n?.className === 'string' && n.className.trim()),
+    [nodesByFile.custom]
+  );
+  useEffect(() => {
+    if (activeFile === 'custom' && customUsesClasses) enableTailwindPreview();
+  }, [activeFile, customUsesClasses]);
+
+  // Autosave (debounced) so a refresh or crash never loses work.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const codeByFile = {};
+      Object.entries(codeBaseByFile).forEach(([fileId, base]) => {
+        // Only keep editor text that still matches the nodes it was parsed into.
+        if (base && base.nodes === nodesByFile[fileId]) codeByFile[fileId] = base.code;
+      });
+      // The active file's current code keeps its formatting across reloads too.
+      if (code) codeByFile[activeFile] = code;
+      saveWorkspace({ nodesByFile, codeByFile, fileViewports, activeFile });
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [nodesByFile, codeBaseByFile, fileViewports, activeFile, code]);
   const setActiveNodesMap = useCallback((updater) => {
-    setNodesByFile((prev) => ({
-      ...prev,
-      [activeFile]: typeof updater === 'function' ? updater(prev[activeFile]) : updater
-    }));
-  }, [activeFile]);
+    setNodesByFile((prev) => {
+      const next = typeof updater === 'function' ? updater(prev[activeFile]) : updater;
+      return next === prev[activeFile] ? prev : { ...prev, [activeFile]: next };
+    });
+  }, [activeFile, setNodesByFile]);
 
   const handleSetActiveFile = useCallback((file) => {
     setActiveFile(file);
@@ -196,7 +240,7 @@ export default function App() {
         }
       };
     });
-  }, []);
+  }, [setNodesByFile]);
 
   const handleSelectMarketingField = useCallback((field) => {
     setMarketingActiveFieldId(field.id);
@@ -249,7 +293,7 @@ export default function App() {
     setFocusedPanel('canvas');
     logLearningEvent('figma_import', { targetFile, nodeCount, frameName });
     notify(`Imported "${frameName || 'frame'}" — ${nodeCount} layers`);
-  }, [notify]);
+  }, [notify, setNodesByFile]);
 
   const handleApplyAI = useCallback(({ type, updates, message, source }) => {
     const { nodesByFile: next, applied } = applyAIUpdates(nodesByFile, updates, type);
@@ -262,7 +306,7 @@ export default function App() {
     }
     logLearningEvent('ai_generate_applied', { type, applied, source });
     notify(message || `Applied ${applied} updates to canvas`);
-  }, [nodesByFile, notify]);
+  }, [nodesByFile, notify, setNodesByFile]);
 
   const handleCaptureDashboardScreenshot = useCallback(async () => {
     if (activeFile !== 'dashboard') {
@@ -314,6 +358,23 @@ export default function App() {
         setActiveCanvasTool('hand');
         return;
       }
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        dispatchHistory({ type: e.shiftKey ? 'redo' : 'undo' });
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        dispatchHistory({ type: 'redo' });
+        return;
+      }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && !e.metaKey && !e.ctrlKey && !isActivatable(e.target)) {
+        if (selectedNodeId && selectedNodeId !== activeRootId) {
+          e.preventDefault();
+          deleteNodeRef.current?.(selectedNodeId);
+        }
+        return;
+      }
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const tool = getToolByShortcut(e.key, e.shiftKey);
       if (tool) {
@@ -334,7 +395,7 @@ export default function App() {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
     };
-  }, [activeCanvasTool]);
+  }, [activeCanvasTool, selectedNodeId, activeRootId]);
 
   const handleGoHome = useCallback(() => {
     setMarketingKitOpen(false);
@@ -403,7 +464,7 @@ export default function App() {
   }, [phase, feedbackPromptShown]);
 
   const handleCodeChange = (newCode) => {
-    const parsedNodes = parseTSX(newCode, activeNodesMap);
+    const parsedNodes = parseTSX(newCode, activeNodesMap, activeRootId);
     setCodeBaseByFile((prev) => ({ ...prev, [activeFile]: { code: newCode, nodes: parsedNodes } }));
     setActiveNodesMap(parsedNodes);
     logLearningOnce('round_trip_code', 'editor', { source: 'editor' });
@@ -449,6 +510,65 @@ export default function App() {
       return updated;
     });
     setSelectedNodeId(activeRootId);
+  };
+
+  useEffect(() => {
+    deleteNodeRef.current = handleDeleteNode;
+  });
+
+  // Reorder a layer among its siblings (dir: -1 = up/earlier, 1 = down/later).
+  const handleMoveNode = (nodeId, dir) => {
+    setActiveNodesMap((prev) => {
+      const parent = Object.values(prev).find((n) => n.children?.includes(nodeId));
+      if (!parent) return prev;
+      const from = parent.children.indexOf(nodeId);
+      const to = from + dir;
+      if (to < 0 || to >= parent.children.length) return prev;
+      const children = [...parent.children];
+      children.splice(from, 1);
+      children.splice(to, 0, nodeId);
+      return { ...prev, [parent.id]: { ...parent, children } };
+    });
+  };
+
+  // Duplicate a layer (and everything inside it) right after the original.
+  const handleDuplicateNode = (nodeId) => {
+    if (nodeId === activeRootId) return;
+    let newRootId = null;
+    setActiveNodesMap((prev) => {
+      const parent = Object.values(prev).find((n) => n.children?.includes(nodeId));
+      if (!parent || !prev[nodeId]) return prev;
+      const next = { ...prev };
+      const taken = new Set(Object.keys(prev));
+      const freshId = (base) => {
+        const stem = base.replace(/-copy(-\d+)?$/, '');
+        let id = `${stem}-copy`;
+        for (let n = 2; taken.has(id); n += 1) id = `${stem}-copy-${n}`;
+        taken.add(id);
+        return id;
+      };
+      const clone = (id) => {
+        const source = prev[id];
+        if (!source) return null;
+        const copyId = freshId(id);
+        const copy = { ...source, id: copyId, style: { ...(source.style || {}) } };
+        if (source.children) copy.children = source.children.map(clone).filter(Boolean);
+        next[copyId] = copy;
+        return copyId;
+      };
+      const copyRoot = clone(nodeId);
+      if (next[copyRoot].style.position === 'absolute') {
+        next[copyRoot].style.left = (Number(next[copyRoot].style.left) || 0) + 16;
+        next[copyRoot].style.top = (Number(next[copyRoot].style.top) || 0) + 16;
+      }
+      const children = [...parent.children];
+      children.splice(children.indexOf(nodeId) + 1, 0, copyRoot);
+      next[parent.id] = { ...parent, children };
+      newRootId = copyRoot;
+      return next;
+    });
+    // the updater runs synchronously for the first of a batch; select when known
+    setTimeout(() => { if (newRootId) setSelectedNodeId(newRootId); }, 0);
   };
 
   const makeNodeId = useCallback((prefix) => {
@@ -546,18 +666,50 @@ export default function App() {
   };
 
   const handleResetDemo = () => {
-    setNodesByFile({
-      pricing: getFreshPricingNodes(),
-      hero: getFreshHeroNodes(),
-      dashboard: getFreshDashboardNodes(),
-      marketing: getFreshMarketingNodes(),
-      figma: getEmptyFigmaImportNodes()
-    });
+    clearWorkspace();
+    dispatchHistory({ type: 'reset', value: getFreshNodesByFile() });
     setCodeBaseByFile({});
     setFileViewports({});
     handleSetActiveFile('dashboard');
     setSelectedNodeId('dashboard-page');
     setDismissedRules(new Set());
+  };
+
+  const handleUndo = useCallback(() => dispatchHistory({ type: 'undo' }), []);
+  const handleRedo = useCallback(() => dispatchHistory({ type: 'redo' }), []);
+
+  // Open a .tsx/.jsx file from disk on the canvas.
+  const handleOpenTsxFile = useCallback(async (file) => {
+    if (!file) return;
+    try {
+      const source = await file.text();
+      const imported = importTSXFile(source, file.name);
+      registerCustomFile({ label: file.name, rootId: imported.rootId, componentName: imported.componentName });
+      setNodesByFile((prev) => ({ ...prev, custom: imported.nodes }));
+      setCodeBaseByFile((prev) => ({ ...prev, custom: { code: imported.code, nodes: imported.nodes } }));
+      setActiveFile('custom');
+      setSelectedNodeId(imported.rootId);
+      setFocusedPanel('canvas');
+      if (/\bclassName=/.test(imported.code)) enableTailwindPreview();
+      logLearningEvent('tsx_file_opened', { layers: Object.keys(imported.nodes).length });
+      notify(imported.addedIds
+        ? `Opened ${file.name} — added ${imported.addedIds} id attribute${imported.addedIds === 1 ? '' : 's'} so layers are editable`
+        : `Opened ${file.name}`);
+    } catch (err) {
+      notify(err.message || 'Could not open that file');
+    }
+  }, [notify, setNodesByFile]);
+
+  // Save the active file's current code back to disk as a download.
+  const handleDownloadActiveFile = () => {
+    const blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = fileConfig.label || 'Component.tsx';
+    anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    notify(`Downloaded ${anchor.download}`);
   };
 
   const handlePolicyChange = (nextPolicy) => {
@@ -660,6 +812,8 @@ export default function App() {
     onSelectNode: setSelectedNodeId,
     onUpdateNode: handleUpdateNode,
     onDeleteNode: handleDeleteNode,
+    onMoveNode: handleMoveNode,
+    onDuplicateNode: handleDuplicateNode,
     code,
     onCodeChange: handleCodeChange,
     onAddNode: handleAddNode,
@@ -702,6 +856,13 @@ export default function App() {
         onGoHome={handleGoHome}
         onFeedback={() => setFeedbackOpen(true)}
         onShowAbout={() => setAboutOpen(true)}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onOpenTsxFile={handleOpenTsxFile}
+        onDownloadFile={handleDownloadActiveFile}
+        onResetWorkspace={() => { handleResetDemo(); notify('Workspace reset to the demo files'); }}
         onOpenInterviewGuide={() => setValidationScriptOpen(true)}
         onOpenExportDeploy={() => setExportDeployOpen(true)}
         onOpenMarketingKit={handleOpenMarketingKit}

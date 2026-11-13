@@ -17,6 +17,8 @@ export default function VSCodeShell({
   onSelectNode,
   onUpdateNode,
   onDeleteNode,
+  onMoveNode,
+  onDuplicateNode,
   code,
   onCodeChange,
   onAddNode,
@@ -227,6 +229,8 @@ export default function VSCodeShell({
             }}
             onUpdateNode={onUpdateNode}
             onDeleteNode={onDeleteNode}
+            onMoveNode={onMoveNode}
+            onDuplicateNode={onDuplicateNode}
           />
         }
         inspect={

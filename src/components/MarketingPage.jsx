@@ -1,3 +1,4 @@
+import { SITE_URL } from '../utils/shareViral';
 const FEATURES = [
   {
     id: 'sync',
@@ -329,13 +330,13 @@ export default function MarketingPage({ onLaunchDemo, onShowFeedback }) {
           <button type="button" className="landing-footer-link" onClick={() => onLaunchDemo('phase1')}>
             Demo
           </button>
-          <a className="landing-footer-link" href="https://bluepainter-launch.vercel.app/pricing">
+          <a className="landing-footer-link" href={`${SITE_URL}/pricing`}>
             Pricing
           </a>
-          <a className="landing-footer-link" href="https://bluepainter-launch.vercel.app/pilot">
+          <a className="landing-footer-link" href={`${SITE_URL}/pilot`}>
             Request pilot
           </a>
-          <a className="landing-footer-link" href="https://bluepainter-launch.vercel.app/tools">
+          <a className="landing-footer-link" href={`${SITE_URL}/tools`}>
             Free tools
           </a>
           <button type="button" className="landing-footer-link" onClick={openFacilitator}>

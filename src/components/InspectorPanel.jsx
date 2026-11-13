@@ -160,6 +160,19 @@ export default function InspectorPanel({
           </div>
         </div>
 
+        {/* className (Tailwind / CSS classes) — written to the code as-is */}
+        <div>
+          <div style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', color: '#64748b', marginBottom: 8, letterSpacing: '0.05em' }}>Classes</div>
+          <input
+            type="text"
+            value={node.className || ''}
+            placeholder="e.g. text-lg font-bold"
+            onChange={(e) => onUpdateNode(selectedNodeId, { className: e.target.value })}
+            spellCheck={false}
+            style={{ width: '100%', background: '#2c2c2c', border: '1px solid #444', color: 'white', padding: '4px 8px', borderRadius: 4, fontSize: '0.75rem', outline: 'none', fontFamily: 'var(--font-mono, monospace)' }}
+          />
+        </div>
+
         {/* SECTION B: LAYOUT (Only show for non-leaf text/button tags if flex is enabled) */}
         {(node.type === 'frame' || node.type === 'list') && (
           <div>
