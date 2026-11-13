@@ -38,7 +38,7 @@ From a checkout of this repo (works today):
       "args": ["/absolute/path/to/bluepainter-studio/mcp/src/index.js"],
       "env": {
         "BLUEPAINTER_SITE_URL": "https://bluepainter-launch.vercel.app",
-        "BLUEPAINTER_WAITLIST_URL": "https://bluepainter-studio.vercel.app/api/waitlist",
+        "BLUEPAINTER_WAITLIST_URL": "https://www.bluepainter.com/api/waitlist",
         "FIGMA_TOKEN": "figd_…"
       }
     }
@@ -70,8 +70,8 @@ All optional — the defaults point at the live demo and site.
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `BLUEPAINTER_SITE_URL` | `https://bluepainter-launch.vercel.app` | Marketing site links returned by `bluepainter_open_demo` |
-| `BLUEPAINTER_WAITLIST_URL` | `https://bluepainter-studio.vercel.app/api/waitlist` | Endpoint for `bluepainter_request_pilot` |
-| `BLUEPAINTER_API_BASE` | `https://bluepainter-studio.vercel.app` | Origin for `bluepainter_figma_import` |
+| `BLUEPAINTER_WAITLIST_URL` | `https://www.bluepainter.com/api/waitlist` | Endpoint for `bluepainter_request_pilot` |
+| `BLUEPAINTER_API_BASE` | `https://www.bluepainter.com` | Origin for `bluepainter_figma_import` |
 | `BLUEPAINTER_TIMEOUT_MS` | `15000` | Network tool timeout |
 | `FIGMA_TOKEN` | — | Figma personal access token for `bluepainter_figma_import` |
 

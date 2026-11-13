@@ -16,16 +16,16 @@ Code + deploy for the launch program are done. These need *your* accounts:
 ## Live URLs
 
 - Distribution site: https://bluepainter-launch.vercel.app
-- Product demo: https://bluepainter-studio.vercel.app
+- Product demo: https://www.bluepainter.com
 - Waitlist API (site forms): https://bluepainter-launch.vercel.app/api/waitlist — same-origin `/api/waitlist`, override with `WAITLIST_URL`
-- Waitlist API (Studio): https://bluepainter-studio.vercel.app/api/waitlist
+- Waitlist API (Studio): https://www.bluepainter.com/api/waitlist
 
 ## Environment variables (site project)
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `SITE_URL` | `https://bluepainter-launch.vercel.app` | Canonicals, og:url, robots.txt, sitemap. **Set when the domain goes live.** |
-| `DEMO_URL` | `https://bluepainter-studio.vercel.app` | Links into the Studio demo |
+| `DEMO_URL` | `https://www.bluepainter.com` | Links into the Studio demo |
 | `WAITLIST_URL` | `/api/waitlist` | Newsletter, pilot and tool email forms |
 | `WAITLIST_WEBHOOK` | — | Durable store for signups (without it they are in-memory only) |
 

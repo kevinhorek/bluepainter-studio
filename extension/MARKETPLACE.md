@@ -133,7 +133,7 @@ Use these values in the publisher portal (if not already in package.json):
 - **Categories:** Visualization, Other
 - **Tags:** react, tsx, jsx, design, figma, canvas, visual-editor, ast, design-system, accessibility, wcag
 - **Links:**
-  - Demo: https://bluepainter-studio.vercel.app/#/app
+  - Demo: https://www.bluepainter.com/#/app
   - Marketing site: https://bluepainter-launch.vercel.app
   - MCP docs: https://bluepainter-launch.vercel.app/knowledge/mcp
   - Free tools: https://bluepainter-launch.vercel.app/tools

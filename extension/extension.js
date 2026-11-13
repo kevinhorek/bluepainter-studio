@@ -168,7 +168,7 @@ class BluePainterController {
   }
 
   getDemoUrl() {
-    return vscode.workspace.getConfiguration('bluepainter').get('demoUrl', 'https://bluepainter-studio.vercel.app/#/app');
+    return vscode.workspace.getConfiguration('bluepainter').get('demoUrl', 'https://www.bluepainter.com/#/app');
   }
 
   async openPilotGuide() {
@@ -191,7 +191,7 @@ class BluePainterController {
         'Open Docs'
       ).then((choice) => {
         if (choice === 'Open Docs') {
-          vscode.env.openExternal(vscode.Uri.parse('https://bluepainter-studio.vercel.app/#/docs'));
+          vscode.env.openExternal(vscode.Uri.parse('https://www.bluepainter.com/#/docs'));
         }
       });
     }
@@ -872,7 +872,7 @@ function activate(context) {
           const msg = `Design system detected: ${detection.indicators[0]}`;
           vscode.window.showInformationMessage(msg, 'Learn More').then((choice) => {
             if (choice === 'Learn More') {
-              vscode.env.openExternal(vscode.Uri.parse('https://bluepainter-studio.vercel.app/#/docs'));
+              vscode.env.openExternal(vscode.Uri.parse('https://www.bluepainter.com/#/docs'));
             }
           });
         }

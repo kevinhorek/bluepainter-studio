@@ -2,7 +2,7 @@
 
 Use this for **5–8 sessions** with frontend devs, design engineers, or founders shipping React UI. Sessions should be **15–20 minutes** of them using the tool, not you presenting.
 
-**Demo URL:** https://bluepainter-studio.vercel.app  
+**Demo URL:** https://www.bluepainter.com  
 **Facilitator tools:** add `?facilitator=1` for export, auto-present, break/fix scenarios.
 
 ---

@@ -8,7 +8,7 @@
  */
 
 const DEFAULT_ALLOWED_ORIGINS = [
-  'https://bluepainter-studio.vercel.app',
+  'https://www.bluepainter.com',
   'https://bluepainter-launch.vercel.app'
 ];
 

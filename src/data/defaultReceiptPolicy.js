@@ -49,7 +49,7 @@ export function saveLearningConfig(config) {
 
 export function exportFullConfig(receiptPolicy, learningConfig) {
   return {
-    $schema: 'https://bluepainter-studio.vercel.app/schemas/config.json',
+    $schema: 'https://www.bluepainter.com/schemas/config.json',
     receiptPolicy,
     learningLoopOverrides: learningConfig
   };

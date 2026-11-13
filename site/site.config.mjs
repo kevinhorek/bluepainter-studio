@@ -13,7 +13,7 @@ const origin = (value, fallback) => String(value || fallback).trim().replace(/\/
 export const SITE_URL = origin(env.SITE_URL, 'https://bluepainter-launch.vercel.app');
 
 /** Origin of the Studio demo app (no trailing slash). */
-export const DEMO_URL = origin(env.DEMO_URL, 'https://bluepainter-studio.vercel.app');
+export const DEMO_URL = origin(env.DEMO_URL, 'https://www.bluepainter.com');
 
 /** Waitlist endpoint. Same-origin by default: site/api/waitlist.js deploys with the site. */
 export const WAITLIST_URL = String(env.WAITLIST_URL || '/api/waitlist').trim();

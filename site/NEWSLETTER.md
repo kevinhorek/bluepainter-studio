@@ -2,7 +2,7 @@
 
 ESP: connect `WAITLIST_WEBHOOK` on the **bluepainter-studio** Vercel project (waitlist API lives there).
 
-Forms post to `https://bluepainter-studio.vercel.app/api/waitlist` with `source`:
+Forms post to `https://www.bluepainter.com/api/waitlist` with `source`:
 - `newsletter`
 - `pilot`
 - `contrast-checker` / `receipt-grader` / `tsx-id-analyzer`
@@ -14,7 +14,7 @@ Forms post to `https://bluepainter-studio.vercel.app/api/waitlist` with `source`
 ```
 Thanks for joining.
 
-1) Open the free studio: https://bluepainter-studio.vercel.app/#/app
+1) Open the free studio: https://www.bluepainter.com/#/app
 2) Try the free contrast checker: https://bluepainter-launch.vercel.app/tools/contrast-checker
 3) Prefer a facilitated session? Request a pilot: https://bluepainter-launch.vercel.app/pilot
 

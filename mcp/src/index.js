@@ -23,7 +23,7 @@ function readPackageVersion() {
   }
 }
 const VERSION = readPackageVersion();
-const DEMO_URL = 'https://bluepainter-studio.vercel.app';
+const DEMO_URL = 'https://www.bluepainter.com';
 const SITE_URL = process.env.BLUEPAINTER_SITE_URL || 'https://bluepainter-launch.vercel.app';
 const WAITLIST_URL = process.env.BLUEPAINTER_WAITLIST_URL || `${DEMO_URL}/api/waitlist`;
 

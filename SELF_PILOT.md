@@ -21,12 +21,12 @@
 
 **For facilitators running validation sessions:**
 ```
-https://bluepainter-studio.vercel.app/?facilitator=1#/app
+https://www.bluepainter.com/?facilitator=1#/app
 ```
 
 **For self-guided pilots:**
 ```
-https://bluepainter-studio.vercel.app/#/app
+https://www.bluepainter.com/#/app
 ```
 
 > **Facilitator mode** (`?facilitator=1`) enables session export, scorecard, break/fix tools, and auto-present demo. Use it when running validation sessions with others or when you need to export session data for product feedback.
@@ -232,8 +232,8 @@ A: This is a **validation prototype**. Use it on real code, but not in productio
 
 ## Links
 
-- **Live demo:** https://bluepainter-studio.vercel.app/#/app
-- **Facilitator mode:** https://bluepainter-studio.vercel.app/?facilitator=1#/app
+- **Live demo:** https://www.bluepainter.com/#/app
+- **Facilitator mode:** https://www.bluepainter.com/?facilitator=1#/app
 - **Marketing site:** https://bluepainter.com/
 - **Full pilot guide:** `PILOT.md`
 - **Validation checklist:** `VALIDATION.md`

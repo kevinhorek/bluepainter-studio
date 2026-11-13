@@ -2,8 +2,8 @@
   "brand": "BluePainter",
   "status": "validation_prototype",
   "urls": {
-    "demo": "https://bluepainter-studio.vercel.app",
-    "demoApp": "https://bluepainter-studio.vercel.app/#/app",
+    "demo": "https://www.bluepainter.com",
+    "demoApp": "https://www.bluepainter.com/#/app",
     "site": "https://bluepainter-launch.vercel.app",
     "pricing": "https://bluepainter-launch.vercel.app/pricing",
     "pilot": "https://bluepainter-launch.vercel.app/pilot",

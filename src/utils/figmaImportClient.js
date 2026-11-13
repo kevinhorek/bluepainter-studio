@@ -8,7 +8,7 @@ async function parseApiError(res) {
     
     if (res.status === 404) {
       if (errorMsg.includes('API not found') || errorMsg.includes('endpoint')) {
-        return 'Figma import API not available. Use production (bluepainter-studio.vercel.app) or run `npx vercel dev` locally. Alternatively, use the "Paste JSON" tab.';
+        return 'Figma import API not available. Use production (www.bluepainter.com) or run `npx vercel dev` locally. Alternatively, use the "Paste JSON" tab.';
       }
       return details ? `${errorMsg}: ${details}` : errorMsg;
     }

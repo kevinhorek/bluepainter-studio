@@ -20,13 +20,13 @@ This guide walks facilitators through running validation sessions with real user
 ## Pre-session setup (5 min)
 
 ### 1. Open facilitator mode
-- Navigate to `https://bluepainter-studio.vercel.app/?facilitator=1`
+- Navigate to `https://www.bluepainter.com/?facilitator=1`
 - Confirm amber **Facilitator** badge appears in header next to **Prototype**
 - Click **···** menu → **Session checklist** to open live metrics tracker
 - Click **Start session** — timer begins
 
 ### 2. Share demo link with participant
-- Send: `https://bluepainter-studio.vercel.app`
+- Send: `https://www.bluepainter.com`
 - Ask them to open in Chrome/Edge (Firefox may have canvas rendering quirks)
 - Participant should see the marketing landing page first
 
@@ -246,7 +246,7 @@ After participant leaves:
 
 ### Participant can't see the demo
 - Check browser: Chrome/Edge work best
-- Check URL: should be `bluepainter-studio.vercel.app` (no `?facilitator=1` for them)
+- Check URL: should be `www.bluepainter.com` (no `?facilitator=1` for them)
 - Hard refresh: `Cmd+Shift+R` (Mac) or `Ctrl+Shift+R` (Windows)
 
 ### Metrics not updating

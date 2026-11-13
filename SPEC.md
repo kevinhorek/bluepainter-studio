@@ -2,7 +2,7 @@
 
 > **Status:** v1 engineering complete → awaiting pilot validation (SPEC §8)  
 > **SPEC §5 (7/7):** ✓ Extension, ✓ AST sync, ✓ Receipts, ✓ Learning loop, ✓ CI gate — all shipped (#115–#123)  
-> **Live demo:** https://bluepainter-studio.vercel.app  
+> **Live demo:** https://www.bluepainter.com  
 > **Repo:** https://github.com/kevinhorek/bluepainter-studio
 
 ---

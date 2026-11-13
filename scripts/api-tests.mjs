@@ -18,7 +18,7 @@ import vercelDeploy from '../api/vercel-deploy.js';
 import oauthConfigRoute from '../api/oauth/config.js';
 import oauthRoute from '../api/oauth/[provider]/[action].js';
 
-const STUDIO = 'https://bluepainter-studio.vercel.app';
+const STUDIO = 'https://www.bluepainter.com';
 const ENV_KEYS = [
   'ALLOWED_ORIGINS', 'OPENAI_API_KEY', 'WAITLIST_WEBHOOK', 'RESEND_WEBHOOK', 'FEEDBACK_WEBHOOK',
   'UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN', 'VERCEL_ENV',
@@ -69,7 +69,7 @@ function makeReq({ method = 'POST', origin, headers = {}, body, query, ip = '203
     method,
     ...(query ? { query } : {}),
     headers: {
-      host: 'bluepainter-studio.vercel.app',
+      host: 'www.bluepainter.com',
       'x-forwarded-for': ip,
       ...(origin ? { origin } : {}),
       ...headers
@@ -129,7 +129,7 @@ test('CORS: allow-list matching', () => {
   assert.equal(isAllowedOrigin('https://evil.example'), false);
   assert.equal(isAllowedOrigin('https://evil-bluepainter.vercel.app'), false, 'must START with bluepainter');
   assert.equal(isAllowedOrigin('https://bluepainter.vercel.app.evil.example'), false);
-  assert.equal(isAllowedOrigin('http://bluepainter-studio.vercel.app'), false, 'https only for vercel.app');
+  assert.equal(isAllowedOrigin('http://www.bluepainter.com'), false, 'https only');
   assert.equal(isAllowedOrigin('http://localhost.evil.example'), false);
   assert.equal(isAllowedOrigin('null'), false);
 
@@ -755,7 +755,7 @@ test('vercel-deploy: validation 400s and success contract', async () => {
 
 /* ---------- oauth ---------- */
 
-const OAUTH_CALLBACK = 'https://bluepainter-studio.vercel.app/api/oauth/github/callback';
+const OAUTH_CALLBACK = 'https://www.bluepainter.com/api/oauth/github/callback';
 
 function setOAuthEnv() {
   process.env.GITHUB_CLIENT_ID = 'gh_client';
@@ -956,7 +956,7 @@ test('oauth callback: Vercel exchange is form-encoded and posts { token, teamId 
     client_id: 'oac_client',
     client_secret: 'vc_secret',
     code: 'vcode',
-    redirect_uri: 'https://bluepainter-studio.vercel.app/api/oauth/vercel/callback'
+    redirect_uri: 'https://www.bluepainter.com/api/oauth/vercel/callback'
   });
   assert.deepStrictEqual(postedPayload(res.body), {
     origin: STUDIO,
