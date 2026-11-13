@@ -4,24 +4,67 @@ Interactive validation demo for a **visual canvas ↔ code workspace** with **De
 
 - **Live demo:** https://bluepainter-studio.vercel.app  
 - **Product spec:** [SPEC.md](./SPEC.md)  
-- **Interview guide:** [VALIDATION.md](./VALIDATION.md)
+- **Interview guide:** [VALIDATION.md](./VALIDATION.md)  
+- **Figma import:** [FIGMA_IMPORT.md](./FIGMA_IMPORT.md)
 
 ## What this is
 
 BluePainter is **not** an LLM wrapper. It's a workflow bet: **AST-preserving bidirectional sync** and **team-configurable design policy** inside existing repos.
 
-This repo is the **validation prototype**. Opens straight into BluePainter — canvas, code, receipts, and page composition.
+**Use it on YOUR projects:**
+- Studio: Load .tsx/.jsx files, edit visually, download with AST preservation
+- Extension: Edit components in VS Code with receipts before merge
+- CI Gate: Block merge on error-severity receipts
+
+This repo includes the validation prototype and production-ready extension.
+
+**Guides:**
+- [SELF_PILOT.md](./SELF_PILOT.md) — 30-minute self-guided validation on your own repo
+- [PILOT.md](./PILOT.md) — Pilot team quick-start checklist
+- [FACILITATOR.md](./FACILITATOR.md) — Session guide for running validation with users
+- [PRICING.md](./PRICING.md) — Recommended pricing model (open-core: free core + paid team features). See [/pricing](/pricing) for the live page.
+- [extension/MARKETPLACE.md](./extension/MARKETPLACE.md) — VS Code Marketplace publish checklist
 
 ## Quick start
+
+### Studio requires authentication
+
+BluePainter Studio now requires a free account to save and manage your projects. Sign in with:
+- Magic link (email OTP)
+- Email/password
+
+**Environment setup:** Copy `.env.example` to `.env` and add your Supabase credentials (see [docs/AUTH_PROJECTS.md](./docs/AUTH_PROJECTS.md) for details).
+
+### Try the Studio (web demo)
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open http://localhost:5173 — lands on `DashboardPage.tsx`. The Studio is fully client-side; the `api/` functions (AI copy, Figma import, GitHub push, Vercel deploy, waitlist, feedback) are optional and need `npm run dev:full` (`vercel dev`).
+Open http://localhost:5173 — lands on the marketing site. Click **Try the live demo** and sign in to access Studio.
 
-Environment variables are all optional for local work and are documented in [`.env.example`](./.env.example).
+### Use on Your Own Repo
+
+**Studio:** Click **📂 Open File** button → load .tsx/.jsx → edit → **💾 Download**
+
+**Extension:** Install in VS Code → `BluePainter: Pick Component` → edit → write to file
+
+**Validation workflow:**
+- [SELF_PILOT.md](./SELF_PILOT.md) — 30-minute self-guided validation
+- [PILOT.md](./PILOT.md) — Full pilot team quick-start checklist
+- [FACILITATOR.md](./FACILITATOR.md) — Run validation sessions with users
+
+### Desktop app
+
+```bash
+npm install
+npm run desktop
+```
+
+Opens BluePainter in a native desktop window (Electron). See [desktop/README.md](./desktop/README.md).
+
+Without `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` the Studio skips sign-in and keeps the workspace in the browser. Environment variables are documented in [`.env.example`](./.env.example).
 
 ## Tests
 
@@ -49,6 +92,9 @@ npm run build
 4. Facilitator (`?facilitator=1`): **Export** JSON after each session
 5. Apply go/no-go after **8 sessions** (see VALIDATION.md)
 
+**For self-guided pilots:** See [SELF_PILOT.md](./SELF_PILOT.md) for a 30-45 minute walkthrough on your own project.  
+**For facilitators:** See [scripts/pilot-dry-run.md](./scripts/pilot-dry-run.md) for a printable session checklist.
+
 ## Deploy
 
 ```bash
@@ -56,6 +102,77 @@ npm run deploy:vercel
 ```
 
 Vercel is the only supported host (the `api/` functions are Vercel serverless functions); set the variables from `.env.example` in the project settings.
+### Optional: Team Audit Log Backend
+
+The learning loop (receipt fixes, dismissals, policy changes) can persist to a team database for analytics and compliance. **This is optional** — the app works without it.
+
+**Environment Variables:**
+- `DATABASE_URL` — PostgreSQL connection string (enables production audit persistence)
+- `VITE_AUDIT_API_URL` — Custom audit backend URL (optional, defaults to `/api/audit-log`)
+
+**Without `DATABASE_URL` (demo/validation mode):**
+- Events buffer to localStorage only
+- No team-wide audit data
+- API runs in "soft-fail" mode
+
+**With `DATABASE_URL` (production mode):**
+- Events persist to Postgres for team audit trail
+- 90-day retention policy
+- Query via `/api/audit-log/query`
+
+**Quick setup for production:**
+```bash
+# 1. Create Postgres database (Supabase or Vercel Postgres recommended)
+
+# 2. Set environment variable in Vercel dashboard
+#    Project Settings → Environment Variables → Add Variable
+#    Name: DATABASE_URL
+#    Value: postgresql://[user]:[password]@[host]:[port]/[database]
+
+# 3. Run schema migration
+psql $DATABASE_URL -f docs/migrations/001_audit_events.sql
+
+# 4. Redeploy
+vercel --prod
+```
+
+**Full documentation:** [docs/AUDIT_BACKEND.md](./docs/AUDIT_BACKEND.md) — Complete setup guide with Supabase/Vercel Postgres instructions, monitoring, and troubleshooting.
+
+## CI Receipt Gate
+
+The repo includes a **Designer's Receipts gate** for CI pipelines that blocks merge on error-severity findings (e.g., WCAG contrast failures).
+
+**Quick start:**
+```bash
+node scripts/check-receipts.mjs extension/test-fixtures/*.tsx
+```
+
+**Wire into your CI:** See [CI.md](./CI.md) for GitHub Actions, GitLab, CircleCI, and pre-commit hook examples.
+
+**Configure team policy:** Create `.bluepainter.json` in your repo root (see [CI.md](./CI.md#configuration)).
+
+## Extension (VS Code)
+
+The VS Code extension brings BluePainter's canvas editor and Designer's Receipts directly into your editor.
+
+### Development
+```bash
+cd extension && npm install
+# Test in VS Code: press F5 to launch Extension Development Host
+```
+
+### Package for distribution
+```bash
+cd extension && npm run package
+# Creates: extension/bluepainter-0.2.0.vsix
+```
+
+### Install locally
+```bash
+code --install-extension extension/bluepainter-0.2.0.vsix
+```
+
+**Marketplace checklist:** See [extension/MARKETPLACE.md](./extension/MARKETPLACE.md)
 
 ## Key features (demo)
 
@@ -105,6 +222,16 @@ Then **F5** in VS Code (launch config **BluePainter Extension**), or build and i
 
 Try `extension/test-fixtures/PricingCard.tsx` — edit on canvas, changes write back to the file.
 
+## Figma import
+
+Pull frames from Figma → canvas → export as React. One-way only (no sync back to Figma).
+
+- **URL import:** Requires Figma personal access token + `/api/figma-import` (works on live demo, or `npx vercel dev` locally)
+- **JSON paste:** Offline fallback — paste Figma REST API JSON
+- **Optional:** Set `FIGMA_TOKEN` environment variable on API host to skip token entry in UI (recommended for team deployments)
+
+See [FIGMA_IMPORT.md](./FIGMA_IMPORT.md) for supported node types, limitations, and usage.
+
 ## Prototype limitations
 
 - Browser demo sync uses AST-first with regex fallback; Recast parse can fail on some JSX in Node (extension uses Babel generator fallback)
@@ -112,5 +239,7 @@ Try `extension/test-fixtures/PricingCard.tsx` — edit on canvas, changes write 
 - The workspace, learning loop and feedback are kept in `localStorage` (feedback is also posted to `/api/feedback` when the API is running)
 - Deploy / Figma / OpenAI tokens stay in the browser: this tab only by default, or `localStorage` when **Remember on this device** is ticked
 - In an exported app, a component placed twice on a page repeats its element ids
+- Learning loop uses localStorage by default; optional team backend available (see [docs/AUDIT_BACKEND.md](./docs/AUDIT_BACKEND.md))
+- Figma import is one-way (no bidirectional sync)
 
 See [SPEC.md](./SPEC.md) for v1 scope and kill criteria.

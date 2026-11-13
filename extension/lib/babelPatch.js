@@ -12,7 +12,7 @@ const {
   setJsxText,
   upsertStyleAttribute,
   upsertStringAttribute
-} = require('./astSyncEngine');
+} = require('@bluepainter/shared/astSyncEngine');
 
 const traverse = traverseModule.default || traverseModule;
 const generate = generateModule.default || generateModule;

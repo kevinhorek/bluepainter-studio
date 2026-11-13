@@ -3,8 +3,8 @@
  * Run: npm run test:features
  */
 import assert from 'assert';
+import { createRequire } from 'module';
 import { generateTSX, parseTSX } from '../src/utils/syncEngine.js';
-import { parseTSXWithAST, patchTSXWithAST } from '../src/utils/astSyncEngine.js';
 import {
   getFreshPricingNodes,
   getFreshHeroNodes,
@@ -12,7 +12,6 @@ import {
   applyBrokenDesignScenario,
   applyFixedDesignScenario
 } from '../src/utils/demoScenarios.js';
-import { evaluateReceipts, applyReceiptFix } from '../src/utils/receiptPolicy.js';
 import { DEFAULT_RECEIPT_POLICY } from '../src/data/defaultReceiptPolicy.js';
 import { applyAIUpdates, getFirstUpdateTarget, buildAIContext } from '../src/utils/aiApply.js';
 import { createNodeFromTool, canDropIntoNode, isLeafNode } from '../src/utils/nodeFactory.js';
@@ -26,6 +25,10 @@ import { buildSessionScorecard } from '../src/utils/sessionScorecard.js';
 import { getLearningSummary, logLearningEvent, clearLearningEvents } from '../src/utils/learningLoop.js';
 import { importTSXFile } from '../src/utils/syncEngine.js';
 import { createHistory, historyReducer, loadWorkspace, saveWorkspace, clearWorkspace } from '../src/utils/workspaceStore.js';
+
+const require = createRequire(import.meta.url);
+const { parseTSXWithAST, patchTSXWithAST } = require('@bluepainter/shared/astSyncEngine');
+const { evaluateReceipts, applyReceiptFix } = require('@bluepainter/shared/receiptPolicy');
 
 if (typeof globalThis.localStorage === 'undefined') {
   const store = new Map();
@@ -169,8 +172,8 @@ test('buildProjectFileMap', () => {
 
 test('learning loop + scorecard', () => {
   clearLearningEvents();
-  logLearningEvent('round_trip_canvas', { file: 'pricing' });
-  logLearningEvent('fix_applied', { ruleId: 'contrast' });
+  logLearningEvent('canvas_to_code_sync', { file: 'pricing' });
+  logLearningEvent('receipt_fix_applied', { data: { ruleId: 'contrast' } });
   const summary = getLearningSummary();
   assert.equal(summary.roundTripsCanvas, 1);
   assert.equal(summary.fixesApplied, 1);
@@ -476,7 +479,7 @@ test('receipts work on arbitrary components (no demo ids)', () => {
   for (const selected of ['wrap', 'h', 'i3', 'go']) {
     const { rules } = evaluateReceipts(nodes, nodes[selected], DEFAULT_RECEIPT_POLICY);
     const failing = rules.filter((r) => !r.valid).map((r) => r.id).sort();
-    assert.deepStrictEqual(failing, ['contrast', 'copy', 'features', 'radius', 'spacing'], `selected ${selected}: ${failing}`);
+    assert.deepStrictEqual(failing, ['brand-color', 'contrast', 'copy', 'features', 'radius', 'spacing'], `selected ${selected}: ${failing}`);
     rules.filter((r) => !r.valid).forEach((r) => assert.ok(nodes[r.fixMeta.nodeId], `${r.id} fix has no target`));
   }
   // fixes land on the right nodes
@@ -555,7 +558,7 @@ test('open a real TSX file: ids added, logic preserved, edits patch in place', (
   const h1 = Object.values(file.nodes).find((n) => n.tag === 'h1');
   assert.strictEqual(h1.text, 'Welcome back');
   const p = Object.values(file.nodes).find((n) => n.tag === 'p');
-  assert.strictEqual(p.placeholder, '{title}', 'dynamic content gets a stand-in');
+  assert.strictEqual(p.dynamicSource, '{title}', 'dynamic content gets a stand-in');
   assert.strictEqual(generateTSX(file.rootId, file.nodes, file.code), file.code, 'opening must not rewrite the file');
 
   const edited = { ...file.nodes, [h1.id]: { ...h1, text: 'Hello again', style: { fontSize: 40 } } };

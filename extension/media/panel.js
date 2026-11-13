@@ -11,7 +11,10 @@
     syncableCount: 0,
     parseError: false,
     source: '',
-    mode: 'sidebar'
+    mode: 'sidebar',
+    suggestions: [],
+    appliedSuggestions: new Set(),
+    showFirstRunTip: false
   };
 
   const els = {
@@ -24,7 +27,9 @@
     inspectorEmpty: document.getElementById('bp-inspector-empty'),
     receipts: document.getElementById('bp-receipts'),
     scores: document.getElementById('bp-scores'),
-    status: document.getElementById('bp-status')
+    status: document.getElementById('bp-status'),
+    firstRunTip: document.getElementById('bp-first-run-tip'),
+    tipDismiss: document.getElementById('bp-tip-dismiss')
   };
 
   const TEXT_TYPES = ['text', 'button', 'list-item'];
@@ -89,9 +94,11 @@
     const ids = Object.keys(state.nodesMap || {});
     if (!state.rootNodeId || !ids.length) {
       els.canvasEmpty.hidden = false;
+      els.canvasEmpty.style.display = 'block';
       return;
     }
     els.canvasEmpty.hidden = true;
+    els.canvasEmpty.style.display = 'none';
     const rootEl = renderNode(state.rootNodeId);
     if (rootEl) els.canvas.appendChild(rootEl);
   }
@@ -107,8 +114,74 @@
       </div>`;
   }
 
+  function renderSuggestions() {
+    const container = document.getElementById('bp-suggestions');
+    if (!container) {
+      const suggestionsEl = document.createElement('div');
+      suggestionsEl.id = 'bp-suggestions';
+      suggestionsEl.className = 'bp-suggestions';
+      els.receipts.parentElement.insertBefore(suggestionsEl, els.receipts);
+    }
+
+    const suggestionsContainer = document.getElementById('bp-suggestions');
+    const suggestions = (state.suggestions || []).slice(0, 3);
+    
+    if (!suggestions.length) {
+      suggestionsContainer.innerHTML = '';
+      return;
+    }
+
+    suggestionsContainer.innerHTML = `
+      <div class="bp-suggestions-header">
+        <span style="font-size: 1rem;">💡</span>
+        <strong>Learning Suggestions</strong>
+      </div>
+      <div class="bp-suggestions-list">
+        ${suggestions.map((suggestion) => {
+          const key = `${suggestion.type}-${suggestion.ruleId || suggestion.fixKey}`;
+          const isApplied = state.appliedSuggestions.has(key);
+          const icon = isApplied ? '✓' : (suggestion.type === 'downgrade_rule' ? '📉' : '⚡');
+          
+          return `
+            <div class="bp-suggestion-card ${isApplied ? 'applied' : ''}">
+              <div class="bp-suggestion-icon">${icon}</div>
+              <div class="bp-suggestion-content">
+                <div class="bp-suggestion-reason">${escapeHtml(suggestion.reason)}</div>
+                <div class="bp-suggestion-action">${escapeHtml(suggestion.action)}</div>
+                ${suggestion.type === 'downgrade_rule' ? `<div class="bp-suggestion-meta">Rule: <code>${escapeHtml(suggestion.ruleId)}</code></div>` : ''}
+                ${suggestion.type === 'prefer_quick_fix' ? `<div class="bp-suggestion-meta">Fix: <code>${escapeHtml(suggestion.fixKey)}</code></div>` : ''}
+                ${!isApplied ? `<button class="bp-btn small" data-apply-suggestion='${escapeAttr(JSON.stringify(suggestion))}'>Apply</button>` : '<div class="bp-suggestion-applied">Applied</div>'}
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+
+    suggestionsContainer.querySelectorAll('[data-apply-suggestion]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const suggestion = JSON.parse(btn.dataset.applySuggestion);
+        const confirmMessage = suggestion.type === 'downgrade_rule'
+          ? `Hide rule "${suggestion.ruleId}" from receipts? This will update your policy.`
+          : `Remember to prefer quick-fix for "${suggestion.fixKey}"? This will make the fix more prominent.`;
+        
+        if (confirm(confirmMessage)) {
+          const key = `${suggestion.type}-${suggestion.ruleId || suggestion.fixKey}`;
+          state.appliedSuggestions.add(key);
+          vscode.postMessage({
+            type: 'applySuggestion',
+            suggestion
+          });
+          renderSuggestions();
+        }
+      });
+    });
+  }
+
   function renderReceipts() {
     renderScores();
+    renderSuggestions();
+    
     if (!state.rules.length) {
       els.receipts.innerHTML = '<p class="bp-empty">Select a node with policy rules to see receipts.</p>';
       return;
@@ -121,7 +194,12 @@
           <span class="bp-receipt-tag">${escapeHtml(rule.tag || '')}</span>
         </div>
         <p class="bp-receipt-desc">${escapeHtml(rule.desc || '')}</p>
-        ${!rule.valid && rule.fixLabel ? `<button class="bp-btn small" data-fix-key="${escapeHtml(rule.fixKey)}" data-fix-meta='${escapeAttr(JSON.stringify(rule.fixMeta || {}))}'>${escapeHtml(rule.fixLabel)}</button>` : ''}
+        ${!rule.valid ? `
+          <div class="bp-receipt-actions">
+            ${rule.fixLabel ? `<button class="bp-btn small" data-fix-key="${escapeHtml(rule.fixKey)}" data-fix-meta='${escapeAttr(JSON.stringify(rule.fixMeta || {}))}'>${escapeHtml(rule.fixLabel)}</button>` : ''}
+            <button class="bp-btn small secondary" data-dismiss-rule="${escapeHtml(rule.id)}" data-node-id="${escapeHtml(state.selectedNodeId || '')}">Dismiss</button>
+          </div>
+        ` : ''}
       </div>
     `).join('');
 
@@ -131,6 +209,16 @@
           type: 'applyFix',
           fixKey: btn.dataset.fixKey,
           fixMeta: JSON.parse(btn.dataset.fixMeta || '{}')
+        });
+      });
+    });
+
+    els.receipts.querySelectorAll('[data-dismiss-rule]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        vscode.postMessage({
+          type: 'dismissReceipt',
+          ruleId: btn.dataset.dismissRule,
+          nodeId: btn.dataset.nodeId
         });
       });
     });
@@ -216,6 +304,11 @@
       : `${state.syncableCount} syncable id${state.syncableCount === 1 ? '' : 's'}`;
     els.source.textContent = state.source ? `Source: ${state.source}` : '';
     els.status.textContent = state.status || '';
+    
+    if (els.firstRunTip) {
+      els.firstRunTip.hidden = !state.showFirstRunTip;
+    }
+    
     renderCanvas();
     renderInspector();
     renderReceipts();
@@ -236,6 +329,49 @@
   document.getElementById('bp-open-demo-btn').addEventListener('click', () => {
     vscode.postMessage({ type: 'openDemo' });
   });
+
+  document.getElementById('bp-open-settings-btn').addEventListener('click', () => {
+    vscode.postMessage({ type: 'openSettings' });
+  });
+
+  document.getElementById('bp-open-config-btn').addEventListener('click', () => {
+    vscode.postMessage({ type: 'openConfigFile' });
+  });
+
+  if (els.tipDismiss) {
+    els.tipDismiss.addEventListener('click', () => {
+      vscode.postMessage({ type: 'dismissFirstRunTip' });
+    });
+  }
+
+  const pilotGuideBtn = document.getElementById('bp-open-pilot-guide');
+  if (pilotGuideBtn) {
+    pilotGuideBtn.addEventListener('click', () => {
+      vscode.postMessage({ type: 'openPilotGuide' });
+    });
+  }
+
+  const configFromTipBtn = document.getElementById('bp-open-config-from-tip');
+  if (configFromTipBtn) {
+    configFromTipBtn.addEventListener('click', () => {
+      vscode.postMessage({ type: 'openConfigFile' });
+    });
+  }
+
+  const pickComponentBtn = document.getElementById('bp-pick-component-btn');
+  if (pickComponentBtn) {
+    pickComponentBtn.addEventListener('click', () => {
+      vscode.postMessage({ type: 'pickComponent' });
+    });
+  }
+
+  const emptyPilotLink = document.getElementById('bp-empty-pilot-link');
+  if (emptyPilotLink) {
+    emptyPilotLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      vscode.postMessage({ type: 'openPilotGuide' });
+    });
+  }
 
   window.addEventListener('message', (event) => {
     const msg = event.data;

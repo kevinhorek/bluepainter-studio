@@ -46,34 +46,37 @@ export const WORKSPACE_FILES = {
   },
   // A TSX file the user opened from disk. Its label / root id / component name
   // come from the file (see registerCustomFile); hidden until something is opened.
-  custom: {
-    id: 'custom',
-    label: 'Imported.tsx',
-    rootId: 'imported-root',
-    componentName: 'Imported',
+  'real-file': {
+    id: 'real-file',
+    label: 'RealFile.tsx',
+    rootId: 'real-file-root',
+    componentName: 'RealFile',
     isPage: false,
-    defaultSelection: 'imported-root',
+    defaultSelection: 'real-file-root',
+    isRealFile: true,
     isUserFile: true,
     hidden: true
   }
 };
 
-/** Point the `custom` slot at an opened file. */
+export const USER_FILE_ID = 'real-file';
+
+/** Point the `real-file` slot at an opened file. */
 export function registerCustomFile({ label, rootId, componentName }) {
-  const file = WORKSPACE_FILES.custom;
-  file.label = label || 'Imported.tsx';
+  const file = WORKSPACE_FILES[USER_FILE_ID];
+  file.label = label || 'RealFile.tsx';
   file.rootId = rootId;
   file.defaultSelection = rootId;
-  file.componentName = componentName || 'Imported';
+  file.componentName = componentName || 'RealFile';
   file.hidden = false;
 }
 
 export function getCustomFileMeta() {
-  const { label, rootId, componentName, hidden } = WORKSPACE_FILES.custom;
+  const { label, rootId, componentName, hidden } = WORKSPACE_FILES[USER_FILE_ID];
   return hidden ? null : { label, rootId, componentName };
 }
 
-export const FILE_ORDER = ['dashboard', 'marketing', 'figma', 'pricing', 'hero', 'custom'];
+export const FILE_ORDER = ['dashboard', 'marketing', 'figma', 'pricing', 'hero', 'real-file'];
 
 /** Files included in app export (excludes marketing meta-page). */
 export const APP_EXPORT_FILE_IDS = ['dashboard', 'pricing', 'hero'];

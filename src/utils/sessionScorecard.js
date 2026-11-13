@@ -63,7 +63,10 @@ export function buildSessionScorecard() {
       fixesApplied: learning.fixesApplied,
       rulesDismissed: learning.rulesDismissed,
       engaged: receiptsEngaged,
-      policyConfigured
+      policyConfigured,
+      fixDismissRatio: learning.fixesApplied + learning.rulesDismissed > 0 
+        ? (learning.fixesApplied / (learning.fixesApplied + learning.rulesDismissed)) 
+        : 0
     },
     learning,
     recommendation,

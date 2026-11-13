@@ -101,11 +101,12 @@ check('initialize reports name and package.json version', async () => {
   notify('notifications/initialized');
 });
 
-check('tools/list returns the six tools with input schemas', async () => {
+check('tools/list returns the seven tools with input schemas', async () => {
   const res = await request('tools/list', {});
   const names = res.result.tools.map((t) => t.name).sort();
   assert.deepStrictEqual(names, [
     'bluepainter_analyze_tsx',
+    'bluepainter_estimate_roi',
     'bluepainter_figma_import',
     'bluepainter_get_knowledge',
     'bluepainter_open_demo',

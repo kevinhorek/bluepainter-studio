@@ -10,7 +10,7 @@ const {
   readObjectExpression,
   readStringAttribute,
   readJsxText
-} = require('./astSyncEngine');
+} = require('@bluepainter/shared/astSyncEngine');
 const { parseTSX } = require('./syncEngine');
 
 const traverse = traverseModule.default || traverseModule;

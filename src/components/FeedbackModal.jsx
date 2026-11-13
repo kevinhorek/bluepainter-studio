@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { submitFeedback } from '../utils/feedbackStorage';
+import { submitFeedback, buildCurrentSessionMetrics } from '../utils/feedbackStorage';
 
 export default function FeedbackModal({ isOpen, onClose }) {
   const [interest, setInterest] = useState('');
@@ -14,12 +14,15 @@ export default function FeedbackModal({ isOpen, onClose }) {
     e.preventDefault();
     if (!interest) return;
 
+    const sessionMetrics = buildCurrentSessionMetrics();
+    
     const entry = {
       interest,
       pilot,
       role,
       comment,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      sessionMetrics
     };
 
     submitFeedback(entry);
@@ -38,11 +41,19 @@ export default function FeedbackModal({ isOpen, onClose }) {
   return (
     <div className="feedback-modal-overlay" onClick={handleClose}>
       <div className="feedback-modal" onClick={(e) => e.stopPropagation()}>
+        <button type="button" className="feedback-modal-close" onClick={handleClose} aria-label="Close">×</button>
         {submitted ? (
           <>
             <div className="feedback-modal-icon">✓</div>
             <h2>Thanks for your feedback!</h2>
-            <p>Your response helps us decide whether to build out BluePainter fully.</p>
+            <p>Your response has been saved locally and helps us decide whether to build BluePainter for real.</p>
+            <p className="feedback-export-note">
+              <strong>Note:</strong> Feedback is stored locally in your browser. No data is sent to external servers. 
+            </p>
+            <p className="feedback-export-note" style={{ marginTop: '8px', fontSize: '0.8rem' }}>
+              Demo facilitators can access <strong>··· → Session scorecard</strong> (with <code style={{ background: '#f1f5f9', padding: '2px 4px', borderRadius: '3px' }}>?facilitator=1</code>) 
+              to export all responses as JSON for go/no-go decisions.
+            </p>
             <button type="button" className="feedback-submit-btn" onClick={handleClose}>
               Close
             </button>
@@ -51,7 +62,7 @@ export default function FeedbackModal({ isOpen, onClose }) {
           <>
             <h2>Would you use BluePainter?</h2>
             <p className="feedback-subtitle">
-              We're validating this concept. Your honest take matters — this takes 30 seconds.
+              We're validating this concept. Your honest feedback matters — this takes 30 seconds.
             </p>
 
             <form onSubmit={handleSubmit}>

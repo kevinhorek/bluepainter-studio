@@ -171,6 +171,32 @@ function isLocalhost(base) {
   }
 }
 
+// Mirror of site estimateReviewRoi so the free tool doubles as an agent action.
+function estimateReviewRoi(args) {
+  const componentsPerMonth = Math.max(0, parseFloat(args.componentsPerMonth) || 0);
+  const reviewMinutes = Math.max(0, parseFloat(args.reviewMinutes) || 0);
+  const hourlyRate = Math.max(0, parseFloat(args.hourlyRate) || 0);
+  const savingsFactor = 0.6;
+  const minutesSavedMonthly = componentsPerMonth * reviewMinutes * savingsFactor;
+  const hoursSavedMonthly = Math.round((minutesSavedMonthly / 60) * 10) / 10;
+  const monthlySavings = Math.round(hoursSavedMonthly * hourlyRate);
+  const annualSavings = monthlySavings * 12;
+  return {
+    estimate: annualSavings,
+    unit: 'USD/year',
+    monthlySavings,
+    hoursSavedMonthly,
+    explanation:
+      `Assumes BluePainter removes ~${Math.round(savingsFactor * 100)}% of manual design-review and rework time by catching contrast, spacing, CTA, and clutter issues in-editor and keeping canvas and TSX in sync before merge.`,
+    assumptions: [
+      `${componentsPerMonth} components/PRs reviewed per month`,
+      `${reviewMinutes} min manual review + rework per component today`,
+      `$${hourlyRate}/hr blended cost`,
+      `${Math.round(savingsFactor * 100)}% of that time removed`
+    ]
+  };
+}
+
 function loadKnowledge() {
   try {
     const jsonPath = join(__dirname, 'knowledge.json');
@@ -215,6 +241,19 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           ctaText: { type: 'string' },
           padding: { type: 'number' }
         }
+      }
+    },
+    {
+      name: 'bluepainter_estimate_roi',
+      description: 'Estimate yearly time/cost saved by catching design issues in-editor before merge.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          componentsPerMonth: { type: 'number', description: 'Components/PRs reviewed per month' },
+          reviewMinutes: { type: 'number', description: 'Manual design review + rework minutes per component today' },
+          hourlyRate: { type: 'number', description: 'Blended hourly cost in USD' }
+        },
+        required: ['componentsPerMonth', 'reviewMinutes', 'hourlyRate']
       }
     },
     {
@@ -285,6 +324,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   if (name === 'bluepainter_receipts_evaluate') {
     return { content: [{ type: 'text', text: JSON.stringify(evaluateReceiptsFromArgs(args), null, 2) }] };
+  }
+
+  if (name === 'bluepainter_estimate_roi') {
+    return { content: [{ type: 'text', text: JSON.stringify(estimateReviewRoi(args), null, 2) }] };
   }
 
   if (name === 'bluepainter_get_knowledge') {

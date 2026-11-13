@@ -1,13 +1,15 @@
 import { useState, useEffect, useCallback, useMemo, useReducer, useRef } from 'react';
-import { generateTSX, parseTSX, importTSXFile } from './utils/syncEngine';
+import { generateTSX, parseTSX, importTSXFile, getASTMeta } from './utils/syncEngine';
 import { createHistory, historyReducer, loadWorkspace, saveWorkspace, clearWorkspace, getFreshNodesByFile } from './utils/workspaceStore';
-import { registerCustomFile } from './data/workspaceFiles';
+import { registerCustomFile, USER_FILE_ID } from './data/workspaceFiles';
+import { exportComponentTSX } from './utils/componentExport';
+import { batchExportComponents } from './utils/batchComponentExport';
 import { applyBrokenDesignScenario, applyFixedDesignScenario } from './utils/demoScenarios';
 import { captureCanvasPageFrame } from './utils/canvasCapture';
 import { getWorkspaceFile } from './data/workspaceFiles';
-import { downloadValidationExport, getFeedbackSummary } from './utils/validationExport';
-import { loadReceiptPolicy, saveReceiptPolicy } from './data/defaultReceiptPolicy';
-import { logLearningEvent, getLearningSummary } from './utils/learningLoop';
+import { downloadValidationExport, downloadLearningLoopExport, downloadPilotPackExport, getFeedbackSummary } from './utils/validationExport';
+import { loadReceiptPolicy, saveReceiptPolicy, loadLearningConfig, saveLearningConfig } from './data/defaultReceiptPolicy';
+import { LearningLoop, getLearningSummary } from './utils/learningLoop';
 import { runPresenterSequence } from './utils/presenterMode';
 import { isFacilitatorMode } from './utils/facilitatorMode';
 import VSCodeShell from './components/Shells/VSCodeShell';
@@ -16,25 +18,38 @@ import FigmaShell from './components/Shells/FigmaShell';
 import ResponsiveShell from './components/Shells/ResponsiveShell';
 import ValidationScriptModal from './components/ValidationScriptModal';
 import ValidationScorecardModal from './components/ValidationScorecardModal';
+import SessionChecklistModal from './components/SessionChecklistModal';
 import WelcomeModal from './components/WelcomeModal';
 import { hasSeenWelcome, markWelcomeSeen } from './utils/welcomeStorage';
 import AppToast from './components/AppToast';
 import { copyDemoLink, DEMO_URL } from './utils/shareDemo';
 import AboutPanel from './components/AboutPanel';
 import MarketingSite from './components/MarketingPage';
+import PricingPage from './components/PricingPage';
 import WorkspaceHeader from './components/WorkspaceHeader';
 import DemoTour from './components/DemoTour';
 import FeedbackModal from './components/FeedbackModal';
 import DemoScriptModal from './components/DemoScriptModal';
 import PresenterToast from './components/PresenterToast';
 import SpecModal from './components/SpecModal';
+import ConflictDialog from './components/ConflictDialog';
 import ExportDeployModal from './components/ExportDeployModal';
 import MarketingKitModal from './components/MarketingKitModal';
 import FigmaImportModal from './components/FigmaImportModal';
+import FacilitatorDashboard from './components/FacilitatorDashboard';
 import AIGeneratePanel from './components/AIGeneratePanel';
+import RealFileLoader from './components/RealFileLoader';
+import RestoreBackupModal from './components/RestoreBackupModal';
+import ExportConfirmationModal from './components/ExportConfirmationModal';
+import GitContextModal from './components/GitContextModal';
 import { createNodeFromTool, canDropIntoNode } from './utils/nodeFactory';
 import { getToolByShortcut, isPlacableTool } from './data/canvasTools';
 import { applyAIUpdates, getFirstUpdateTarget } from './utils/aiApply';
+import { createBackup, AUTO_SAVE_INTERVAL_MS } from './utils/autoSaveBackup';
+import AuthModal from './lib/auth/AuthModal';
+import ProjectPicker from './components/ProjectPicker';
+import { useAuth } from './lib/auth/AuthContext';
+import { updateProjectState } from './lib/projects/projectsApi';
 
 const VALID_PHASES = ['landing', 'phase1', 'phase2', 'phase3', 'phase4'];
 const TOUR_SEEN_KEY = 'bluepainter-tour-seen';
@@ -66,8 +81,10 @@ function safeStorageSet(key, value) {
 
 function parseHash() {
   const hash = window.location.hash.replace(/^#\/?/, '');
-  if (!hash || hash === 'app' || hash === 'studio') return { phase: 'phase1', startTour: false };
+  if (!hash) return { phase: 'landing', startTour: false };
+  if (hash === 'app' || hash === 'studio') return { phase: 'phase1', startTour: false };
   if (hash === 'home' || hash === 'landing') return { phase: 'landing', startTour: false };
+  if (hash === 'pricing') return { phase: 'pricing', startTour: false };
   if (hash === 'about') return { phase: 'phase1', startTour: false, openAbout: true };
   if (hash === 'demo') {
     return { phase: 'phase1', startTour: facilitator };
@@ -87,14 +104,26 @@ function phaseToHash(phase, tourActive) {
 }
 
 export default function App() {
+  const { user, loading: authLoading, enabled: authEnabled } = useAuth();
+  
   const initialRoute = parseHash();
   const [phase, setPhase] = useState(() => {
     const route = initialRoute.phase === 'landing' ? 'landing' : initialRoute.phase;
     return route;
   });
+  
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [projectPickerOpen, setProjectPickerOpen] = useState(false);
+  const [currentProject, setCurrentProject] = useState(null);
+  
+  // Learning loop instance for comprehensive logging (SPEC §3)
+  const learningLoop = useMemo(() => new LearningLoop(), []);
+  
   const [aboutOpen, setAboutOpen] = useState(Boolean(initialRoute.openAbout));
   const [validationScriptOpen, setValidationScriptOpen] = useState(false);
   const [scorecardOpen, setScorecardOpen] = useState(false);
+  const [sessionChecklistOpen, setSessionChecklistOpen] = useState(false);
+  const [facilitatorDashboardOpen, setFacilitatorDashboardOpen] = useState(false);
   const [exportDeployOpen, setExportDeployOpen] = useState(false);
   const [marketingKitOpen, setMarketingKitOpen] = useState(false);
   const [marketingActiveFieldId, setMarketingActiveFieldId] = useState(null);
@@ -105,7 +134,12 @@ export default function App() {
   const [figmaImportOpen, setFigmaImportOpen] = useState(false);
   // Restored once from localStorage (or fresh demo files on first visit).
   const [initialWorkspace] = useState(loadWorkspace);
+  const [realFileLoaderOpen, setRealFileLoaderOpen] = useState(false);
+  const [restoreBackupOpen, setRestoreBackupOpen] = useState(false);
+  const [exportConfirmOpen, setExportConfirmOpen] = useState(false);
+  const [exportConfirmResult, setExportConfirmResult] = useState(null);
   const [fileViewports, setFileViewports] = useState(initialWorkspace.fileViewports);
+  const [activeViewportMode, setActiveViewportMode] = useState(() => safeStorageGet('bluepainter-viewport-mode') || 'desktop');
   const [welcomeOpen, setWelcomeOpen] = useState(() => !hasSeenWelcome());
   const [toast, setToast] = useState(null);
   const [activeFile, setActiveFile] = useState(initialWorkspace.activeFile);
@@ -124,6 +158,9 @@ export default function App() {
   // What the user last typed in the code editor, per file, with the node map it
   // parsed to. Canvas edits are patched onto this so formatting/comments survive.
   const [codeBaseByFile, setCodeBaseByFile] = useState(initialWorkspace.codeBaseByFile);
+  // Canvas edit held back because the code panel has text the canvas can't read (CONFLICT_MODEL.md).
+  const [conflictDialogOpen, setConflictDialogOpen] = useState(false);
+  const [pendingCanvasUpdate, setPendingCanvasUpdate] = useState(null);
 
   const [tourActive, setTourActive] = useState(initialRoute.startTour);
   const [tourStep, setTourStep] = useState(0);
@@ -131,10 +168,12 @@ export default function App() {
   const [feedbackPromptShown, setFeedbackPromptShown] = useState(false);
   const [scriptOpen, setScriptOpen] = useState(false);
   const [specOpen, setSpecOpen] = useState(false);
+  const [gitContextModalOpen, setGitContextModalOpen] = useState(false);
   const [presenterMessage, setPresenterMessage] = useState(null);
   const [presenterRunning, setPresenterRunning] = useState(false);
   const [feedbackCount, setFeedbackCount] = useState(() => getFeedbackSummary().total);
   const [receiptPolicy, setReceiptPolicy] = useState(() => loadReceiptPolicy());
+  const [learningConfig, setLearningConfig] = useState(() => loadLearningConfig());
   const [dismissedRules, setDismissedRules] = useState(() => new Set());
   const [learningSummary, setLearningSummary] = useState(() => getLearningSummary());
   const presenterCancelRef = useRef(null);
@@ -142,6 +181,7 @@ export default function App() {
   const toastTimerRef = useRef(null);
   const lastLearningRef = useRef({ key: '', at: 0 });
   const deleteNodeRef = useRef(null);
+  const backupStateRef = useRef(null);
 
   const refreshLearningSummary = () => setLearningSummary(getLearningSummary());
 
@@ -163,13 +203,14 @@ export default function App() {
   }, [activeRootId, activeNodesMap, activeCodeBase]);
 
   // A restored/opened file that styles with classes needs the Tailwind preview CSS.
-  const customUsesClasses = useMemo(
-    () => Object.values(nodesByFile.custom || {}).some((n) => typeof n?.className === 'string' && n.className.trim()),
-    [nodesByFile.custom]
+  const userFileNodes = nodesByFile[USER_FILE_ID];
+  const userFileUsesClasses = useMemo(
+    () => Object.values(userFileNodes || {}).some((n) => typeof n?.className === 'string' && n.className.trim()),
+    [userFileNodes]
   );
   useEffect(() => {
-    if (activeFile === 'custom' && customUsesClasses) enableTailwindPreview();
-  }, [activeFile, customUsesClasses]);
+    if (activeFile === USER_FILE_ID && userFileUsesClasses) enableTailwindPreview();
+  }, [activeFile, userFileUsesClasses]);
 
   // Autosave (debounced) so a refresh or crash never loses work.
   useEffect(() => {
@@ -197,6 +238,11 @@ export default function App() {
     setSelectedNodeId(getWorkspaceFile(file).defaultSelection);
   }, []);
 
+  const handleViewportChange = useCallback((viewportId) => {
+    setActiveViewportMode(viewportId);
+    safeStorageSet('bluepainter-viewport-mode', viewportId);
+  }, []);
+
   const notify = useCallback((message) => {
     setToast(message);
     // Restart the timer so an older toast's timeout can't dismiss a newer one early.
@@ -210,7 +256,7 @@ export default function App() {
    * Log a sync event at most once per burst. Dragging, resizing and typing fire
    * dozens of updates a second; logging each one rewrote localStorage every frame.
    */
-  const logLearningOnce = useCallback((type, key, payload) => {
+  const logLearningOnce = useCallback((type, key, logEvent) => {
     const now = Date.now();
     const last = lastLearningRef.current;
     const burstKey = `${type}:${key}`;
@@ -219,7 +265,7 @@ export default function App() {
       return;
     }
     lastLearningRef.current = { key: burstKey, at: now };
-    logLearningEvent(type, payload);
+    logEvent();
     setLearningSummary(getLearningSummary());
   }, []);
 
@@ -291,9 +337,47 @@ export default function App() {
     setActiveFile(targetFile);
     setSelectedNodeId(selectionId);
     setFocusedPanel('canvas');
-    logLearningEvent('figma_import', { targetFile, nodeCount, frameName });
+    learningLoop.log('figma_import', { targetFile, nodeCount, frameName });
     notify(`Imported "${frameName || 'frame'}" — ${nodeCount} layers`);
-  }, [notify, setNodesByFile]);
+  }, [learningLoop, notify, setNodesByFile]);
+
+  // Put a user's file (already parsed to layers) in the `real-file` slot and show it.
+  const showUserFile = useCallback(({ fileName, code: fileCode, nodes, rootId, componentName }) => {
+    registerCustomFile({ label: fileName, rootId, componentName });
+    setNodesByFile((prev) => ({ ...prev, [USER_FILE_ID]: nodes }));
+    setCodeBaseByFile((prev) => ({ ...prev, [USER_FILE_ID]: { code: fileCode, nodes } }));
+    setActiveFile(USER_FILE_ID);
+    setSelectedNodeId(rootId);
+    setFocusedPanel('canvas');
+    if (/\bclassName=/.test(fileCode)) enableTailwindPreview();
+  }, [setNodesByFile]);
+
+  const handleRealFileLoaded = useCallback(({ fileName, code: fileCode, nodes, rootId, componentName, addedIds }) => {
+    showUserFile({ fileName, code: fileCode, nodes, rootId, componentName });
+    const nodeCount = Object.keys(nodes).length;
+    learningLoop.log('real_file_loaded', { fileName, nodeCount });
+    notify(addedIds
+      ? `Loaded "${fileName}" — ${nodeCount} layers (added ${addedIds} id attribute${addedIds === 1 ? '' : 's'} so they are editable)`
+      : `Loaded "${fileName}" — ${nodeCount} layers`);
+  }, [learningLoop, notify, showUserFile]);
+
+  const handleRestoreBackup = useCallback((backup) => {
+    if (!backup) return;
+    let restored = { code: backup.code, nodes: backup.nodes, rootId: backup.rootId, componentName: backup.componentName };
+    try {
+      // Rebuild the layers from the saved code so older backups get the full tree.
+      restored = importTSXFile(backup.code, backup.fileName);
+    } catch {
+      // fall back to the layer map stored with the backup
+    }
+    if (!restored.nodes || !restored.nodes[restored.rootId]) {
+      notify(`Could not restore "${backup.fileName}" — the backup has no readable layers`);
+      return;
+    }
+    showUserFile({ fileName: backup.fileName, ...restored });
+    learningLoop.log('backup_restored', { fileName: backup.fileName, backupId: backup.id });
+    notify(`Restored "${backup.fileName}" from backup`);
+  }, [learningLoop, notify, showUserFile]);
 
   const handleApplyAI = useCallback(({ type, updates, message, source }) => {
     const { nodesByFile: next, applied } = applyAIUpdates(nodesByFile, updates, type);
@@ -304,9 +388,9 @@ export default function App() {
       setSelectedNodeId(target.nodeId);
       setFocusedPanel('canvas');
     }
-    logLearningEvent('ai_generate_applied', { type, applied, source });
+    learningLoop.log('ai_generate_applied', { type, applied, source });
     notify(message || `Applied ${applied} updates to canvas`);
-  }, [nodesByFile, notify, setNodesByFile]);
+  }, [learningLoop, nodesByFile, notify, setNodesByFile]);
 
   const handleCaptureDashboardScreenshot = useCallback(async () => {
     if (activeFile !== 'dashboard') {
@@ -334,7 +418,7 @@ export default function App() {
 
   useEffect(() => {
     if (!window.location.hash || window.location.hash === '#/' || window.location.hash === '#') {
-      window.location.hash = '#/app';
+      window.location.hash = '#/home';
     }
   }, []);
 
@@ -397,6 +481,70 @@ export default function App() {
     };
   }, [activeCanvasTool, selectedNodeId, activeRootId]);
 
+  const handleExportLearningLoop = useCallback(() => {
+    const result = downloadLearningLoopExport(learningLoop);
+    if (result.success) {
+      if (result.isEmpty) {
+        notify('⚠️ Learning loop exported — no events yet. Interact with receipts to log events.');
+      } else {
+        notify(`✓ Learning loop exported — ${result.eventCount} event(s)`);
+      }
+    } else {
+      notify(`❌ Export failed: ${result.error}`);
+    }
+  }, [learningLoop, notify]);
+
+  const handleExportPilotPack = useCallback(() => {
+    const result = downloadPilotPackExport();
+    if (result.success) {
+      if (result.isEmpty) {
+        notify('⚠️ Pilot pack created — no session data yet. Run validation sessions first.');
+      } else {
+        notify(`✓ Pilot pack exported — ${result.sessionCount} session(s), ${result.recommendation} recommendation`);
+      }
+    } else {
+      notify(`❌ Export failed: ${result.error}`);
+    }
+  }, [notify]);
+
+  // Facilitator keyboard shortcuts
+  useEffect(() => {
+    if (!facilitator || phase === 'landing') return;
+    
+    const handleFacilitatorShortcuts = (e) => {
+      // Cmd/Ctrl + K: Toggle session checklist
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k' && !e.shiftKey) {
+        e.preventDefault();
+        setSessionChecklistOpen(prev => !prev);
+        return;
+      }
+      
+      // Cmd/Ctrl + E: Quick export pilot pack
+      if ((e.metaKey || e.ctrlKey) && e.key === 'e' && !e.shiftKey) {
+        e.preventDefault();
+        handleExportPilotPack();
+        return;
+      }
+      
+      // Cmd/Ctrl + Shift + L: Export learning loop
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'L') {
+        e.preventDefault();
+        handleExportLearningLoop();
+        return;
+      }
+      
+      // Cmd/Ctrl + Shift + K: Toggle scorecard
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'K') {
+        e.preventDefault();
+        setScorecardOpen(prev => !prev);
+        return;
+      }
+    };
+    
+    window.addEventListener('keydown', handleFacilitatorShortcuts);
+    return () => window.removeEventListener('keydown', handleFacilitatorShortcuts);
+  }, [phase, handleExportLearningLoop, handleExportPilotPack]);
+
   const handleGoHome = useCallback(() => {
     setMarketingKitOpen(false);
     setAiPanelOpen(false);
@@ -406,15 +554,62 @@ export default function App() {
   }, []);
 
   const handleLaunchApp = useCallback((nextPhase = 'phase1') => {
+    if (authLoading) return;
+
+    // Without Supabase configured (local dev, self-hosted demo) the Studio runs
+    // signed-out and keeps the workspace in this browser only.
+    if (authEnabled) {
+      if (!user) {
+        setAuthModalOpen(true);
+        return;
+      }
+      if (!currentProject) {
+        setProjectPickerOpen(true);
+        return;
+      }
+    }
+    
     setPhase(nextPhase);
     window.location.hash = '#/app';
     markWelcomeSeen();
     setWelcomeOpen(false);
-  }, []);
+  }, [user, authLoading, authEnabled, currentProject]);
 
   const handleWelcomeStart = () => {
     handleLaunchApp('phase1');
   };
+
+  const handleProjectSelected = useCallback((project, studioState) => {
+    setCurrentProject(project);
+    setProjectPickerOpen(false);
+    
+    // A project replaces the workspace: start from the demo files, lay the saved
+    // files over them, and start a fresh undo history.
+    const next = getFreshNodesByFile();
+    if (studioState && typeof studioState === 'object') {
+      Object.entries(studioState).forEach(([fileId, nodes]) => {
+        const file = getWorkspaceFile(fileId);
+        if (fileId !== USER_FILE_ID && file.id === fileId && nodes && nodes[file.rootId]) next[fileId] = nodes;
+      });
+    }
+    dispatchHistory({ type: 'reset', value: next });
+    setCodeBaseByFile({});
+
+    const openFile = project.studio_active_file && next[project.studio_active_file] ? project.studio_active_file : 'dashboard';
+    setActiveFile(openFile);
+    setSelectedNodeId(getWorkspaceFile(openFile).defaultSelection);
+    
+    setPhase('phase1');
+    window.location.hash = '#/app';
+    markWelcomeSeen();
+    setWelcomeOpen(false);
+    notify(`Opened project: ${project.name}`);
+  }, [notify]);
+
+  const handleAuthSuccess = useCallback(() => {
+    setAuthModalOpen(false);
+    setProjectPickerOpen(true);
+  }, []);
 
   const handleWelcomeShowReceipts = () => {
     markWelcomeSeen();
@@ -452,6 +647,37 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
+  // Crash-recovery backups of the opened file (SPEC §5). The interval reads the
+  // latest state from a ref so typing doesn't keep restarting it.
+  useEffect(() => {
+    backupStateRef.current = activeFile === USER_FILE_ID && code && activeNodesMap
+      ? { fileName: fileConfig.label, code, nodes: activeNodesMap, rootId: activeRootId }
+      : null;
+  });
+  useEffect(() => {
+    if (activeFile !== USER_FILE_ID) return undefined;
+    let lastSaved = null;
+    const interval = setInterval(() => {
+      const snap = backupStateRef.current;
+      if (!snap || snap.code === lastSaved) return;
+      if (createBackup(snap.fileName, snap.code, snap.nodes, snap.rootId).success) lastSaved = snap.code;
+    }, AUTO_SAVE_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [activeFile]);
+
+  // Auto-save project state to Supabase
+  useEffect(() => {
+    if (!currentProject || !user || phase === 'landing') return undefined;
+    const timer = setTimeout(async () => {
+      try {
+        await updateProjectState(currentProject.id, nodesByFile, activeFile);
+      } catch (error) {
+        console.error('[AutoSave] Failed to save project:', error);
+      }
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [currentProject, user, nodesByFile, activeFile, phase]);
+
   useEffect(() => {
     if (!facilitator) return;
     const timer = setTimeout(() => {
@@ -465,12 +691,33 @@ export default function App() {
 
   const handleCodeChange = (newCode) => {
     const parsedNodes = parseTSX(newCode, activeNodesMap, activeRootId);
-    setCodeBaseByFile((prev) => ({ ...prev, [activeFile]: { code: newCode, nodes: parsedNodes } }));
+    // No AST coverage means the canvas could not read this text (syntax error, or no ids).
+    const unsynced = !getASTMeta(parsedNodes);
+    setCodeBaseByFile((prev) => ({ ...prev, [activeFile]: { code: newCode, nodes: parsedNodes, unsynced } }));
     setActiveNodesMap(parsedNodes);
-    logLearningOnce('round_trip_code', 'editor', { source: 'editor' });
+    logLearningOnce('code', 'editor', () => learningLoop.logCodeToCanvasSync(activeFile, Object.keys(parsedNodes).length));
   };
 
   const handleUpdateNode = (nodeId, updatedFields) => {
+    // Conflict detection (CONFLICT_MODEL.md v2): the code panel holds text the
+    // canvas could not read, so a canvas edit would regenerate over it. Ask first.
+    if (activeCodeBase?.unsynced && activeCodeBase.nodes === activeNodesMap) {
+      if (!conflictDialogOpen) {
+        setPendingCanvasUpdate({
+          nodeId,
+          updatedFields,
+          lastSyncedCode: generateTSX(activeRootId, activeNodesMap, null),
+          currentCode: code
+        });
+        setConflictDialogOpen(true);
+      }
+      return;
+    }
+
+    applyNodeUpdate(nodeId, updatedFields);
+  };
+
+  const applyNodeUpdate = (nodeId, updatedFields) => {
     setActiveNodesMap(prev => {
       const node = prev[nodeId];
       if (!node) return prev;
@@ -483,7 +730,31 @@ export default function App() {
         }
       };
     });
-    logLearningOnce('round_trip_canvas', nodeId, { nodeId, source: 'canvas' });
+    logLearningOnce('canvas', nodeId, () => learningLoop.logCanvasToCodeSync(nodeId, activeFile, 'node_update'));
+  };
+
+  const handleConflictResolve = (resolution) => {
+    setConflictDialogOpen(false);
+    const pending = pendingCanvasUpdate;
+    setPendingCanvasUpdate(null);
+
+    if (resolution === 'overwrite_with_canvas' && pending) {
+      learningLoop.log('conflict_resolved', { resolution, fileName: activeFile, nodeId: pending.nodeId });
+      // Drop the unreadable editor text; the code is regenerated from the canvas.
+      setCodeBaseByFile((prev) => {
+        const next = { ...prev };
+        delete next[activeFile];
+        return next;
+      });
+      applyNodeUpdate(pending.nodeId, pending.updatedFields);
+    } else if (resolution === 'discard_canvas') {
+      learningLoop.log('conflict_resolved', { resolution, fileName: activeFile });
+      // Keep the code as typed; the canvas edit is dropped.
+    } else if (resolution === 'show_both') {
+      learningLoop.log('conflict_resolved', { resolution: 'show_both_manual_fix', fileName: activeFile, nodeId: pending?.nodeId });
+      notify('Review the diff and fix the code in the editor, then edit on the canvas again.');
+    }
+    refreshLearningSummary();
   };
 
   const handleDeleteNode = (nodeId) => {
@@ -646,9 +917,9 @@ export default function App() {
       [newId]: newNode
     }));
     setSelectedNodeId(newId);
-    logLearningEvent('component_instance_added', { refFile, page: activeFile });
+    learningLoop.log('component_instance_added', { refFile, page: activeFile });
     refreshLearningSummary();
-  }, [activeFile, activeNodesMap, activeRootId, fileConfig.isPage, setActiveNodesMap, notify, makeNodeId]);
+  }, [learningLoop, activeFile, activeNodesMap, activeRootId, fileConfig.isPage, setActiveNodesMap, notify, makeNodeId]);
 
   const handleBreakDesign = () => {
     handleSetActiveFile('pricing');
@@ -678,28 +949,6 @@ export default function App() {
   const handleUndo = useCallback(() => dispatchHistory({ type: 'undo' }), []);
   const handleRedo = useCallback(() => dispatchHistory({ type: 'redo' }), []);
 
-  // Open a .tsx/.jsx file from disk on the canvas.
-  const handleOpenTsxFile = useCallback(async (file) => {
-    if (!file) return;
-    try {
-      const source = await file.text();
-      const imported = importTSXFile(source, file.name);
-      registerCustomFile({ label: file.name, rootId: imported.rootId, componentName: imported.componentName });
-      setNodesByFile((prev) => ({ ...prev, custom: imported.nodes }));
-      setCodeBaseByFile((prev) => ({ ...prev, custom: { code: imported.code, nodes: imported.nodes } }));
-      setActiveFile('custom');
-      setSelectedNodeId(imported.rootId);
-      setFocusedPanel('canvas');
-      if (/\bclassName=/.test(imported.code)) enableTailwindPreview();
-      logLearningEvent('tsx_file_opened', { layers: Object.keys(imported.nodes).length });
-      notify(imported.addedIds
-        ? `Opened ${file.name} — added ${imported.addedIds} id attribute${imported.addedIds === 1 ? '' : 's'} so layers are editable`
-        : `Opened ${file.name}`);
-    } catch (err) {
-      notify(err.message || 'Could not open that file');
-    }
-  }, [notify, setNodesByFile]);
-
   // Save the active file's current code back to disk as a download.
   const handleDownloadActiveFile = () => {
     const blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
@@ -709,24 +958,60 @@ export default function App() {
     anchor.download = fileConfig.label || 'Component.tsx';
     anchor.click();
     setTimeout(() => URL.revokeObjectURL(url), 2000);
+    if (activeFile === USER_FILE_ID) {
+      learningLoop.log('real_file_downloaded', { fileName: anchor.download, linesOfCode: code.split('\n').length });
+    }
     notify(`Downloaded ${anchor.download}`);
   };
 
   const handlePolicyChange = (nextPolicy) => {
     setReceiptPolicy(nextPolicy);
     saveReceiptPolicy(nextPolicy);
-    logLearningEvent('policy_updated', { policy: nextPolicy });
+    const oldPolicy = receiptPolicy;
+    learningLoop.logPolicyChange('receiptPolicy', oldPolicy, nextPolicy);
     refreshLearningSummary();
   };
 
   const handleDismissRule = (ruleId) => {
     setDismissedRules((prev) => new Set([...prev, ruleId]));
-    logLearningEvent('rule_dismissed', { ruleId });
+    learningLoop.logReceiptDismissed(ruleId, selectedNodeId, activeFile);
     refreshLearningSummary();
   };
 
   const handleReceiptFix = (ruleId, fixKey) => {
-    logLearningEvent('fix_applied', { ruleId, fixKey });
+    learningLoop.logReceiptFixApplied(fixKey, selectedNodeId, { ruleId }, ruleId);
+    refreshLearningSummary();
+  };
+
+  const handleApplySuggestion = (suggestion) => {
+    const updatedConfig = { ...learningConfig };
+
+    if (suggestion.type === 'downgrade_rule') {
+      if (!updatedConfig.hiddenRules.includes(suggestion.ruleId)) {
+        updatedConfig.hiddenRules = [...updatedConfig.hiddenRules, suggestion.ruleId];
+        setDismissedRules((prev) => new Set([...prev, suggestion.ruleId]));
+        learningLoop.log('learning_rule_hidden', {
+          ruleId: suggestion.ruleId,
+          reason: suggestion.reason
+        });
+        notify(`Rule "${suggestion.ruleId}" hidden from receipts`);
+      }
+    } else if (suggestion.type === 'prefer_quick_fix') {
+      updatedConfig.preferredFixes[suggestion.fixKey] = {
+        priority: 'high',
+        appliedCount: suggestion.fixCount,
+        ruleIds: suggestion.ruleIds,
+        timestamp: Date.now()
+      };
+      learningLoop.log('learning_fix_preferred', {
+        fixKey: suggestion.fixKey,
+        ruleIds: suggestion.ruleIds
+      });
+      notify(`Quick-fix preference saved for "${suggestion.fixKey}"`);
+    }
+    
+    setLearningConfig(updatedConfig);
+    saveLearningConfig(updatedConfig);
     refreshLearningSummary();
   };
 
@@ -752,9 +1037,64 @@ export default function App() {
   };
 
   const handleExportFeedback = () => {
-    downloadValidationExport();
+    const result = downloadValidationExport();
+    if (result.success) {
+      if (result.isEmpty) {
+        notify('⚠️ Export created — no session data yet. Run validation sessions and collect feedback.');
+      } else {
+        notify(`✓ Validation export complete — ${result.sessionCount} session(s), ${result.eventCount} learning events`);
+      }
+    } else {
+      notify(`❌ Export failed: ${result.error}`);
+    }
     setFeedbackCount(getFeedbackSummary().total);
     refreshLearningSummary();
+  };
+
+
+
+  const handleExportComponent = () => {
+    const nodesMap = nodesByFile[activeFile];
+    const fileInfo = getWorkspaceFile(activeFile);
+    const rootId = fileInfo.rootId;
+    
+    if (!rootId || !nodesMap || !nodesMap[rootId]) {
+      notify('⚠️ No component loaded to export');
+      return;
+    }
+
+    const existingCode = generateTSX(rootId, nodesMap, null);
+    const result = exportComponentTSX(rootId, nodesMap, existingCode);
+    
+    if (result.success) {
+      setExportConfirmResult(result);
+      setExportConfirmOpen(true);
+      learningLoop.log('component_exported', {
+        filename: result.filename,
+        componentName: result.componentName,
+        linesOfCode: result.linesOfCode,
+        sourceFile: activeFile
+      });
+      refreshLearningSummary();
+    } else {
+      notify(`❌ Export failed: ${result.error}`);
+    }
+  };
+  
+  const handleBatchExportComponents = async () => {
+    const result = await batchExportComponents(nodesByFile);
+    
+    if (result.success) {
+      notify(`✓ Batch export complete — ${result.exported} component(s) in ${result.filename}`);
+      learningLoop.log('batch_export', {
+        exported: result.exported,
+        failed: result.failed,
+        components: result.components.map(c => c.componentName)
+      });
+      refreshLearningSummary();
+    } else {
+      notify(`❌ Batch export failed: ${result.error}`);
+    }
   };
 
   const handleRunPresenter = () => {
@@ -802,7 +1142,10 @@ export default function App() {
     dismissedRules,
     onDismissRule: handleDismissRule,
     onFixApplied: handleReceiptFix,
-    learningSummary
+    learningSummary,
+    learningLoop,
+    learningConfig,
+    onApplySuggestion: handleApplySuggestion
   };
 
   const shellProps = {
@@ -829,11 +1172,28 @@ export default function App() {
       hero: nodesByFile.hero
     },
     onOpenComponentFile: handleSetActiveFile,
-    receiptsConfig
+    receiptsConfig,
+    activeViewportMode,
+    onViewportChange: handleViewportChange
   };
 
   const workspacePhase = facilitator ? phase : 'phase1';
   const showLanding = phase === 'landing';
+  const showPricing = phase === 'pricing';
+
+  const requiresAuth = authEnabled && !showLanding && !showPricing && !user && !authLoading;
+
+  if (requiresAuth) {
+    return (
+      <div className="app-container">
+        <AuthModal 
+          isOpen={true}
+          onClose={handleGoHome}
+          onSuccess={handleAuthSuccess}
+        />
+      </div>
+    );
+  }
 
   if (showLanding) {
     return (
@@ -842,7 +1202,30 @@ export default function App() {
           onLaunchDemo={handleLaunchApp}
           onShowFeedback={() => setFeedbackOpen(true)}
         />
-        <FeedbackModal isOpen={feedbackOpen} onClose={handleFeedbackClose} />
+        <FeedbackModal 
+          isOpen={feedbackOpen} 
+          onClose={handleFeedbackClose}
+          onExport={facilitator ? handleExportFeedback : null}
+        />
+        <AppToast message={toast} onDismiss={() => setToast(null)} />
+        <AuthModal 
+          isOpen={authModalOpen} 
+          onClose={() => setAuthModalOpen(false)}
+          onSuccess={handleAuthSuccess}
+        />
+      </div>
+    );
+  }
+
+  if (showPricing) {
+    return (
+      <div className="app-container app-landing">
+        <PricingPage
+          onBackToHome={() => {
+            setPhase('landing');
+            window.location.hash = '#/home';
+          }}
+        />
         <AppToast message={toast} onDismiss={() => setToast(null)} />
       </div>
     );
@@ -860,15 +1243,21 @@ export default function App() {
         onRedo={handleRedo}
         canUndo={canUndo}
         canRedo={canRedo}
-        onOpenTsxFile={handleOpenTsxFile}
         onDownloadFile={handleDownloadActiveFile}
         onResetWorkspace={() => { handleResetDemo(); notify('Workspace reset to the demo files'); }}
         onOpenInterviewGuide={() => setValidationScriptOpen(true)}
         onOpenExportDeploy={() => setExportDeployOpen(true)}
+        onExportComponent={handleExportComponent}
+        onBatchExport={handleBatchExportComponents}
         onOpenMarketingKit={handleOpenMarketingKit}
         onOpenFigmaImport={() => setFigmaImportOpen(true)}
+        onOpenRealFile={() => setRealFileLoaderOpen(true)}
+        onRestoreBackup={() => setRestoreBackupOpen(true)}
+        onDownloadRealFile={handleDownloadActiveFile}
         onOpenAI={() => handleOpenAI('full-marketing')}
         onCopyLink={handleCopyLink}
+        onOpenGitContext={() => setGitContextModalOpen(true)}
+        realFileLoaded={Boolean(userFileNodes)}
         facilitatorActions={facilitator ? {
           onBreakDesign: handleBreakDesign,
           onFixAll: handleFixAll,
@@ -877,8 +1266,12 @@ export default function App() {
           onRunPresenter: handleRunPresenter,
           onOpenScript: () => setScriptOpen(true),
           onOpenSpec: () => setSpecOpen(true),
+          onOpenDashboard: () => setFacilitatorDashboardOpen(true),
           onOpenScorecard: () => setScorecardOpen(true),
+          onOpenSessionChecklist: () => setSessionChecklistOpen(true),
           onExportFeedback: handleExportFeedback,
+          onExportLearningLoop: handleExportLearningLoop,
+          onExportPilotPack: handleExportPilotPack,
           feedbackCount,
           presenterRunning
         } : null}
@@ -919,6 +1312,8 @@ export default function App() {
       <FeedbackModal isOpen={feedbackOpen} onClose={handleFeedbackClose} />
       <ValidationScriptModal isOpen={validationScriptOpen} onClose={() => setValidationScriptOpen(false)} />
       <ValidationScorecardModal isOpen={scorecardOpen} onClose={() => setScorecardOpen(false)} />
+      <SessionChecklistModal isOpen={sessionChecklistOpen} onClose={() => setSessionChecklistOpen(false)} />
+      {facilitator && <FacilitatorDashboard isOpen={facilitatorDashboardOpen} onClose={() => setFacilitatorDashboardOpen(false)} learningLoop={learningLoop} />}
       {/* Mounted only while open so it always reads the latest saved tokens. */}
       {exportDeployOpen && (
         <ExportDeployModal
@@ -956,6 +1351,21 @@ export default function App() {
         onImported={handleFigmaImported}
         onNotify={notify}
       />
+      <RealFileLoader
+        isOpen={realFileLoaderOpen}
+        onClose={() => setRealFileLoaderOpen(false)}
+        onFileLoaded={handleRealFileLoaded}
+      />
+      <RestoreBackupModal
+        isOpen={restoreBackupOpen}
+        onClose={() => setRestoreBackupOpen(false)}
+        onRestore={handleRestoreBackup}
+      />
+      <ExportConfirmationModal
+        isOpen={exportConfirmOpen}
+        onClose={() => setExportConfirmOpen(false)}
+        exportResult={exportConfirmResult}
+      />
       <AIGeneratePanel
         isOpen={aiPanelOpen}
         onClose={() => setAiPanelOpen(false)}
@@ -968,6 +1378,33 @@ export default function App() {
       {facilitator && <DemoScriptModal isOpen={scriptOpen} onClose={() => setScriptOpen(false)} />}
       {facilitator && <SpecModal isOpen={specOpen} onClose={() => setSpecOpen(false)} />}
       {facilitator && <PresenterToast message={presenterMessage} />}
+      <GitContextModal key={gitContextModalOpen ? 'open' : 'closed'} isOpen={gitContextModalOpen} onClose={() => setGitContextModalOpen(false)} />
+      
+      <ConflictDialog
+        isOpen={conflictDialogOpen}
+        onResolve={handleConflictResolve}
+        conflictContext={{
+          lastSyncedCode: pendingCanvasUpdate?.lastSyncedCode,
+          currentCode: pendingCanvasUpdate?.currentCode,
+          pendingUpdate: pendingCanvasUpdate?.updatedFields,
+          nodeId: pendingCanvasUpdate?.nodeId
+        }}
+      />
+      
+      <AuthModal 
+        isOpen={authModalOpen} 
+        onClose={() => setAuthModalOpen(false)}
+        onSuccess={handleAuthSuccess}
+      />
+      
+      {projectPickerOpen && (
+        <ProjectPicker
+          onProjectSelected={handleProjectSelected}
+          onCancel={() => setProjectPickerOpen(false)}
+        />
+      )}
+      
+      <AppToast message={toast} onDismiss={() => setToast(null)} />
     </div>
   );
 }

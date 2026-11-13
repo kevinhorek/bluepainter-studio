@@ -1,8 +1,10 @@
 name: CI
 
 on:
-  push:
   pull_request:
+  push:
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -12,6 +14,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  conflict-markers:
+    name: Check for conflict markers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan for conflict markers
+        run: |
+          if git grep -nE "^(<<<<<<<|>>>>>>>) " -- ':!*.md'; then
+            echo "Found conflict markers in code files"
+            exit 1
+          fi
+
   studio:
     name: Studio (lint, test, build)
     runs-on: ubuntu-latest
@@ -21,10 +35,14 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      # Installs the workspaces too (packages/shared, extension).
       - run: npm ci
       - run: npm run lint
+      # features, AST sync suites, real-file integration, API handlers, export
       - run: npm test
       - run: npm run build
+      - name: Extension tests
+        run: npm test --workspace extension
 
   site:
     name: Site (Astro build)
@@ -41,22 +59,6 @@ jobs:
           cache-dependency-path: site/package-lock.json
       - run: npm ci
       - run: npm run build
-
-  extension:
-    name: VS Code extension (test)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: extension
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: extension/package-lock.json
-      - run: npm ci
-      - run: npm test
 
   mcp:
     name: MCP server (smoke test)

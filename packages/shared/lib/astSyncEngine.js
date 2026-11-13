@@ -1,9 +1,11 @@
-import recast from 'recast';
+import * as recastModule from 'recast';
 import { parse } from '@babel/parser';
-import traverseModule from '@babel/traverse';
+import * as traverseModule from '@babel/traverse';
 import * as t from '@babel/types';
 
-const traverse = traverseModule.default || traverseModule;
+// Namespace imports so the same file loads under Vite, Node ESM and require(esm).
+const recast = recastModule.default?.parse ? recastModule.default : recastModule;
+const traverse = traverseModule.default?.default || traverseModule.default || traverseModule;
 
 const babelParser = {
   parse(source) {
@@ -12,7 +14,8 @@ const babelParser = {
     return parse(source, {
       sourceType: 'module',
       plugins: ['jsx', 'typescript'],
-      tokens: true
+      tokens: true,
+      ranges: true
     });
   }
 };
@@ -34,12 +37,13 @@ function literalForValue(val) {
     // Babel 8 rejects negative NumericLiterals — emit `-n` as a unary expression.
     return val < 0 ? t.unaryExpression('-', t.numericLiteral(-val)) : t.numericLiteral(val);
   }
+  if (typeof val === 'boolean') return t.booleanLiteral(val);
   return t.stringLiteral(String(val ?? ''));
 }
 
 /** Read a static style value. Returns undefined for anything dynamic. */
 function readLiteral(valueNode) {
-  if (t.isNumericLiteral(valueNode) || t.isStringLiteral(valueNode)) return valueNode.value;
+  if (t.isNumericLiteral(valueNode) || t.isStringLiteral(valueNode) || t.isBooleanLiteral(valueNode)) return valueNode.value;
   if (
     t.isUnaryExpression(valueNode, { operator: '-' }) &&
     t.isNumericLiteral(valueNode.argument)
@@ -247,7 +251,7 @@ function setJsxText(jsxElement, text) {
   }
 }
 
-const TEXT_NODE_TYPES = new Set(['text', 'button', 'list-item']);
+const TEXT_NODE_TYPES = new Set(['text', 'button', 'list-item', 'link']);
 
 const INLINE_TEXT_TAGS = new Set(['p', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'label', 'strong', 'em', 'small', 'b', 'i']);
 
@@ -259,6 +263,8 @@ function jsxTagName(openingElement) {
 function inferNodeType(tag, jsxElement) {
   if (tag === 'button') return 'button';
   if (tag === 'img') return 'image';
+  if (tag === 'input') return 'input';
+  if (tag === 'textarea') return 'textarea';
   if (tag === 'hr') return 'line';
   if (tag === 'li') return readJsxText(jsxElement) != null ? 'list-item' : 'frame';
   if (tag === 'ul' || tag === 'ol') return 'list';
@@ -315,9 +321,37 @@ function readElementInto(node, jsxElement) {
     const src = readStringAttribute(opening, 'src');
     if (src != null) node.src = src;
   }
+
+  if (node.type === 'link' && t.isJSXIdentifier(opening.name, { name: 'a' })) {
+    const href = readStringAttribute(opening, 'href');
+    if (href != null) node.href = href;
+  }
+
+  if (node.type === 'input') {
+    const inputType = readStringAttribute(opening, 'type');
+    if (inputType != null) node.inputType = inputType;
+  }
+  if (node.type === 'input' || node.type === 'textarea') {
+    const placeholder = readStringAttribute(opening, 'placeholder');
+    if (placeholder != null) node.placeholder = placeholder;
+  }
 }
 
-const NON_CONTAINER_TYPES = new Set(['text', 'button', 'list-item', 'image', 'line', 'shape', 'vector', 'comment', 'component-instance']);
+/** Record why parts of a file may not be editable on the canvas. */
+function noteIssues(opening, id, issues) {
+  const tag = jsxTagName(opening);
+  if (!id) {
+    const idIdx = findAttribute(opening, 'id');
+    if (idIdx >= 0) issues.hasComputedIds = true;
+    else if (tag && /^[a-z]/.test(tag)) issues.missingIds = true;
+    return;
+  }
+  if (findAttribute(opening, 'style') < 0 && findAttribute(opening, 'className') >= 0) {
+    issues.hasTailwindOnly = true;
+  }
+}
+
+const NON_CONTAINER_TYPES = new Set(['text', 'button', 'list-item', 'link', 'input', 'textarea', 'image', 'line', 'shape', 'vector', 'comment', 'component-instance']);
 
 /**
  * Parse TSX → nodes map (AST). Returns null on failure.
@@ -334,6 +368,8 @@ export function parseTSXWithAST(code, nodesMap, options = {}) {
   const { structural = false, rootId = null, resolveComponent = null } = options;
 
   const updated = JSON.parse(JSON.stringify(nodesMap));
+  let foundIds = 0;
+  const issues = { hasComputedIds: false, hasTailwindOnly: false, missingIds: false };
 
   try {
     const ast = recast.parse(code, { parser: babelParser });
@@ -344,12 +380,17 @@ export function parseTSXWithAST(code, nodesMap, options = {}) {
       JSXElement(path) {
         const opening = path.node.openingElement;
         const id = getJsxId(opening);
+        noteIssues(opening, id, issues);
         if (!id || seen.has(id)) return;
 
         if (!structural) {
-          if (updated[id]) readElementInto(updated[id], path.node);
+          if (updated[id]) {
+            foundIds += 1;
+            readElementInto(updated[id], path.node);
+          }
           return;
         }
+        foundIds += 1;
 
         seen.add(id);
         const tag = jsxTagName(opening);
@@ -397,9 +438,9 @@ export function parseTSXWithAST(code, nodesMap, options = {}) {
           const hasIdDescendant = (path.node.children || []).some((c) => t.isJSXElement(c) && getJsxId(c.openingElement));
           if (opaque.length && !hasIdDescendant && readJsxText(path.node) == null && Number.isFinite(opaque[0].start)) {
             const src = code.slice(opaque[0].start, opaque[opaque.length - 1].end).replace(/\s+/g, ' ').trim();
-            updated[id].placeholder = src.length > 48 ? `${src.slice(0, 47)}…` : src;
+            updated[id].dynamicSource = src.length > 48 ? `${src.slice(0, 47)}…` : src;
           } else {
-            delete updated[id].placeholder;
+            delete updated[id].dynamicSource;
           }
         }
 
@@ -431,9 +472,14 @@ export function parseTSXWithAST(code, nodesMap, options = {}) {
       });
     }
 
+    if (foundIds > 0) {
+      // Non-enumerable: the result stays a plain id → node map for callers that iterate it.
+      Object.defineProperty(updated, '_astMeta', { value: { issues, foundIds }, enumerable: false, configurable: true });
+    }
     return updated;
   } catch (err) {
     console.warn('[astSync] parse failed:', err.message);
+    console.warn('[astSync] Hint: check for syntax errors, unclosed tags or malformed JSX');
     return null;
   }
 }
@@ -626,12 +672,22 @@ export function patchTSXWithAST(code, nodesMap, expectedIds = null, options = {}
 
         patchClassName(opening, node);
 
-        if (TEXT_NODE_TYPES.has(node.type)) {
-          setJsxText(path.node, node.text || '');
+        // A node with no `text` field never owned this element's text.
+        if (TEXT_NODE_TYPES.has(node.type) && node.text !== undefined && node.text !== null) {
+          setJsxText(path.node, node.text);
         }
 
         if (node.type === 'image' && node.src) {
           upsertStringAttribute(opening, 'src', node.src);
+        }
+        if (node.type === 'link' && node.href) {
+          upsertStringAttribute(opening, 'href', node.href);
+        }
+        if (node.type === 'input' && node.inputType) {
+          upsertStringAttribute(opening, 'type', node.inputType);
+        }
+        if ((node.type === 'input' || node.type === 'textarea') && node.placeholder) {
+          upsertStringAttribute(opening, 'placeholder', node.placeholder);
         }
       }
     });
@@ -716,3 +772,54 @@ export function prepareTSXForCanvas(code) {
 export function astSyncAvailable() {
   return true;
 }
+
+/** What kinds of styling a file uses, so the UI can say what is canvas-editable. */
+export function detectStyleSources(code) {
+  const none = { hasInlineStyles: false, hasClassNames: false, hasTailwind: false, hasCssModules: false };
+  if (!code?.trim()) return none;
+  try {
+    const ast = recast.parse(code, { parser: babelParser });
+    const out = { ...none };
+    traverse(ast, {
+      JSXOpeningElement(path) {
+        const opening = path.node;
+        const styleIdx = findAttribute(opening, 'style');
+        if (styleIdx >= 0 && t.isJSXExpressionContainer(opening.attributes[styleIdx].value)) {
+          const parsed = readObjectExpression(opening.attributes[styleIdx].value.expression);
+          if (parsed && (Object.keys(parsed.values).length || parsed.dynamicKeys.length)) out.hasInlineStyles = true;
+        }
+        const classIdx = findAttribute(opening, 'className');
+        if (classIdx < 0) return;
+        out.hasClassNames = true;
+        const value = opening.attributes[classIdx].value;
+        if (t.isStringLiteral(value) && /\b(bg-|text-|p-|m-|flex|grid|rounded|border|shadow|w-|h-)/.test(value.value)) {
+          out.hasTailwind = true;
+        }
+        if (t.isJSXExpressionContainer(value)) out.hasCssModules = true;
+      }
+    });
+    return out;
+  } catch (err) {
+    console.warn('[astSync] detectStyleSources failed:', err.message);
+    return none;
+  }
+}
+
+/** Sync coverage for a parsed nodes map (see parseTSXWithAST). */
+export function getASTMeta(nodesMap) {
+  return nodesMap?._astMeta || null;
+}
+
+// Building blocks for hosts that walk the AST themselves (the VS Code extension).
+export {
+  getJsxId,
+  babelParser,
+  TEXT_NODE_TYPES,
+  findAttribute,
+  readObjectExpression,
+  readStringAttribute,
+  readJsxText,
+  setJsxText,
+  upsertStyleAttribute,
+  upsertStringAttribute
+};

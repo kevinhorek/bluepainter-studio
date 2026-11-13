@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { isFacilitatorMode } from '../utils/facilitatorMode';
 import { FILE_ORDER, WORKSPACE_FILES } from '../data/workspaceFiles';
+import { useAuth } from '../lib/auth/AuthContext';
 
 export default function WorkspaceHeader({
   activeFile,
@@ -10,25 +11,37 @@ export default function WorkspaceHeader({
   onShowAbout,
   onOpenInterviewGuide,
   onOpenExportDeploy,
+  onExportComponent,
+  onBatchExport,
   onOpenMarketingKit,
   onOpenFigmaImport,
+  onOpenRealFile,
+  onRestoreBackup,
+  onDownloadRealFile,
   onOpenAI,
   onCopyLink,
   onUndo,
   onRedo,
   canUndo = false,
   canRedo = false,
-  onOpenTsxFile,
   onDownloadFile,
   onResetWorkspace,
+  onOpenGitContext,
+  realFileLoaded,
   facilitatorActions
 }) {
   const facilitator = isFacilitatorMode();
+  const { user, signOut } = useAuth();
   const [fileOpen, setFileOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const fileRef = useRef(null);
   const menuRef = useRef(null);
-  const fileInputRef = useRef(null);
+
+  const handleSignOut = async () => {
+    await signOut();
+    window.location.hash = '#/home';
+    window.location.reload();
+  };
 
   const active = WORKSPACE_FILES[activeFile];
 
@@ -47,10 +60,10 @@ export default function WorkspaceHeader({
       <div className="workspace-header-left">
         <div className="workspace-brand">
           <button type="button" className="workspace-brand-btn" onClick={onGoHome} title="Back to marketing site">
-            <div className="logo-icon"><div className="logo-dot" /></div>
-            <span className="workspace-brand-name">BluePainter</span>
+            <img src="/logo.svg" alt="BluePainter" height="24" className="workspace-brand-logo" />
           </button>
         <span className="workspace-prototype-badge">Prototype</span>
+        {facilitator && <span className="workspace-facilitator-badge" title="Facilitator mode active — access session tools via ··· menu">Facilitator</span>}
         </div>
 
         <div className="workspace-file-picker" ref={fileRef}>
@@ -83,7 +96,7 @@ export default function WorkspaceHeader({
               <button
                 type="button"
                 className="workspace-dropdown-item"
-                onClick={() => { fileInputRef.current?.click(); setFileOpen(false); }}
+                onClick={() => { onOpenRealFile?.(); setFileOpen(false); }}
               >
                 <span>Open .tsx file…</span>
               </button>
@@ -96,17 +109,6 @@ export default function WorkspaceHeader({
               </button>
             </div>
           )}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".tsx,.jsx,.ts,.js"
-            hidden
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              e.target.value = ''; // allow re-opening the same file
-              if (file) onOpenTsxFile?.(file);
-            }}
-          />
         </div>
 
         <div className="workspace-history" role="group" aria-label="History">
@@ -116,6 +118,38 @@ export default function WorkspaceHeader({
       </div>
 
       <div className="workspace-header-right">
+        <button
+          type="button"
+          className="workspace-real-file-btn"
+          onClick={onOpenRealFile}
+          title="Open your own .tsx/.jsx file to edit on canvas"
+        >
+          📂 Open real .tsx
+        </button>
+        <button
+          type="button"
+          className="workspace-restore-btn"
+          onClick={onRestoreBackup}
+          title="Restore a previously loaded file from auto-save backup"
+        >
+          ⏮️ Restore backup
+        </button>
+        {realFileLoaded && (
+          <>
+            <div className="workspace-file-indicator" title="Currently loaded file">
+              <span className="workspace-file-icon">📄</span>
+              <span className="workspace-file-name">{active?.label || 'Untitled'}</span>
+            </div>
+            <button
+              type="button"
+              className="workspace-download-btn"
+              onClick={onDownloadRealFile}
+              title={`Download ${active?.label || 'file'}`}
+            >
+              💾 Download
+            </button>
+          </>
+        )}
         <button
           type="button"
           className="workspace-ai-btn"
@@ -144,6 +178,22 @@ export default function WorkspaceHeader({
           <span className="sync-dot" />
         </span>
 
+        {user && (
+          <div className="workspace-user-info">
+            <span className="workspace-user-email" title={user.email}>
+              {user.email}
+            </span>
+            <button
+              type="button"
+              className="workspace-signout-btn"
+              onClick={handleSignOut}
+              title="Sign out"
+            >
+              Sign out
+            </button>
+          </div>
+        )}
+
         <div className="workspace-menu-wrap" ref={menuRef}>
           <button
             type="button"
@@ -156,6 +206,18 @@ export default function WorkspaceHeader({
           </button>
           {menuOpen && (
             <div className="workspace-dropdown workspace-menu-dropdown">
+              <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { onOpenRealFile?.(); setMenuOpen(false); }}>
+                📂 Open Real File
+              </button>
+              {realFileLoaded && (
+                <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { onDownloadRealFile?.(); setMenuOpen(false); }}>
+                  💾 Download File
+                </button>
+              )}
+              <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { onOpenFigmaImport?.(); setMenuOpen(false); }}>
+                Import from Figma
+              </button>
+              <div className="workspace-dropdown-divider" />
               <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { onOpenAI?.(); setMenuOpen(false); }}>
                 AI Generate
               </button>
@@ -165,8 +227,11 @@ export default function WorkspaceHeader({
               <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { onOpenExportDeploy?.(); setMenuOpen(false); }}>
                 Export & deploy
               </button>
-              <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { onOpenFigmaImport?.(); setMenuOpen(false); }}>
-                Import from Figma
+              <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { onExportComponent?.(); setMenuOpen(false); }}>
+                Export component TSX
+              </button>
+              <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { onBatchExport?.(); setMenuOpen(false); }}>
+                Batch export components
               </button>
               <div className="workspace-dropdown-divider" />
               <button type="button" className="workspace-dropdown-item" onClick={() => { onGoHome?.(); setMenuOpen(false); }}>
@@ -194,10 +259,17 @@ export default function WorkspaceHeader({
               >
                 Reset workspace
               </button>
+              <div className="workspace-dropdown-divider" />
+              <button type="button" className="workspace-dropdown-item" onClick={() => { onOpenGitContext?.(); setMenuOpen(false); }}>
+                Git context settings
+              </button>
               {facilitator && facilitatorActions && (
                 <>
                   <div className="workspace-dropdown-divider" />
                   <span className="workspace-dropdown-heading">Facilitator</span>
+                  <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { facilitatorActions.onOpenDashboard?.(); setMenuOpen(false); }}>
+                    Dashboard
+                  </button>
                   <button type="button" className="workspace-dropdown-item" onClick={() => { facilitatorActions.onRunPresenter(); setMenuOpen(false); }} disabled={facilitatorActions.presenterRunning}>
                     {facilitatorActions.presenterRunning ? 'Presenting…' : 'Auto-present'}
                   </button>
@@ -207,11 +279,20 @@ export default function WorkspaceHeader({
                   <button type="button" className="workspace-dropdown-item" onClick={() => { facilitatorActions.onStartTour(); setMenuOpen(false); }}>Tour</button>
                   <button type="button" className="workspace-dropdown-item" onClick={() => { facilitatorActions.onOpenScript(); setMenuOpen(false); }}>Script</button>
                   <button type="button" className="workspace-dropdown-item" onClick={() => { facilitatorActions.onOpenSpec(); setMenuOpen(false); }}>Spec</button>
+                  <button type="button" className="workspace-dropdown-item" onClick={() => { facilitatorActions.onOpenSessionChecklist?.(); setMenuOpen(false); }}>
+                    Session checklist
+                  </button>
                   <button type="button" className="workspace-dropdown-item" onClick={() => { facilitatorActions.onOpenScorecard?.(); setMenuOpen(false); }}>
                     Session scorecard
                   </button>
                   <button type="button" className="workspace-dropdown-item" onClick={() => { facilitatorActions.onExportFeedback(); setMenuOpen(false); }}>
                     Export{facilitatorActions.feedbackCount > 0 ? ` (${facilitatorActions.feedbackCount})` : ''}
+                  </button>
+                  <button type="button" className="workspace-dropdown-item workspace-dropdown-item-highlight" onClick={() => { facilitatorActions.onExportPilotPack?.(); setMenuOpen(false); }}>
+                    Export pilot pack
+                  </button>
+                  <button type="button" className="workspace-dropdown-item" onClick={() => { facilitatorActions.onExportLearningLoop(); setMenuOpen(false); }}>
+                    Export learning loop
                   </button>
                 </>
               )}

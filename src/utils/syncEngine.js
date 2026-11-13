@@ -1,6 +1,6 @@
 // syncEngine.js - Canvas ↔ TSX sync (AST-first with regex fallback)
 import { getComponentName, getWorkspaceFile, getImportPath, collectComponentRefs, WORKSPACE_FILES } from '../data/workspaceFiles';
-import { parseTSXWithAST, patchTSXWithAST, jsxTextNeedsExpression, prepareTSXForCanvas } from './astSyncEngine';
+import { parseTSXWithAST, patchTSXWithAST, jsxTextNeedsExpression, prepareTSXForCanvas, getASTMeta } from '@bluepainter/shared/astSyncEngine';
 
 function formatStyleValue(v) {
   if (typeof v === 'number') return v;
@@ -51,7 +51,7 @@ function expectedIdOrder(rootNodeId, nodesMap) {
     }
     ids.push(node.id);
     if (node.type === 'component-instance') return;
-    const leaf = ['text', 'button', 'list-item', 'image', 'line', 'shape', 'vector'].includes(node.type);
+    const leaf = ['text', 'button', 'list-item', 'link', 'input', 'textarea', 'image', 'line', 'shape', 'vector'].includes(node.type);
     if (!leaf) (node.children || []).forEach(walk);
   }
   walk(rootNodeId);
@@ -59,6 +59,7 @@ function expectedIdOrder(rootNodeId, nodesMap) {
 }
 
 // 1. GENERATE TSX CODE FROM NODE TREE STATE
+// Fail-loud: returns null when AST patch fails on existing code (SPEC §5)
 export function generateTSX(rootNodeId, nodesMap, existingCode = null) {
   if (existingCode?.trim() && rootNodeId && nodesMap) {
     // Only patch when the code has exactly the tree's structure. If a layer was
@@ -74,6 +75,7 @@ export function generateTSX(rootNodeId, nodesMap, existingCode = null) {
       if (patched) return patched;
     }
   }
+  // No existing code - generate from template (fresh component)
   return generateTSXFromTemplate(rootNodeId, nodesMap);
 }
 
@@ -93,9 +95,16 @@ export function renderNodeJSX(rootId, nodesMap, baseIndent = '    ') {
       return `${indent}<div${idAttr}${styleAttr}>\n${indent}  <${compName} />\n${indent}</div>`;
     }
 
-    if (node.type === 'text' || node.type === 'button' || node.type === 'list-item') {
+    if (node.type === 'text' || node.type === 'button' || node.type === 'list-item' || node.type === 'link') {
       const textVal = formatJsxText(node.text);
-      return `${indent}<${tag}${idAttr}${styleAttr}${classAttr}>${textVal}</${tag}>`;
+      const hrefAttr = node.type === 'link' && node.href ? ` href="${escapeAttr(node.href)}"` : '';
+      return `${indent}<${tag}${idAttr}${hrefAttr}${styleAttr}${classAttr}>${textVal}</${tag}>`;
+    }
+
+    if (node.type === 'input' || node.type === 'textarea') {
+      const typeAttr = node.type === 'input' && node.inputType ? ` type="${escapeAttr(node.inputType)}"` : '';
+      const placeholderAttr = node.placeholder ? ` placeholder="${escapeAttr(node.placeholder)}"` : '';
+      return `${indent}<${node.type}${idAttr}${typeAttr}${placeholderAttr}${styleAttr}${classAttr} />`;
     }
 
     if (node.type === 'image') {
@@ -178,6 +187,8 @@ export function parseTSX(code, nodesMap, rootId = null) {
 
   return parseTSXWithRegex(code, nodesMap);
 }
+
+export { getASTMeta };
 
 function parseTSXWithRegex(code, nodesMap) {
 

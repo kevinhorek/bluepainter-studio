@@ -1,0 +1,84 @@
+{
+  "version": "1.0",
+  "exportedAt": 1725476880000,
+  "surface": "web-studio",
+  "context": {
+    "userId": null,
+    "userName": null,
+    "teamId": null,
+    "repoUrl": null,
+    "branch": null,
+    "commitSha": null,
+    "filePath": null
+  },
+  "stats": {
+    "total": 15,
+    "byType": {
+      "receipt_fix_applied": 7,
+      "receipt_dismissed": 4,
+      "policy_change": 2,
+      "canvas_to_code_sync": 1,
+      "code_to_canvas_sync": 1
+    },
+    "mostAppliedFixes": {
+      "contrast-fix-darker": 4,
+      "spacing-fix-grid": 3
+    },
+    "mostDismissedRules": {
+      "weak-cta": 3,
+      "feature-count": 1
+    },
+    "policyChanges": 2,
+    "roundTrips": 2
+  },
+  "events": [
+    {
+      "type": "canvas_to_code_sync",
+      "timestamp": 1725476800000,
+      "data": {
+        "nodeId": "hero-title",
+        "fileName": "MarketingPage.jsx",
+        "patchType": "text"
+      }
+    },
+    {
+      "type": "receipt_fix_applied",
+      "timestamp": 1725476820000,
+      "data": {
+        "fixKey": "contrast-fix-darker",
+        "nodeId": "pricing-cta",
+        "fixMeta": {
+          "property": "backgroundColor",
+          "newValue": "#1e40af"
+        },
+        "ruleId": "contrast"
+      }
+    },
+    {
+      "type": "receipt_dismissed",
+      "timestamp": 1725476840000,
+      "data": {
+        "ruleId": "weak-cta",
+        "nodeId": "secondary-btn",
+        "fileName": "DashboardPage.jsx"
+      }
+    },
+    {
+      "type": "policy_change",
+      "timestamp": 1725476860000,
+      "data": {
+        "key": "spacingGrid",
+        "oldValue": 8,
+        "newValue": 4
+      }
+    },
+    {
+      "type": "code_to_canvas_sync",
+      "timestamp": 1725476880000,
+      "data": {
+        "fileName": "DashboardPage.jsx",
+        "nodeCount": 12
+      }
+    }
+  ]
+}

@@ -1,0 +1,87 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { DEMO_APP, WAITLIST_URL } from '../../lib/constants';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: 'BluePainter Design Review ROI Calculator',
+  applicationCategory: 'BusinessApplication',
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' }
+};
+---
+
+<BaseLayout
+  title="Free Design Review ROI Calculator — BluePainter"
+  description="Estimate the yearly time and cost your team saves by catching contrast, spacing, CTA, and clutter issues in-editor with Designer's Receipts before merge."
+  jsonLd={jsonLd}
+>
+  <section class="section">
+    <p class="eyebrow">Free tool</p>
+    <h1>Design review ROI calculator</h1>
+    <p class="lead">Turn manual design-review and rework time into a dollar number. Email unlocks the full breakdown and a demo link.</p>
+    <div class="tool-panel">
+      <div>
+        <label for="devs">Frontend devs on the team</label>
+        <input id="devs" type="number" value="4" />
+        <label for="components">Components / PRs reviewed per month</label>
+        <input id="components" type="number" value="40" />
+        <label for="minutes">Manual design review + rework per component (min)</label>
+        <input id="minutes" type="number" value="30" />
+        <label for="rate">Blended hourly cost ($)</label>
+        <input id="rate" type="number" value="90" />
+        <button class="btn btn-primary" id="run" style="margin-top:16px;width:100%">Estimate savings</button>
+        <div class="email-gate" id="gate" hidden>
+          <p class="muted">Email for the full breakdown + demo link.</p>
+          <label for="email">Email</label>
+          <input id="email" type="email" placeholder="you@company.com" />
+          <button class="btn btn-ghost" id="unlock" style="margin-top:8px;width:100%">Unlock breakdown</button>
+          <p class="form-status muted" hidden></p>
+        </div>
+      </div>
+      <div class="result-box" id="result"><p class="muted">Estimated savings appear here.</p></div>
+    </div>
+    <p style="margin-top:24px"><a href={DEMO_APP}>Open BluePainter demo →</a></p>
+  </section>
+  <script is:inline src="/js/receipts.js"></script>
+  <script is:inline define:vars={{ DEMO_APP, WAITLIST_URL }}>
+    let last = null;
+    function money(n) { return '$' + Number(n).toLocaleString(); }
+    document.getElementById('run').onclick = function () {
+      last = BluePainterTools.estimateReviewRoi({
+        devs: document.getElementById('devs').value,
+        componentsPerMonth: document.getElementById('components').value,
+        reviewMinutes: document.getElementById('minutes').value,
+        hourlyRate: document.getElementById('rate').value
+      });
+      document.getElementById('result').innerHTML =
+        '<div class="score-big ok">' + money(last.annualSavings) + '</div>' +
+        '<p>Estimated savings per year</p>' +
+        '<ul>' +
+        '<li class="ok">' + money(last.monthlySavings) + ' / month</li>' +
+        '<li class="ok">' + last.hoursSavedMonthly + ' hours / month saved</li>' +
+        '</ul>';
+      document.getElementById('gate').hidden = false;
+    };
+    document.getElementById('unlock').onclick = async function () {
+      const email = document.getElementById('email').value;
+      const status = document.querySelector('#gate .form-status');
+      const res = await fetch(WAITLIST_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, source: 'roi-calculator' })
+      });
+      const data = await res.json();
+      status.hidden = false;
+      status.textContent = data.ok ? 'Unlocked — see breakdown below.' : (data.error || 'Failed');
+      if (data.ok && last) {
+        const assumptions = last.assumptions.map(function (a) { return '<li>' + a + '</li>'; }).join('');
+        document.getElementById('result').innerHTML +=
+          '<h3>How we got there</h3>' +
+          '<p class="muted">' + last.explanation + '</p>' +
+          '<ul>' + assumptions + '</ul>' +
+          '<p><a class="btn btn-primary" href="' + DEMO_APP + '">Open in BluePainter</a></p>';
+      }
+    };
+  </script>
+</BaseLayout>

@@ -6,7 +6,8 @@ import LayersPanel from '../LayersPanel';
 import InspectorPanel from '../InspectorPanel';
 import DetailDrawer from '../DetailDrawer';
 import ReceiptMessageBar from '../ReceiptMessageBar';
-import { evaluateReceipts } from '../../utils/receiptPolicy';
+import { evaluateReceipts } from '@bluepainter/shared/receiptPolicy';
+import ASTScopeBanner from '../AST_ScopeBanner';
 
 import ComponentLibrary from '../ComponentLibrary';
 
@@ -30,7 +31,9 @@ export default function VSCodeShell({
   fileConfig,
   componentLibrary,
   onOpenComponentFile,
-  receiptsConfig
+  receiptsConfig,
+  activeViewportMode,
+  onViewportChange
 }) {
   const node = nodesMap[selectedNodeId];
   const [paneLayout, setPaneLayout] = useState('split');
@@ -72,7 +75,8 @@ export default function VSCodeShell({
   const codeCollapsed = paneLayout === 'design';
 
   return (
-    <div className="studio-shell">
+    <div className={`studio-shell ${fileConfig.isRealFile ? 'studio-shell-with-banner' : ''}`}>
+      {fileConfig.isRealFile && <ASTScopeBanner nodesMap={nodesMap} />}
       <div className={`studio-main studio-layout-${paneLayout}`}>
         <div className={`studio-canvas-pane ${designCollapsed ? 'is-collapsed' : ''}`}>
           {designCollapsed ? (
@@ -119,6 +123,8 @@ export default function VSCodeShell({
                   pageViewport={fileConfig?.isPage ? fileConfig.viewport : null}
                   componentLibrary={componentLibrary}
                   onOpenComponentFile={onOpenComponentFile}
+                  activeViewportMode={activeViewportMode}
+                  onViewportChange={onViewportChange}
                 />
 
                 <ReceiptMessageBar

@@ -31,13 +31,15 @@ function slugId(figmaId, index, nodes) {
 }
 
 function figmaSolidColor(fills) {
-  const paint = (fills || []).find((f) => f.visible !== false && f.type === 'SOLID');
+  if (!fills || fills.length === 0) return undefined;
+  const paint = fills.find((f) => f.visible !== false && f.type === 'SOLID');
   if (!paint?.color) return undefined;
   const { r, g, b, a = 1 } = paint.color;
-  const ri = Math.round(r * 255);
-  const gi = Math.round(g * 255);
-  const bi = Math.round(b * 255);
-  if (a < 0.99) return `rgba(${ri}, ${gi}, ${bi}, ${a.toFixed(2)})`;
+  const ri = Math.round(Math.max(0, Math.min(255, r * 255)));
+  const gi = Math.round(Math.max(0, Math.min(255, g * 255)));
+  const bi = Math.round(Math.max(0, Math.min(255, b * 255)));
+  const alpha = Math.max(0, Math.min(1, a));
+  if (alpha < 0.99) return `rgba(${ri}, ${gi}, ${bi}, ${alpha.toFixed(2)})`;
   return `#${[ri, gi, bi].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 }
 
@@ -97,42 +99,44 @@ function convertNode(figmaNode, nodes, parentBox, index, { useAbsolute }) {
   if (isTextNode(figmaNode)) {
     const style = figmaNode.style || {};
     const textStyle = {
-      fontSize: style.fontSize || 14,
-      fontWeight: style.fontWeight || 400,
+      fontSize: Math.max(8, Math.round(style.fontSize || 14)),
+      fontWeight: Math.max(100, Math.min(900, Math.round((style.fontWeight || 400) / 100) * 100)),
       color: figmaSolidColor([{ type: 'SOLID', color: style.fills?.[0]?.color || figmaNode.fills?.[0]?.color }])
         || figmaSolidColor(figmaNode.fills)
         || '#1e293b',
       textAlign: (style.textAlignHorizontal || 'LEFT').toLowerCase(),
-      lineHeight: style.lineHeightPx ? `${style.lineHeightPx}px` : '1.4'
+      lineHeight: style.lineHeightPx ? `${Math.max(1, Math.round(style.lineHeightPx))}px` : '1.4'
     };
     if (useAbsolute && box && parentBox) {
       textStyle.position = 'absolute';
-      textStyle.left = Math.round(box.x - parentBox.x);
-      textStyle.top = Math.round(box.y - parentBox.y);
-      textStyle.width = Math.round(box.width);
+      textStyle.left = Math.max(0, Math.round(box.x - parentBox.x));
+      textStyle.top = Math.max(0, Math.round(box.y - parentBox.y));
+      textStyle.width = Math.max(1, Math.round(box.width));
     }
+    const text = (figmaNode.characters || '').trim();
     nodes[id] = {
       id,
       type: 'text',
       name: figmaNode.name || 'Text',
       tag: 'p',
       style: textStyle,
-      text: figmaNode.characters || ''
+      text: text || 'Text'
     };
     return id;
   }
 
   if (figmaNode.type === 'LINE') {
+    const strokeWidth = figmaNode.strokeWeight || 1;
     const lineStyle = {
       position: 'absolute',
-      left: box && parentBox ? Math.round(box.x - parentBox.x) : 0,
-      top: box && parentBox ? Math.round(box.y - parentBox.y) : 0,
-      width: box ? Math.round(box.width) : 100,
+      left: box && parentBox ? Math.max(0, Math.round(box.x - parentBox.x)) : 0,
+      top: box && parentBox ? Math.max(0, Math.round(box.y - parentBox.y)) : 0,
+      width: box ? Math.max(1, Math.round(box.width)) : 100,
       borderWidth: 0,
-      borderTopWidth: 1,
+      borderTopWidth: Math.max(1, Math.round(strokeWidth)),
       borderColor: figmaSolidColor(figmaNode.strokes) || '#94a3b8',
       borderStyle: 'solid',
-      height: 1
+      height: Math.max(1, Math.round(strokeWidth))
     };
     nodes[id] = {
       id,
@@ -149,24 +153,26 @@ function convertNode(figmaNode, nodes, parentBox, index, { useAbsolute }) {
   const childUseAbsolute = !hasAutoLayout;
 
   (figmaNode.children || []).forEach((child, i) => {
-    const childId = convertNode(child, nodes, box || parentBox, i, { useAbsolute: childUseAbsolute });
-    if (childId) childIds.push(childId);
+    if (child && child.visible !== false) {
+      const childId = convertNode(child, nodes, box || parentBox, i, { useAbsolute: childUseAbsolute });
+      if (childId) childIds.push(childId);
+    }
   });
 
   const style = {
     display: 'flex',
     flexDirection: figmaNode.layoutMode === 'HORIZONTAL' ? 'row' : 'column',
-    gap: figmaNode.itemSpacing || 0,
+    gap: Math.max(0, Math.round(figmaNode.itemSpacing || 0)),
     padding: figmaNode.paddingLeft || figmaNode.paddingTop
-      ? Math.max(figmaNode.paddingTop || 0, figmaNode.paddingLeft || 0)
+      ? Math.max(0, Math.round(Math.max(figmaNode.paddingTop || 0, figmaNode.paddingLeft || 0)))
       : 0,
-    borderRadius: cornerRadius || 0,
-    overflow: 'hidden'
+    borderRadius: Math.max(0, Math.round(cornerRadius || 0)),
+    overflow: childIds.length > 0 ? 'hidden' : 'visible'
   };
 
   if (bg) style.background = bg;
   if (figmaNode.strokes?.length && figmaNode.strokeWeight) {
-    style.borderWidth = figmaNode.strokeWeight;
+    style.borderWidth = Math.max(1, Math.round(figmaNode.strokeWeight));
     style.borderColor = figmaSolidColor(figmaNode.strokes) || '#cbd5e1';
     style.borderStyle = 'solid';
   }
@@ -177,23 +183,25 @@ function convertNode(figmaNode, nodes, parentBox, index, { useAbsolute }) {
 
   if (useAbsolute && box && parentBox && !hasAutoLayout) {
     style.position = 'absolute';
-    style.left = Math.round(box.x - parentBox.x);
-    style.top = Math.round(box.y - parentBox.y);
-    style.width = Math.round(box.width);
-    if (box.height) style.height = Math.round(box.height);
+    style.left = Math.max(0, Math.round(box.x - parentBox.x));
+    style.top = Math.max(0, Math.round(box.y - parentBox.y));
+    style.width = Math.max(1, Math.round(box.width));
+    if (box.height) style.height = Math.max(1, Math.round(box.height));
   } else if (box) {
-    style.width = Math.round(box.width);
-    if (box.height) style.minHeight = Math.round(box.height);
+    style.width = Math.max(1, Math.round(box.width));
+    if (box.height) style.minHeight = Math.max(1, Math.round(box.height));
   }
 
-  const tag = childIds.length ? 'div' : 'div';
+  const tag = 'div';
   nodes[id] = {
     id,
     type: 'frame',
     name: figmaNode.name || 'Frame',
     tag,
     style,
-    children: childIds
+    children: childIds,
+    _figmaType: figmaNode.type,
+    _hasAutoLayout: hasAutoLayout
   };
 
   return id;
@@ -201,20 +209,53 @@ function convertNode(figmaNode, nodes, parentBox, index, { useAbsolute }) {
 
 /** Convert Figma REST API file JSON (or nodes endpoint) to BluePainter nodes map. */
 export function figmaFileToNodes(figmaFile, { nodeId, pageName = 'FigmaImport' } = {}) {
+  if (!figmaFile || typeof figmaFile !== 'object') {
+    throw new Error('Invalid Figma file data: expected an object with document or nodes field');
+  }
+  
   const found = findImportRoot(figmaFile, nodeId);
   if (!found?.node) {
-    throw new Error('No frame found in Figma file. Open a file with at least one top-level frame.');
+    if (nodeId) {
+      throw new Error(`Frame not found: node ${nodeId} does not exist or is not a valid frame. Right-click a frame in Figma → Copy link to get the correct node URL.`);
+    }
+    throw new Error('No frames found in Figma file. The file must have at least one top-level frame on the first page. Create a frame in Figma before importing, or use a specific node URL (right-click frame → Copy link).');
   }
 
   const rootFigma = found.node;
-  const box = rootFigma.absoluteBoundingBox || { width: 1280, height: 800, x: 0, y: 0 };
+  
+  if (rootFigma.type === 'DOCUMENT') {
+    throw new Error('Cannot import DOCUMENT node. Navigate to a page in Figma, right-click a frame → Copy link, then use that URL.');
+  }
+  
+  if (rootFigma.type === 'PAGE') {
+    throw new Error('Cannot import PAGE node. Drill into the page, right-click a specific frame or component → Copy link, then use that URL.');
+  }
+  
+  const box = rootFigma.absoluteBoundingBox || rootFigma.size || { width: 1280, height: 800, x: 0, y: 0 };
+  
+  if (!box.width || box.width < 1 || box.width > 10000) {
+    console.warn(`Unusual frame width: ${box.width}. Using 1280px as fallback.`);
+    box.width = 1280;
+  }
+  if (!box.height || box.height < 1 || box.height > 10000) {
+    console.warn(`Unusual frame height: ${box.height}. Using 800px as fallback.`);
+    box.height = 800;
+  }
+  
   const rootId = 'figma-import-page';
   const nodes = {};
 
   const childIds = [];
-  (rootFigma.children || []).forEach((child, i) => {
-    const cid = convertNode(child, nodes, box, i, { useAbsolute: !rootFigma.layoutMode || rootFigma.layoutMode === 'NONE' });
-    if (cid) childIds.push(cid);
+  const children = Array.isArray(rootFigma.children) ? rootFigma.children : [];
+  children.forEach((child, i) => {
+    if (child && child.visible !== false) {
+      try {
+        const cid = convertNode(child, nodes, box, i, { useAbsolute: !rootFigma.layoutMode || rootFigma.layoutMode === 'NONE' });
+        if (cid) childIds.push(cid);
+      } catch (err) {
+        console.warn(`Failed to convert node ${child.id || i}:`, err.message);
+      }
+    }
   });
 
   nodes[rootId] = {
@@ -224,23 +265,35 @@ export function figmaFileToNodes(figmaFile, { nodeId, pageName = 'FigmaImport' }
     tag: 'div',
     style: {
       position: 'relative',
-      width: Math.round(box.width) || 1280,
-      height: Math.round(box.height) || 800,
+      width: Math.max(320, Math.round(box.width)) || 1280,
+      height: Math.max(200, Math.round(box.height)) || 800,
       display: 'flex',
       flexDirection: rootFigma.layoutMode === 'HORIZONTAL' ? 'row' : 'column',
-      gap: rootFigma.itemSpacing || 0,
-      padding: rootFigma.paddingLeft || 0,
+      gap: Math.max(0, Math.round(rootFigma.itemSpacing || 0)),
+      padding: Math.max(0, Math.round(rootFigma.paddingLeft || 0)),
       background: figmaSolidColor(rootFigma.fills) || '#ffffff',
-      overflow: 'hidden',
+      overflow: childIds.length > 0 ? 'hidden' : 'visible',
       boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.2)',
       borderRadius: 8,
       borderWidth: 1,
       borderColor: '#e2e8f0',
       borderStyle: 'solid'
     },
-    children: childIds
+    children: childIds,
+    _figmaType: rootFigma.type,
+    _hasAutoLayout: Boolean(rootFigma.layoutMode && rootFigma.layoutMode !== 'NONE')
   };
 
+  const nodeCount = Object.keys(nodes).length;
+  
+  if (nodeCount === 1 && childIds.length === 0) {
+    console.warn('Import resulted in only the root node. The frame may be empty or contain only unsupported node types (images, gradients, vectors). See FIGMA_IMPORT.md for supported types.');
+  }
+  
+  if (nodeCount > 1000) {
+    console.warn(`Large import: ${nodeCount} nodes. Canvas may render slowly. Consider importing smaller frames.`);
+  }
+  
   return {
     nodes,
     rootId,
@@ -250,7 +303,10 @@ export function figmaFileToNodes(figmaFile, { nodeId, pageName = 'FigmaImport' }
       height: Math.max(Math.round(box.height) || 800, 400)
     },
     frameName: found.name,
-    nodeCount: Object.keys(nodes).length
+    nodeCount,
+    childCount: childIds.length,
+    hasContent: childIds.length > 0,
+    warnings: nodeCount === 1 ? ['Frame appears empty or contains only unsupported node types'] : []
   };
 }
 
@@ -291,8 +347,8 @@ export function getEmptyFigmaImportNodes() {
       type: 'text',
       name: 'Hint',
       tag: 'p',
-      style: { fontSize: 14, color: '#94a3b8', textAlign: 'center', maxWidth: 420, lineHeight: '1.5' },
-      text: 'Use ··· → Import from Figma with a file URL and access token, or paste exported JSON.'
+      style: { fontSize: 14, color: '#94a3b8', textAlign: 'center', maxWidth: 480, lineHeight: '1.5' },
+      text: 'Use ··· → Import from Figma with a file URL and access token (see FIGMA_TOKEN.md), or paste exported JSON. v2 is import-only — changes do NOT sync back to Figma.'
     }
   };
 }

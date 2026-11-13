@@ -1,7 +1,22 @@
 import { useState, useEffect, useRef } from 'react';
 import TeamPolicyPanel from './TeamPolicyPanel';
-import { evaluateReceipts, applyReceiptFix } from '../utils/receiptPolicy';
+import LearningSuggestions from './LearningSuggestions';
+import { evaluateReceipts, applyReceiptFix } from '@bluepainter/shared/receiptPolicy';
 import { isFacilitatorMode } from '../utils/facilitatorMode';
+import { saveLearningConfig } from '../data/defaultReceiptPolicy';
+
+function formatTimestamp(timestamp) {
+  const now = Date.now();
+  const diff = now - timestamp;
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  return `${days}d ago`;
+}
 
 export default function ReceiptsPanel({
   component,
@@ -15,7 +30,10 @@ export default function ReceiptsPanel({
   dismissedRules = new Set(),
   onDismissRule,
   onFixApplied,
-  learningSummary
+  learningSummary,
+  learningLoop,
+  learningConfig,
+  onApplySuggestion
 }) {
   const [policyOpen, setPolicyOpen] = useState(false);
   const facilitator = isFacilitatorMode();
@@ -25,6 +43,8 @@ export default function ReceiptsPanel({
     ? evaluateReceipts(nodesMap, component, policy, dismissedRules)
     : { rules: [], scores: { total: 0, design: 0, buildability: 0, accessibility: 0 } };
   const { rules, scores } = receiptResult;
+
+  const suggestionsCount = learningLoop ? learningLoop.getSuggestions().length : 0;
 
   useEffect(() => {
     if (highlightRuleId && ruleRefs.current[highlightRuleId]) {
@@ -59,6 +79,11 @@ export default function ReceiptsPanel({
       <div className="receipts-header">
         <div className="receipts-title">
           <span>Receipts</span>
+          {suggestionsCount > 0 && (
+            <span className="receipts-suggestions-badge" title={`${suggestionsCount} learning ${suggestionsCount === 1 ? 'suggestion' : 'suggestions'} available`}>
+              💡 {suggestionsCount}
+            </span>
+          )}
         </div>
         <div className="receipts-header-actions">
           {onPolicyChange && (
@@ -73,14 +98,44 @@ export default function ReceiptsPanel({
       </div>
 
       <div className="receipts-scroll">
+        {learningLoop && suggestionsCount > 0 && (
+          <div className="learning-suggestions-callout">
+            <div className="learning-suggestions-callout-header">
+              <span className="learning-suggestions-callout-icon">💡</span>
+              <div className="learning-suggestions-callout-content">
+                <strong>Policy Suggestions Available</strong>
+                <p>Based on your fix/dismiss patterns, the learning loop has {suggestionsCount} {suggestionsCount === 1 ? 'suggestion' : 'suggestions'} to optimize your team policy.</p>
+              </div>
+            </div>
+            <LearningSuggestions 
+              learningLoop={learningLoop} 
+              lightMode={lightMode}
+              onApplySuggestion={onApplySuggestion}
+            />
+          </div>
+        )}
+
         {policyOpen && onPolicyChange && (
-          <TeamPolicyPanel policy={policy} onPolicyChange={onPolicyChange} compact={!facilitator} />
+          <TeamPolicyPanel 
+            policy={policy} 
+            onPolicyChange={onPolicyChange} 
+            learningConfig={learningConfig}
+            onLearningConfigChange={(config) => {
+              saveLearningConfig(config);
+            }}
+            compact={!facilitator} 
+          />
         )}
 
         {facilitator && learningSummary && learningSummary.totalEvents > 0 && (
           <div className="learning-loop-strip">
             <span>Learning loop</span>
             <span>{learningSummary.fixesApplied} fixes · {learningSummary.roundTripsCanvas + learningSummary.roundTripsCode} syncs</span>
+            {learningLoop && learningLoop.getLastActivityTimestamp() && (
+              <span className="learning-loop-timestamp" title="Last learning event">
+                {formatTimestamp(learningLoop.getLastActivityTimestamp())}
+              </span>
+            )}
           </div>
         )}
 
@@ -109,38 +164,48 @@ export default function ReceiptsPanel({
         </div>
 
         <div className="rules-list">
-          {rules.map((rule) => (
-            <div
-              key={rule.id}
-              ref={(el) => { ruleRefs.current[rule.id] = el; }}
-              className={`rule-card ${rule.valid ? 'success' : rule.severity === 'error' ? 'warning error-rule' : 'warning'} ${highlightRuleId === rule.id ? 'rule-card-highlight' : ''}`}
-            >
-              <span className="rule-icon">{rule.valid ? '✓' : rule.severity === 'error' ? '!' : '·'}</span>
-              <div className="rule-content">
-                <div className="rule-title">{rule.title}</div>
-                <div className="rule-desc">{rule.desc}</div>
-                {rule.valid ? (
-                  <span className="rule-tag">{rule.tag}</span>
-                ) : (
-                  <div className="rule-actions">
-                    {rule.fixLabel && (
-                      <button
-                        type="button"
-                        className="rule-action-btn"
-                        style={rule.severity === 'error' ? { background: 'var(--danger-color)' } : undefined}
-                        onClick={() => handleFix(rule)}
-                      >
-                        {rule.fixLabel}
-                      </button>
-                    )}
-                    <button type="button" className="rule-dismiss-btn" onClick={() => handleDismiss(rule.id)}>
-                      Dismiss
-                    </button>
-                  </div>
-                )}
+          {rules.length === 0 ? (
+            <div className="receipts-empty-state">
+              <div className="receipts-empty-icon">✨</div>
+              <div className="receipts-empty-title">All checks passing!</div>
+              <div className="receipts-empty-text">
+                This component meets all design policy requirements. Make edits on canvas or in code to see receipts update live.
               </div>
             </div>
-          ))}
+          ) : (
+            rules.map((rule) => (
+              <div
+                key={rule.id}
+                ref={(el) => { ruleRefs.current[rule.id] = el; }}
+                className={`rule-card ${rule.valid ? 'success' : rule.severity === 'error' ? 'warning error-rule' : 'warning'} ${highlightRuleId === rule.id ? 'rule-card-highlight' : ''}`}
+              >
+                <span className="rule-icon">{rule.valid ? '✓' : rule.severity === 'error' ? '!' : '·'}</span>
+                <div className="rule-content">
+                  <div className="rule-title">{rule.title}</div>
+                  <div className="rule-desc">{rule.desc}</div>
+                  {rule.valid ? (
+                    <span className="rule-tag">{rule.tag}</span>
+                  ) : (
+                    <div className="rule-actions">
+                      {rule.fixLabel && (
+                        <button
+                          type="button"
+                          className="rule-action-btn"
+                          style={rule.severity === 'error' ? { background: 'var(--danger-color)' } : undefined}
+                          onClick={() => handleFix(rule)}
+                        >
+                          {rule.fixLabel}
+                        </button>
+                      )}
+                      <button type="button" className="rule-dismiss-btn" onClick={() => handleDismiss(rule.id)}>
+                        Dismiss
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 

@@ -160,7 +160,7 @@ test('CORS: disallowed origin gets 403 on every token-bearing/paid endpoint', as
 test('CORS: no Origin header (server-to-server, MCP, curl) stays allowed', async () => {
   const res = await call(figmaImport, { body: {} });
   assert.equal(res.statusCode, 400);
-  assert.equal(res.body.error, 'Figma personal access token is required');
+  assert.equal(res.body.error, 'Figma personal access token required');
   assert.equal(res.headers['access-control-allow-origin'], undefined);
 });
 
@@ -695,32 +695,32 @@ test('github-push: bad token → error, nothing created', async () => {
 test('figma-import: missing token → 400, bad file key → 400', async () => {
   const noToken = await call(figmaImport, { body: { fileUrl: 'https://www.figma.com/design/abcDEF123456/My-File' } });
   assert.equal(noToken.statusCode, 400);
-  assert.equal(noToken.body.error, 'Figma personal access token is required');
+  assert.equal(noToken.body.error, 'Figma personal access token required');
 
-  const noFile = await call(figmaImport, { body: { token: 'figd_x', fileUrl: '' } });
+  const noFile = await call(figmaImport, { body: { token: 'figd_testtoken0123456789abcdef', fileUrl: '' } });
   assert.equal(noFile.statusCode, 400);
   assert.equal(noFile.body.error, 'Invalid Figma file URL or key');
   assert.equal(calls.length, 0);
 });
 
-test('figma-import: token forwarded only to api.figma.com; upstream error → 502', async () => {
+test('figma-import: token forwarded only to api.figma.com; upstream 403 is passed through', async () => {
   mockFetch(() => [200, { name: 'My File', document: {} }]);
   const res = await call(figmaImport, {
-    body: { token: ' figd_x ', fileUrl: 'https://www.figma.com/design/abcDEF123456/My-File' }
+    body: { token: ' figd_testtoken0123456789abcdef ', fileUrl: 'https://www.figma.com/design/abcDEF123456/My-File' }
   });
   assert.equal(res.statusCode, 200);
   assert.equal(res.body.fileKey, 'abcDEF123456');
   assert.equal(res.body.fileName, 'My File');
   assert.equal(calls.length, 1);
   assert.ok(calls[0].url.startsWith('https://api.figma.com/v1/files/abcDEF123456'));
-  assert.equal(calls[0].headers['X-Figma-Token'], 'figd_x');
+  assert.equal(calls[0].headers['X-Figma-Token'], 'figd_testtoken0123456789abcdef');
 
   mockFetch(() => [403, 'Forbidden']);
   const denied = await call(figmaImport, {
-    body: { token: 'figd_x', fileUrl: 'https://www.figma.com/design/abcDEF123456/My-File' }
+    body: { token: 'figd_testtoken0123456789abcdef', fileUrl: 'https://www.figma.com/design/abcDEF123456/My-File' }
   });
-  assert.equal(denied.statusCode, 502);
-  assert.equal(denied.body.error, 'Figma API error');
+  assert.equal(denied.statusCode, 403);
+  assert.equal(denied.body.error, 'Figma API access denied');
 });
 
 /* ---------- vercel-deploy ---------- */

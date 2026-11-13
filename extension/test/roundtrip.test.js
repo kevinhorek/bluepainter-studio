@@ -10,7 +10,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { bootstrapFromFile, mergeNodeUpdate } = require('../lib/bootstrap');
 const { generateTSX, parseTSX } = require('../lib/syncEngine');
-const { evaluateReceipts } = require('../lib/receiptPolicy');
+const { evaluateReceipts } = require('@bluepainter/shared/receiptPolicy');
 
 const fixturePath = path.join(__dirname, '..', 'test-fixtures', 'PricingCard.tsx');
 const source = fs.readFileSync(fixturePath, 'utf8');

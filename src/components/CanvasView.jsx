@@ -3,6 +3,8 @@ import { getWorkspaceFile } from '../data/workspaceFiles';
 import { isPlacableTool, getCanvasTool } from '../data/canvasTools';
 import { isLeafNode } from '../utils/nodeFactory';
 import CanvasToolbar from './CanvasToolbar';
+import ViewportSwitcher from './ViewportSwitcher';
+import { VIEWPORT_PRESETS } from '../data/viewportPresets';
 
 export default function CanvasView({
   rootNodeId,
@@ -20,7 +22,9 @@ export default function CanvasView({
   onFocus,
   pageViewport = null,
   componentLibrary = null,
-  onOpenComponentFile = null
+  onOpenComponentFile = null,
+  activeViewportMode = null,
+  onViewportChange = null
 }) {
   const canvasRef = useRef(null);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
@@ -50,6 +54,9 @@ export default function CanvasView({
   // Drag-to-Move Positioning state
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ nodeId: '', startX: 0, startY: 0, startLeft: 0, startTop: 0 });
+
+  // Determine if this is a page view
+  const isPageView = Boolean(pageViewport);
 
   // Handle inline contentEditable changes
   const handleInlineTextBlur = (nodeId, event) => {
@@ -173,6 +180,33 @@ export default function CanvasView({
       document.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isResizing, isDragging, resizeStart, dragStart, nodesMap, onUpdateNode, zoom]);
+
+  useEffect(() => {
+    if (!activeViewportMode || !onViewportChange || !isPageView) return;
+
+    const handleKeyDown = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+        return;
+      }
+
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      const key = e.key.toUpperCase();
+      if (key === 'D') {
+        e.preventDefault();
+        onViewportChange('desktop');
+      } else if (key === 'T') {
+        e.preventDefault();
+        onViewportChange('tablet');
+      } else if (key === 'M') {
+        e.preventDefault();
+        onViewportChange('mobile');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeViewportMode, onViewportChange, isPageView]);
 
   useEffect(() => {
     if (activeCanvasTool !== 'hand') return;
@@ -594,11 +628,11 @@ export default function CanvasView({
 
         {/* Leaf values vs children components recursion */}
         {isLeaf ? (
-          node.text || (node.placeholder ? (
-            <span data-canvas-chrome="" contentEditable={false} className="canvas-dynamic-placeholder">{node.placeholder}</span>
+          node.text || (node.dynamicSource ? (
+            <span data-canvas-chrome="" contentEditable={false} className="canvas-dynamic-placeholder">{node.dynamicSource}</span>
           ) : node.text)
-        ) : !(node.children || []).length && node.placeholder ? (
-          <span data-canvas-chrome="" className="canvas-dynamic-placeholder">{node.placeholder}</span>
+        ) : !(node.children || []).length && node.dynamicSource ? (
+          <span data-canvas-chrome="" className="canvas-dynamic-placeholder">{node.dynamicSource}</span>
         ) : (
           (node.children || []).map((childId) => renderASTNode(childId, sourceMap, embedRootId))
         )}
@@ -618,7 +652,15 @@ export default function CanvasView({
   };
 
   const activeToolMeta = getCanvasTool(activeCanvasTool);
-  const isPageView = Boolean(pageViewport);
+
+  const getViewportWidth = () => {
+    if (!activeViewportMode || !isPageView) return null;
+    const preset = VIEWPORT_PRESETS.find(v => v.id === activeViewportMode);
+    return preset ? preset.width : null;
+  };
+
+  const effectiveViewportWidth = getViewportWidth();
+  const effectiveWidth = effectiveViewportWidth || (isPageView ? pageViewport.width : null);
 
   return (
     <div 
@@ -645,14 +687,15 @@ export default function CanvasView({
         id={isPageView ? 'canvas-page-frame' : undefined}
         style={{
         position: 'relative',
-        width: isPageView ? pageViewport.width : '100%',
+        width: effectiveWidth ? effectiveWidth : (isPageView ? pageViewport.width : '100%'),
         height: isPageView ? pageViewport.height : '100%',
-        minWidth: isPageView ? pageViewport.width : 800,
+        minWidth: effectiveWidth ? effectiveWidth : (isPageView ? pageViewport.width : 800),
         minHeight: isPageView ? pageViewport.height : 600,
         flexShrink: 0,
         zoom,
         margin: isPageView ? 0 : 'auto',
-        transform: `translate(${panOffset.x}px, ${panOffset.y}px)`
+        transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
+        transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
       }}>
         {renderASTNode(rootNodeId)}
       </div>
@@ -663,7 +706,7 @@ export default function CanvasView({
           {isPageView ? (
             <>
               <span className="canvas-status-label">Page</span>
-              <span className="canvas-status-value">{pageViewport.width} × {pageViewport.height}</span>
+              <span className="canvas-status-value">{effectiveWidth || pageViewport.width} × {pageViewport.height}</span>
             </>
           ) : (
             <>
@@ -683,6 +726,12 @@ export default function CanvasView({
         </button>
         <button type="button" onClick={() => zoomBy(1.25)} title="Zoom in (⌘ + scroll)" aria-label="Zoom in">+</button>
       </div>
+      {!hideToolbar && activeViewportMode && onViewportChange && isPageView && (
+        <ViewportSwitcher
+          activeViewport={activeViewportMode}
+          onViewportChange={onViewportChange}
+        />
+      )}
 
       {!hideToolbar && (
         <CanvasToolbar

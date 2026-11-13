@@ -1,13 +1,19 @@
 {
   "name": "bluepainter",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.2.0",
   "type": "module",
+  "main": "desktop/main.cjs",
+  "workspaces": [
+    "packages/*",
+    "extension"
+  ],
   "scripts": {
     "dev": "vite",
     "dev:full": "vercel dev",
     "build": "vite build",
     "lint": "eslint .",
+    "test:ast": "node scripts/test-ast-sync.mjs && node scripts/test-ast-sync-advanced.mjs && node scripts/test-ast-sync-expanded.mjs && node scripts/test-ast-sync-forms-links.mjs && node scripts/test-ast-sync-hero-form-nav.mjs && node scripts/test-ast-sync-edge-cases.mjs && node scripts/test-ast-sync-app-ui.mjs && node scripts/test-ast-sync-advanced-ui.mjs && node scripts/test-ast-sync-interactive.mjs && node scripts/test-ast-sync-search-filter.mjs && node scripts/test-ast-sync-layouts.mjs && node scripts/test-ast-sync-media.mjs && node scripts/test-ast-sync-status-indicators.mjs && node scripts/test-ast-sync-form-validation.mjs && node scripts/test-ast-sync-data-display.mjs && node scripts/test-ast-sync-responsive.mjs && node scripts/test-ast-sync-animations.mjs && node scripts/test-ast-sync-accessibility.mjs",
     "preview": "vite preview",
     "deploy:vercel": "npm run build && npx vercel --prod",
     "site:dev": "npm --prefix site run dev",
@@ -19,14 +25,18 @@
     "test:features": "node --import ./scripts/esm-resolve.mjs ./scripts/feature-tests.mjs",
     "test:api": "node scripts/api-tests.mjs",
     "test:export": "node --import ./scripts/esm-resolve.mjs ./scripts/export-tests.mjs",
-    "sync:extension": "node scripts/sync-extension-libs.mjs",
-    "check:extension": "node scripts/sync-extension-libs.mjs --check",
-    "test": "npm run test:features && npm run test:api && npm run test:export && npm run check:extension"
+    "test:integration": "node scripts/test-real-file-integration.mjs",
+    "test": "npm run test:features && npm run test:ast && npm run test:integration && npm run test:api && npm run test:export",
+    "check:receipts": "node scripts/check-receipts.mjs extension/test-fixtures/PricingCard.tsx",
+    "package:extension": "cd extension && npm run package",
+    "desktop": "concurrently -k -s first -n vite,desktop \"vite --host 127.0.0.1 --port 5173\" \"wait-on http://127.0.0.1:5173 && electron .\"",
+    "desktop:prod": "npm run build && cross-env BLUEPAINTER_DESKTOP_PROD=1 electron ."
   },
   "dependencies": {
     "@babel/parser": "^8.0.0",
     "@babel/traverse": "^8.0.0",
     "@babel/types": "^8.0.0",
+    "@supabase/supabase-js": "^2.115.0",
     "@vercel/analytics": "^2.0.1",
     "html2canvas": "^1.4.1",
     "jszip": "^3.10.1",
@@ -39,11 +49,16 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
+    "concurrently": "^9.2.1",
+    "cross-env": "^7.0.3",
+    "electron": "^37.2.6",
     "eslint": "^10.3.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
     "happy-dom": "^20.10.6",
-    "vite": "^8.0.12"
+    "vercel": "^59.11.7",
+    "vite": "^8.0.12",
+    "wait-on": "^8.0.4"
   }
 }

@@ -165,6 +165,12 @@ body {
   line-height: 1.4;
 }
 
+.bp-receipt-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
 .bp-btn {
   width: 100%;
   margin-top: 8px;
@@ -228,4 +234,210 @@ body {
 
 .bp-editor .bp-canvas {
   min-height: 360px;
+}
+
+.bp-suggestions {
+  margin: 12px;
+  padding: 12px;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 6px;
+}
+
+.bp-suggestions-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+  color: var(--vscode-textLink-foreground);
+}
+
+.bp-suggestions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bp-suggestion-card {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.bp-suggestion-card.applied {
+  opacity: 0.6;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.bp-suggestion-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.bp-suggestion-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bp-suggestion-reason {
+  font-weight: 500;
+  color: var(--vscode-editor-foreground);
+}
+
+.bp-suggestion-action {
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.8rem;
+}
+
+.bp-suggestion-meta {
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: var(--vscode-descriptionForeground);
+}
+
+.bp-suggestion-meta code {
+  padding: 2px 4px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.75rem;
+}
+
+.bp-suggestion-applied {
+  margin-top: 6px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #10b981;
+  border: 1px solid #10b981;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.bp-first-run-tip {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.15));
+  border-bottom: 1px solid rgba(59, 130, 246, 0.3);
+  padding: 12px;
+}
+
+.bp-tip-header {
+  display: flex;
+  align-items: start;
+  gap: 10px;
+}
+
+.bp-tip-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.bp-tip-content {
+  flex: 1;
+}
+
+.bp-tip-content strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--vscode-textLink-foreground);
+  font-size: 12px;
+}
+
+.bp-tip-content p {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  opacity: 0.9;
+}
+
+.bp-tip-content code {
+  padding: 2px 4px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+  font-family: var(--vscode-editor-font-family);
+  font-size: 10px;
+}
+
+.bp-tip-dismiss {
+  background: transparent;
+  border: none;
+  color: var(--vscode-foreground);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+  opacity: 0.6;
+  width: 20px;
+  height: 20px;
+}
+
+.bp-tip-dismiss:hover {
+  opacity: 1;
+}
+
+.bp-config-section {
+  padding: 0 12px 12px;
+  border-top: 1px solid var(--vscode-panel-border);
+}
+
+.bp-config-details {
+  margin-top: 12px;
+}
+
+.bp-config-summary {
+  cursor: pointer;
+  padding: 8px 0;
+  font-size: 12px;
+  font-weight: 500;
+  list-style: none;
+  user-select: none;
+  opacity: 0.85;
+}
+
+.bp-config-summary:hover {
+  opacity: 1;
+}
+
+.bp-config-summary::-webkit-details-marker {
+  display: none;
+}
+
+.bp-config-content {
+  padding: 12px 0 0;
+}
+
+.bp-config-text {
+  margin: 0 0 10px;
+  font-size: 11px;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+.bp-config-help {
+  margin: 10px 0 0;
+  padding: 10px;
+  font-size: 10px;
+  line-height: 1.6;
+  background: var(--vscode-textBlockQuote-background);
+  border-left: 3px solid var(--vscode-textBlockQuote-border);
+  border-radius: 4px;
+  opacity: 0.85;
+}
+
+.bp-config-help strong {
+  color: var(--vscode-textLink-foreground);
+}
+
+.bp-config-help code {
+  padding: 2px 4px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+  font-family: var(--vscode-editor-font-family);
+  font-size: 10px;
 }

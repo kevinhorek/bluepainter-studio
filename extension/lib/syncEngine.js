@@ -1,4 +1,4 @@
-const { parseTSXWithAST, patchTSXWithAST } = require('./astSyncEngine');
+const { parseTSXWithAST, patchTSXWithAST } = require('@bluepainter/shared/astSyncEngine');
 const { patchTSXWithBabel, parseTSXWithBabel } = require('./babelPatch');
 
 function parseTSX(code, nodesMap) {

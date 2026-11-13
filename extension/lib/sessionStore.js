@@ -20,6 +20,7 @@ class SessionStore {
       rootNodeId: data.rootNodeId,
       nodesMap: data.nodesMap,
       selectedNodeId: data.selectedNodeId || null,
+      dismissedRules: data.dismissedRules ? Array.from(data.dismissedRules) : [],
       updatedAt: Date.now()
     };
     return this.context.globalState.update(STORE_KEY, all);

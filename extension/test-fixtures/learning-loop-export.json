@@ -1,0 +1,84 @@
+{
+  "version": "1.0",
+  "exportedAt": 1725476880000,
+  "surface": "vscode-extension",
+  "context": {
+    "userId": "dev@example.com",
+    "userName": "Dev User",
+    "teamId": null,
+    "repoUrl": "https://github.com/example/project",
+    "branch": "main",
+    "commitSha": "abc123def456",
+    "filePath": "/workspace/src/components/Button.tsx"
+  },
+  "stats": {
+    "total": 12,
+    "byType": {
+      "receipt_fix_applied": 5,
+      "receipt_dismissed": 3,
+      "policy_change": 1,
+      "canvas_to_code_sync": 2,
+      "code_to_canvas_sync": 1
+    },
+    "mostAppliedFixes": {
+      "contrast-fix-darker": 3,
+      "spacing-fix-grid": 2
+    },
+    "mostDismissedRules": {
+      "weak-cta": 2,
+      "feature-count": 1
+    },
+    "policyChanges": 1,
+    "roundTrips": 3
+  },
+  "events": [
+    {
+      "type": "canvas_to_code_sync",
+      "timestamp": 1725476800000,
+      "data": {
+        "nodeId": "hero-cta",
+        "fileName": "HeroSection.tsx",
+        "patchType": "text"
+      }
+    },
+    {
+      "type": "receipt_fix_applied",
+      "timestamp": 1725476820000,
+      "data": {
+        "fixKey": "contrast-fix-darker",
+        "nodeId": "pricing-cta",
+        "fixMeta": {
+          "property": "backgroundColor",
+          "newValue": "#1e40af"
+        },
+        "ruleId": "contrast"
+      }
+    },
+    {
+      "type": "receipt_dismissed",
+      "timestamp": 1725476840000,
+      "data": {
+        "ruleId": "weak-cta",
+        "nodeId": "secondary-btn",
+        "fileName": "Button.tsx"
+      }
+    },
+    {
+      "type": "policy_change",
+      "timestamp": 1725476860000,
+      "data": {
+        "key": "minContrastRatio",
+        "oldValue": 4.5,
+        "newValue": 3.0
+      }
+    },
+    {
+      "type": "code_to_canvas_sync",
+      "timestamp": 1725476880000,
+      "data": {
+        "fileName": "Dashboard.tsx",
+        "nodeCount": 8
+      }
+    }
+  ]
+}

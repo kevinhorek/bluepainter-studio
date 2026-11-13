@@ -4,10 +4,12 @@ const { parse } = require('@babel/parser');
 const traverseModule = require('@babel/traverse');
 const { bootstrapFromFile, mergeNodeUpdate } = require('./lib/bootstrap');
 const { generateTSX } = require('./lib/syncEngine');
-const { getJsxId } = require('./lib/astSyncEngine');
-const { evaluateReceipts, applyReceiptFix } = require('./lib/receiptPolicy');
+const { getJsxId } = require('@bluepainter/shared/astSyncEngine');
+const { evaluateReceipts, applyReceiptFix } = require('@bluepainter/shared/receiptPolicy');
 const { loadReceiptPolicyFromConfig } = require('./lib/defaultReceiptPolicy');
 const { SessionStore } = require('./lib/sessionStore');
+const { LearningLoop } = require('./lib/learningLoop');
+const { detectWorkspaceType, getWorkspaceRecommendations } = require('./lib/designSystemDetection');
 
 const traverse = traverseModule.default || traverseModule;
 const SUPPORTED_LANGS = new Set(['typescriptreact', 'javascriptreact']);
@@ -48,6 +50,21 @@ function getWebviewHtml(webview, extensionUri, mode = 'sidebar') {
 </head>
 <body class="${mode === 'editor' ? 'bp-editor' : ''}">
   <div class="bp-shell">
+    <div class="bp-first-run-tip" id="bp-first-run-tip" hidden>
+      <div class="bp-tip-header">
+        <span class="bp-tip-icon">👋</span>
+        <div class="bp-tip-content">
+          <strong>Welcome to BluePainter!</strong>
+          <p><strong>Quick Start:</strong> Open Command Palette (⌘/Ctrl+Shift+P) → type <strong>"BluePainter: Pick Component"</strong> → select a .tsx/.jsx file from your workspace.</p>
+          <p style="margin-top: 8px; font-size: 0.85rem;">Once loaded, you can edit components visually on the canvas, apply Designer's Receipts fixes, and sync changes back to your code with full AST preservation.</p>
+          <div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="bp-btn small secondary" id="bp-open-pilot-guide">📖 View Setup Guide</button>
+            <button class="bp-btn small secondary" id="bp-open-config-from-tip">⚙️ Configure</button>
+          </div>
+        </div>
+        <button class="bp-tip-dismiss" id="bp-tip-dismiss" title="Dismiss">×</button>
+      </div>
+    </div>
     <header class="bp-header">
       <h1>BluePainter</h1>
       <p id="bp-file-name">No file open</p>
@@ -66,7 +83,17 @@ function getWebviewHtml(webview, extensionUri, mode = 'sidebar') {
       <section class="bp-pane active" data-pane="canvas">
         <div class="bp-canvas-wrap">
           <div class="bp-canvas" id="bp-canvas"></div>
-          <p class="bp-empty" id="bp-canvas-empty">Open a TSX file with <code>id="…"</code> attributes to preview and edit.</p>
+          <div class="bp-empty" id="bp-canvas-empty">
+            <div style="text-align: center; padding: 24px;">
+              <div style="font-size: 2.5rem; margin-bottom: 12px;">🎨</div>
+              <p style="font-size: 1.1rem; font-weight: 600; margin-bottom: 8px;">No Component Loaded</p>
+              <p style="opacity: 0.75; margin-bottom: 16px;">Pick a React component to start visual editing</p>
+              <button class="bp-btn" id="bp-pick-component-btn">Pick Component</button>
+              <p style="margin-top: 16px; font-size: 0.85rem; opacity: 0.6;">
+                Or: <a href="#" id="bp-empty-pilot-link" style="color: inherit; text-decoration: underline;">View first-session guide</a>
+              </p>
+            </div>
+          </div>
         </div>
       </section>
       <section class="bp-pane" data-pane="inspector">
@@ -82,6 +109,20 @@ function getWebviewHtml(webview, extensionUri, mode = 'sidebar') {
       <button class="bp-btn secondary" id="bp-sync-btn">Sync from file</button>
       <button class="bp-btn" id="bp-write-btn">Write to file</button>
     </footer>
+    <div class="bp-config-section">
+      <details class="bp-config-details">
+        <summary class="bp-config-summary">⚙️ Configuration</summary>
+        <div class="bp-config-content">
+          <p class="bp-config-text">Customize receipt policy for your workspace or team:</p>
+          <button class="bp-btn secondary small" id="bp-open-settings-btn">Open Extension Settings</button>
+          <button class="bp-btn secondary small" id="bp-open-config-btn">Open Team Config (.bluepainter.json)</button>
+          <p class="bp-config-help">
+            <strong>Extension Settings:</strong> Per-workspace VS Code settings<br>
+            <strong>Team Config:</strong> Shared policy in <code>.bluepainter.json</code> (version-controlled)
+          </p>
+        </div>
+      </details>
+    </div>
     <div style="padding: 0 12px 12px;">
       <button class="bp-btn secondary" id="bp-open-demo-btn">Open web demo</button>
     </div>
@@ -95,6 +136,7 @@ class BluePainterController {
   constructor(context) {
     this.context = context;
     this.sessionStore = new SessionStore(context);
+    this.learningLoop = new LearningLoop(context);
     this.docState = new Map();
     this.skipParse = false;
     this.sidebarView = null;
@@ -129,6 +171,32 @@ class BluePainterController {
     return vscode.workspace.getConfiguration('bluepainter').get('demoUrl', 'https://bluepainter-studio.vercel.app/#/app');
   }
 
+  async openPilotGuide() {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders || !workspaceFolders.length) {
+      vscode.window.showWarningMessage('BluePainter: no workspace folder open.');
+      return;
+    }
+
+    const guidePath = path.join(workspaceFolders[0].uri.fsPath, 'EXTENSION_PILOT.md');
+    const guideUri = vscode.Uri.file(guidePath);
+
+    try {
+      await vscode.workspace.fs.stat(guideUri);
+      const doc = await vscode.workspace.openTextDocument(guideUri);
+      await vscode.window.showTextDocument(doc, { preview: false });
+    } catch {
+      vscode.window.showInformationMessage(
+        'EXTENSION_PILOT.md not found. Opening online documentation instead.',
+        'Open Docs'
+      ).then((choice) => {
+        if (choice === 'Open Docs') {
+          vscode.env.openExternal(vscode.Uri.parse('https://bluepainter-studio.vercel.app/#/docs'));
+        }
+      });
+    }
+  }
+
   isSupportedDocument(doc) {
     return doc && SUPPORTED_LANGS.has(doc.languageId);
   }
@@ -141,7 +209,9 @@ class BluePainterController {
         rootNodeId: null,
         nodesMap: {},
         selectedNodeId: null,
-        source: 'empty'
+        source: 'empty',
+        lastSyncedVersion: editor.document.version,
+        dismissedRules: new Set()
       });
     }
     return { uri, editor, state: this.docState.get(uri) };
@@ -167,6 +237,14 @@ class BluePainterController {
     ctx.state.rootNodeId = boot.rootNodeId;
     ctx.state.nodesMap = boot.nodesMap;
     ctx.state.source = boot.source;
+    ctx.state.lastSyncedVersion = editor.document.version;
+    
+    // Restore dismissedRules from saved session (convert from array to Set)
+    if (saved && saved.dismissedRules) {
+      ctx.state.dismissedRules = new Set(saved.dismissedRules);
+    } else {
+      ctx.state.dismissedRules = ctx.state.dismissedRules || new Set();
+    }
 
     if (!ctx.state.selectedNodeId || !boot.nodesMap[ctx.state.selectedNodeId]) {
       ctx.state.selectedNodeId = boot.rootNodeId;
@@ -188,9 +266,13 @@ class BluePainterController {
     const syncInfo = countSyncableIds(code);
     const selected = ctx.state.selectedNodeId ? ctx.state.nodesMap[ctx.state.selectedNodeId] : null;
     const policy = this.getConfig();
+    const dismissedRules = ctx.state.dismissedRules || new Set();
     const receiptResult = selected
-      ? evaluateReceipts(ctx.state.nodesMap, selected, policy)
+      ? evaluateReceipts(ctx.state.nodesMap, selected, policy, dismissedRules)
       : { rules: [], scores: { design: 100, accessibility: 100, buildability: 100, total: 100 } };
+
+    const suggestions = this.learningLoop.getSuggestions();
+    const showFirstRunTip = !this.context.globalState.get('bluepainter.firstRunTipDismissed', false);
 
     return {
       fileName: path.basename(ctx.editor.document.fileName),
@@ -203,7 +285,9 @@ class BluePainterController {
       parseError: syncInfo.error,
       source: ctx.state.source,
       mode: 'sidebar',
-      status: ''
+      status: '',
+      suggestions,
+      showFirstRunTip
     };
   }
 
@@ -245,6 +329,44 @@ class BluePainterController {
       return false;
     }
 
+    // Conflict detection: check if document has changed since last sync (CONFLICT_MODEL.md §3)
+    const currentVersion = ctx.editor.document.version;
+    const hasConflict = ctx.state.lastSyncedVersion && currentVersion !== ctx.state.lastSyncedVersion && !options.forceOverwrite;
+
+    if (hasConflict && !options.quiet) {
+      const choice = await vscode.window.showWarningMessage(
+        '⚠️ Simultaneous Edit Conflict: The file has unsaved or external changes while you edited the canvas. Choose how to resolve (see CONFLICT_MODEL.md for details):',
+        { modal: true, detail: 'Recommendation: Choose "Review Manually" to avoid losing work from either side.' },
+        'Review Manually (Recommended)',
+        'Keep Canvas (Discard Code)',
+        'Keep Code (Discard Canvas)',
+        'Cancel'
+      );
+
+      if (choice === 'Keep Code (Discard Canvas)') {
+        this.syncFromFile(editor);
+        this.learningLoop.log('conflict_resolved', {
+          resolution: 'discard_canvas',
+          fileName: path.basename(ctx.editor.document.fileName)
+        });
+        return false;
+      } else if (choice === 'Review Manually (Recommended)') {
+        this.learningLoop.log('conflict_resolved', {
+          resolution: 'review_manually',
+          fileName: path.basename(ctx.editor.document.fileName)
+        });
+        vscode.window.showInformationMessage('Review the file diff and manually resolve the conflict. See CONFLICT_MODEL.md for guidance.');
+        return false;
+      } else if (choice === 'Cancel' || !choice) {
+        return false;
+      }
+      // If 'Keep Canvas (Discard Code)', continue with write
+      this.learningLoop.log('conflict_resolved', {
+        resolution: 'overwrite_with_canvas',
+        fileName: path.basename(ctx.editor.document.fileName)
+      });
+    }
+
     const existing = ctx.editor.document.getText();
     const nextCode = generateTSX(ctx.state.nodesMap, existing);
     if (!nextCode) {
@@ -254,6 +376,7 @@ class BluePainterController {
 
     if (nextCode === existing) {
       if (!options.quiet) vscode.window.showInformationMessage('BluePainter: file already up to date.');
+      ctx.state.lastSyncedVersion = currentVersion;
       return true;
     }
 
@@ -278,8 +401,31 @@ class BluePainterController {
       return false;
     }
 
+    ctx.state.lastSyncedVersion = ctx.editor.document.version + 1;
     this.persist(ctx.uri, ctx.state);
-    if (!options.quiet) vscode.window.showInformationMessage('BluePainter: wrote canvas changes to file.');
+    
+    // Log canvas→code round-trip to learning loop
+    if (!options.quiet) {
+      const nodeCount = Object.keys(ctx.state.nodesMap).length;
+      const fileName = path.basename(ctx.editor.document.fileName);
+      const filePath = vscode.workspace.asRelativePath(ctx.editor.document.fileName);
+      
+      this.learningLoop.log('canvas_to_code_roundtrip', {
+        fileName,
+        nodeCount,
+        hadConflict: hasConflict
+      });
+      
+      vscode.window.showInformationMessage(
+        `✓ Canvas → File: Wrote ${nodeCount} ${nodeCount === 1 ? 'component' : 'components'} to \`${filePath}\``,
+        'View File'
+      ).then((choice) => {
+        if (choice === 'View File') {
+          vscode.window.showTextDocument(ctx.editor.document, { viewColumn: vscode.ViewColumn.One, preview: false });
+        }
+      });
+    }
+    
     this.refreshViews(editor);
     setTimeout(() => { this.skipParse = false; }, 250);
     return true;
@@ -293,19 +439,23 @@ class BluePainterController {
     this.persist(ctx.uri, ctx.state);
 
     if (options.autoWrite !== false) {
+      const patchType = Object.keys(patch).join(',');
+      this.learningLoop.logCanvasToCodeSync(nodeId, path.basename(editor.document.fileName), patchType);
       this.writeBack(editor, { quiet: true });
     } else {
       this.refreshViews(editor);
     }
   }
 
-  applyFix(editor, fixKey, fixMeta) {
+  applyFix(editor, fixKey, fixMeta, ruleId) {
     const ctx = this.getEditorState(editor);
     if (!ctx) return;
 
     applyReceiptFix(fixKey, fixMeta, ctx.state.nodesMap, (nodeId, patch) => {
       ctx.state.nodesMap = mergeNodeUpdate(ctx.state.nodesMap, nodeId, patch);
     });
+
+    this.learningLoop.logReceiptFixApplied(fixKey, fixMeta.nodeId, fixMeta, ruleId);
 
     this.persist(ctx.uri, ctx.state);
     this.writeBack(editor, { quiet: true });
@@ -318,13 +468,19 @@ class BluePainterController {
       if (!options.quiet) vscode.window.showWarningMessage('BluePainter: open a TSX/JSX file first.');
       return;
     }
+    const nodeCount = Object.keys(ctx.state.nodesMap).length;
+    if (!ctx.parseError) {
+      this.learningLoop.log('code_to_canvas_roundtrip', {
+        fileName: path.basename(ctx.editor.document.fileName),
+        nodeCount,
+        source: ctx.state.source
+      });
+    }
     if (!options.quiet) {
       if (ctx.parseError) {
         vscode.window.showWarningMessage('BluePainter: could not parse this file — fix the syntax error and sync again.');
       } else {
-        vscode.window.showInformationMessage(
-          `BluePainter: synced ${Object.keys(ctx.state.nodesMap).length} node(s) from file.`
-        );
+        vscode.window.showInformationMessage(`BluePainter: synced ${nodeCount} node(s) from file.`);
       }
     }
     this.refreshViews(editor);
@@ -340,8 +496,52 @@ class BluePainterController {
     this.syncTimer = setTimeout(() => {
       // Re-reads values from the code; rebuilds the node tree if ids were added/removed.
       if (!this.loadDocument(editor)) return;
+      this.learningLoop.logCodeToCanvasSync(path.basename(document.fileName), Object.keys(this.getEditorState(editor)?.state.nodesMap || {}).length);
       this.refreshViews(editor);
     }, 350);
+  }
+
+  async pickAndOpenComponent() {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders || !workspaceFolders.length) {
+      vscode.window.showWarningMessage('BluePainter: no workspace folder open.');
+      return;
+    }
+
+    const files = await vscode.workspace.findFiles(
+      '{src/**/*.{tsx,jsx},**/*.{tsx,jsx}}',
+      '**/node_modules/**',
+      100
+    );
+
+    if (!files.length) {
+      vscode.window.showWarningMessage('BluePainter: no TSX/JSX files found in workspace.');
+      return;
+    }
+
+    const items = files.map((uri) => {
+      const relativePath = vscode.workspace.asRelativePath(uri);
+      const fileName = path.basename(uri.fsPath);
+      return {
+        label: fileName,
+        description: relativePath,
+        uri
+      };
+    });
+
+    const selected = await vscode.window.showQuickPick(items, {
+      placeHolder: 'Select a component to open in BluePainter',
+      matchOnDescription: true
+    });
+
+    if (!selected) return;
+
+    const doc = await vscode.workspace.openTextDocument(selected.uri);
+    const editor = await vscode.window.showTextDocument(doc, vscode.ViewColumn.One);
+    
+    this.loadDocument(editor);
+    this.refreshViews(editor);
+    vscode.window.showInformationMessage(`BluePainter: opened ${selected.label}`);
   }
 
   async openEditorPanel() {
@@ -380,7 +580,7 @@ class BluePainterController {
     this.refreshViews(editor);
   }
 
-  handleWebviewMessage(msg) {
+  async handleWebviewMessage(msg) {
     // A focused webview means there is no activeTextEditor; fall back to the last one.
     const candidate = vscode.window.activeTextEditor ?? this.lastEditor;
     const editor =
@@ -391,6 +591,12 @@ class BluePainterController {
     switch (msg.type) {
       case 'ready':
         this.refreshViews(editor);
+        break;
+      case 'pickComponent':
+        this.pickAndOpenComponent();
+        break;
+      case 'openPilotGuide':
+        this.openPilotGuide();
         break;
       case 'selectNode':
         if (editor) {
@@ -408,8 +614,73 @@ class BluePainterController {
         break;
       case 'applyFix':
         if (editor && msg.fixKey) {
-          this.applyFix(editor, msg.fixKey, msg.fixMeta);
+          this.applyFix(editor, msg.fixKey, msg.fixMeta, msg.ruleId);
         }
+        break;
+      case 'dismissReceipt':
+        if (editor && msg.ruleId) {
+          const ctx = this.getEditorState(editor);
+          if (ctx) {
+            ctx.state.dismissedRules.add(msg.ruleId);
+            this.persist(ctx.uri, ctx.state);
+            this.learningLoop.logReceiptDismissed(msg.ruleId, msg.nodeId, path.basename(editor.document.fileName));
+            this.refreshViews(editor);
+          }
+        }
+        break;
+      case 'applySuggestion':
+        if (editor && msg.suggestion) {
+          const ctx = this.getEditorState(editor);
+          if (ctx) {
+            const suggestion = msg.suggestion;
+            
+            if (suggestion.type === 'downgrade_rule') {
+              ctx.state.dismissedRules.add(suggestion.ruleId);
+              this.persist(ctx.uri, ctx.state);
+              this.learningLoop.log('learning_suggestion_applied', {
+                type: 'downgrade_rule',
+                ruleId: suggestion.ruleId,
+                weight: suggestion.weight
+              });
+              vscode.window.showInformationMessage(`BluePainter: Rule "${suggestion.ruleId}" hidden from receipts.`);
+              this.refreshViews(editor);
+            } else if (suggestion.type === 'prefer_quick_fix') {
+              const prefKey = 'bluepainter.quickFixPrefs';
+              const prefs = this.context.globalState.get(prefKey, {});
+              prefs[suggestion.fixKey] = {
+                preferred: true,
+                appliedAt: Date.now(),
+                weight: suggestion.weight
+              };
+              this.context.globalState.update(prefKey, prefs);
+              this.learningLoop.log('learning_suggestion_applied', {
+                type: 'prefer_quick_fix',
+                fixKey: suggestion.fixKey,
+                weight: suggestion.weight
+              });
+              vscode.window.showInformationMessage(`BluePainter: Quick-fix preference saved for "${suggestion.fixKey}".`);
+            }
+          }
+        }
+        break;
+      case 'exportLearningLoop': {
+        const loopData = this.learningLoop.exportJSON();
+        const fileName = `bluepainter-learning-loop-${new Date().toISOString().slice(0, 10)}.json`;
+        const uri = await vscode.window.showSaveDialog({
+          defaultUri: vscode.Uri.file(fileName),
+          filters: { 'JSON': ['json'] }
+        });
+        
+        if (uri) {
+          const fs = require('fs');
+          fs.writeFileSync(uri.fsPath, JSON.stringify(loopData, null, 2));
+          vscode.window.showInformationMessage(`✓ Learning loop exported: ${loopData.stats.total} events → ${path.basename(uri.fsPath)}`);
+        }
+        break;
+      }
+      case 'dismissFirstRunTip':
+        this.context.globalState.update('bluepainter.firstRunTipDismissed', true);
+        this.refreshViews(editor);
         break;
       case 'syncFromFile':
         this.syncFromFile(editor);
@@ -419,6 +690,12 @@ class BluePainterController {
         break;
       case 'openDemo':
         vscode.env.openExternal(vscode.Uri.parse(this.getDemoUrl()));
+        break;
+      case 'openSettings':
+        vscode.commands.executeCommand('bluepainter.openSettings');
+        break;
+      case 'openConfigFile':
+        vscode.commands.executeCommand('bluepainter.openConfigFile');
         break;
       default:
         break;
@@ -462,11 +739,75 @@ function activate(context) {
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand('bluepainter.pickComponent', () => controller.pickAndOpenComponent())
+  );
+
+  context.subscriptions.push(
     vscode.commands.registerCommand('bluepainter.syncFromFile', () => controller.syncFromFile())
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand('bluepainter.writeToFile', () => controller.writeBack())
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('bluepainter.openSettings', () => {
+      vscode.commands.executeCommand('workbench.action.openSettings', '@ext:bluepainter.bluepainter');
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('bluepainter.openConfigFile', async () => {
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (!workspaceFolders || !workspaceFolders.length) {
+        vscode.window.showWarningMessage('BluePainter: no workspace folder open.');
+        return;
+      }
+
+      const configPath = path.join(workspaceFolders[0].uri.fsPath, '.bluepainter.json');
+      const configUri = vscode.Uri.file(configPath);
+
+      try {
+        await vscode.workspace.fs.stat(configUri);
+        const doc = await vscode.workspace.openTextDocument(configUri);
+        await vscode.window.showTextDocument(doc);
+        vscode.window.showInformationMessage('BluePainter: opened .bluepainter.json');
+      } catch {
+        const createFile = await vscode.window.showInformationMessage(
+          'No .bluepainter.json found in workspace root. Create one?',
+          'Create',
+          'Cancel'
+        );
+
+        if (createFile === 'Create') {
+          const defaultConfig = {
+            receiptPolicy: {
+              spacingGrid: 8,
+              radiusGrid: 4,
+              minContrastRatio: 4.5,
+              maxFeatureCount: 5,
+              weakCtaWords: ['submit', 'click here', 'send', 'button', 'ok', 'enter'],
+              suggestedCta: 'Start free trial',
+              contrastFixColor: '#1e40af',
+              primaryColor: '#0f172a',
+              secondaryColor: '#64748b',
+              textColor: '#1e293b',
+              ruleSeverities: {}
+            },
+            learningLoopOverrides: {
+              hiddenRules: [],
+              preferredFixes: {}
+            }
+          };
+
+          const configContent = JSON.stringify(defaultConfig, null, 2);
+          await vscode.workspace.fs.writeFile(configUri, Buffer.from(configContent, 'utf8'));
+          const doc = await vscode.workspace.openTextDocument(configUri);
+          await vscode.window.showTextDocument(doc);
+          vscode.window.showInformationMessage('BluePainter: created .bluepainter.json with default team policy');
+        }
+      }
+    })
   );
 
   context.subscriptions.push(
@@ -502,6 +843,41 @@ function activate(context) {
     controller.rememberEditor(vscode.window.activeTextEditor);
     controller.loadDocument(vscode.window.activeTextEditor);
     controller.refreshViews(vscode.window.activeTextEditor);
+  }
+
+  const config = vscode.workspace.getConfiguration('bluepainter');
+  const enableDetection = config.get('enableDesignSystemDetection', true);
+  
+  if (enableDetection) {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (workspaceFolders && workspaceFolders.length > 0) {
+      const workspaceRoot = workspaceFolders[0].uri.fsPath;
+      const detection = detectWorkspaceType(workspaceRoot);
+      
+      if (detection.isDesignSystem && detection.confidence !== 'none') {
+        const channel = vscode.window.createOutputChannel('BluePainter');
+        channel.appendLine('BluePainter: Design system detected');
+        channel.appendLine(`  Confidence: ${detection.confidence}`);
+        channel.appendLine(`  Indicators: ${detection.indicators.join(', ')}`);
+        
+        const recommendations = getWorkspaceRecommendations(detection);
+        if (recommendations.length > 0) {
+          channel.appendLine('\nRecommendations:');
+          recommendations.forEach((rec) => {
+            channel.appendLine(`  [${rec.type}] ${rec.message}`);
+          });
+        }
+
+        if (detection.confidence === 'high') {
+          const msg = `Design system detected: ${detection.indicators[0]}`;
+          vscode.window.showInformationMessage(msg, 'Learn More').then((choice) => {
+            if (choice === 'Learn More') {
+              vscode.env.openExternal(vscode.Uri.parse('https://bluepainter-studio.vercel.app/#/docs'));
+            }
+          });
+        }
+      }
+    }
   }
 }
 

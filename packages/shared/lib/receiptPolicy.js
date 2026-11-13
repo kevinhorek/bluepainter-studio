@@ -1,5 +1,3 @@
-// GENERATED from src/utils/receiptPolicy.js by scripts/sync-extension-libs.mjs — do not edit.
-// Run `npm run sync:extension` after changing the source.
 const NAMED_COLORS = {
   white: '#ffffff',
   black: '#000000',
@@ -12,7 +10,7 @@ const NAMED_COLORS = {
 };
 
 /** Parse #rgb, #rrggbb(aa), rgb()/rgba() and a few named colors → [r, g, b] or null. */
-function parseColor(input) {
+export function parseColor(input) {
   if (typeof input !== 'string') return null;
   let value = input.trim().toLowerCase();
   if (NAMED_COLORS[value]) value = NAMED_COLORS[value];
@@ -38,7 +36,7 @@ function relativeLuminance([r, g, b]) {
  * Returns null when either colour can't be parsed (gradient, CSS variable…),
  * so callers can skip the check instead of reporting a made-up number.
  */
-function getContrastRatio(background, foreground = '#ffffff') {
+export function getContrastRatio(background, foreground = '#ffffff') {
   const bg = parseColor(background);
   const fg = parseColor(foreground);
   if (!bg || !fg) return null;
@@ -48,7 +46,7 @@ function getContrastRatio(background, foreground = '#ffffff') {
   return Math.round(ratio * 100) / 100;
 }
 
-function evaluateReceipts(nodesMap, component, policy, dismissedRules = new Set()) {
+export function evaluateReceipts(nodesMap, component, policy, dismissedRules = new Set()) {
   if (!component || !nodesMap) return { rules: [], scores: { design: 100, accessibility: 100, buildability: 100, total: 100 } };
 
   // Resolve what each rule applies to from the tree itself, so receipts work on
@@ -168,6 +166,20 @@ function evaluateReceipts(nodesMap, component, policy, dismissedRules = new Set(
     });
   }
 
+  // Design tokens: a button that is not the brand primary colour (informational).
+  const brandPrimary = policy.primaryColor;
+  if (buttonNode && brandPrimary && String(btnColor).toLowerCase() !== String(brandPrimary).toLowerCase()) {
+    addRule('brand-color', false, {
+      title: 'Button uses off-brand color',
+      desc: `Button color ${btnColor} doesn't match brand primary ${brandPrimary}.`,
+      tag: 'Design',
+      severity: 'info',
+      fixLabel: 'Use brand primary',
+      fixKey: 'brand-color',
+      fixMeta: { nodeId: buttonNode.id, color: brandPrimary }
+    });
+  }
+
   if (buttonNode) {
     addRule('copy', !isCopyWeak, {
       title: isCopyWeak ? 'Weak CTA copy detected' : 'Strong CTA Copy',
@@ -210,6 +222,27 @@ function evaluateReceipts(nodesMap, component, policy, dismissedRules = new Set(
     });
   }
 
+  // Design tokens: text that sets its own colour instead of the brand text colour.
+  const brandTextColor = policy.textColor;
+  if (brandTextColor) {
+    const offBrandNode = Object.values(nodesMap).find((n) => {
+      if (!n || (n.type !== 'text' && n.type !== 'list-item') || !n.text) return false;
+      const color = n.style?.color;
+      return color && color !== brandTextColor && !['inherit', 'currentColor'].includes(color);
+    });
+    if (offBrandNode) {
+      addRule('text-color', false, {
+        title: 'Inconsistent text colors detected',
+        desc: `Some text uses custom colors instead of brand text color ${brandTextColor}.`,
+        tag: 'Design',
+        severity: 'info',
+        fixLabel: 'Use brand text color',
+        fixKey: 'text-color',
+        fixMeta: { nodeId: offBrandNode.id, color: brandTextColor }
+      });
+    }
+  }
+
   let designScore = 100;
   let accessibilityScore = 100;
   let buildabilityScore = 100;
@@ -218,6 +251,7 @@ function evaluateReceipts(nodesMap, component, policy, dismissedRules = new Set(
     if (r.valid) return;
     if (r.id === 'spacing' || r.id === 'radius') designScore -= r.id === 'spacing' ? 20 : 10;
     if (r.id === 'copy') designScore -= 15;
+    if (r.id === 'brand-color' || r.id === 'text-color') designScore -= 5;
     if (r.id === 'contrast') accessibilityScore -= 45;
     if (r.id === 'features') buildabilityScore -= 25;
   });
@@ -230,7 +264,7 @@ function evaluateReceipts(nodesMap, component, policy, dismissedRules = new Set(
   };
 }
 
-function applyReceiptFix(fixKey, fixMeta, nodesMap, onUpdateNode) {
+export function applyReceiptFix(fixKey, fixMeta, nodesMap, onUpdateNode) {
   if (!onUpdateNode || !fixMeta) return;
   const node = nodesMap?.[fixMeta.nodeId];
   if (!node) return;
@@ -240,6 +274,10 @@ function applyReceiptFix(fixKey, fixMeta, nodesMap, onUpdateNode) {
     onUpdateNode(fixMeta.nodeId, { style: { ...style, padding: fixMeta.padding } });
   } else if (fixKey === 'contrast') {
     onUpdateNode(fixMeta.nodeId, { style: { ...style, background: fixMeta.color } });
+  } else if (fixKey === 'brand-color') {
+    onUpdateNode(fixMeta.nodeId, { style: { ...style, background: fixMeta.color } });
+  } else if (fixKey === 'text-color') {
+    onUpdateNode(fixMeta.nodeId, { style: { ...style, color: fixMeta.color } });
   } else if (fixKey === 'copy') {
     onUpdateNode(fixMeta.nodeId, { text: fixMeta.text });
   } else if (fixKey === 'radius') {
@@ -248,10 +286,3 @@ function applyReceiptFix(fixKey, fixMeta, nodesMap, onUpdateNode) {
     onUpdateNode(fixMeta.nodeId, { children: (node.children || []).slice(0, fixMeta.max) });
   }
 }
-
-module.exports = {
-  parseColor,
-  getContrastRatio,
-  evaluateReceipts,
-  applyReceiptFix
-};
