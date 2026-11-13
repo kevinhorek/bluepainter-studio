@@ -2,15 +2,21 @@ import JSZip from 'jszip';
 import { generateTSX } from './syncEngine';
 import { FILE_ORDER, WORKSPACE_FILES, APP_EXPORT_FILE_IDS } from '../data/workspaceFiles';
 
-function exportFilename(label) {
-  return label.replace(/\.tsx$/, '.jsx');
+/** Studio labels are already `.tsx`; the export is a real TypeScript project. */
+export function exportFilename(label) {
+  return /\.tsx$/.test(label) ? label : `${label.replace(/\.[jt]sx?$/, '')}.tsx`;
 }
 
-function fixImportPaths(code) {
-  return code.replace(/from '\.\/([^']+)'/g, (_, name) => `from './${name}.jsx'`);
+/**
+ * Generated imports are extensionless (`from './PricingCard'`), which is what
+ * TypeScript's bundler resolution wants. Strip any explicit extension so older
+ * saved code keeps resolving after the .jsx → .tsx move.
+ */
+export function fixImportPaths(code) {
+  return code.replace(/from '\.\/([^']+?)\.[jt]sx?'/g, (_, name) => `from './${name}'`);
 }
 
-function scaffoldPackageJson(name) {
+export function scaffoldPackageJson(name) {
   return JSON.stringify({
     name,
     private: true,
@@ -19,6 +25,7 @@ function scaffoldPackageJson(name) {
     scripts: {
       dev: 'vite',
       build: 'vite build',
+      typecheck: 'tsc --noEmit',
       preview: 'vite preview'
     },
     dependencies: {
@@ -26,13 +33,33 @@ function scaffoldPackageJson(name) {
       'react-dom': '^19.0.0'
     },
     devDependencies: {
+      '@types/react': '^19.0.0',
+      '@types/react-dom': '^19.0.0',
       '@vitejs/plugin-react': '^4.3.4',
+      typescript: '^5.6.0',
       vite: '^6.0.0'
     }
   }, null, 2);
 }
 
-const VITE_CONFIG = `import { defineConfig } from 'vite';
+export const TSCONFIG_JSON = JSON.stringify({
+  compilerOptions: {
+    target: 'ES2022',
+    lib: ['ES2022', 'DOM', 'DOM.Iterable'],
+    module: 'ESNext',
+    moduleResolution: 'bundler',
+    jsx: 'react-jsx',
+    strict: true,
+    noEmit: true,
+    isolatedModules: true,
+    skipLibCheck: true
+  },
+  include: ['src']
+}, null, 2);
+
+export const VITE_ENV_DTS = '/// <reference types="vite/client" />\n';
+
+export const VITE_CONFIG = `import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
@@ -49,17 +76,17 @@ const INDEX_HTML = `<!doctype html>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
 `;
 
-const MAIN_JSX = `import { StrictMode } from 'react';
+export const MAIN_TSX = `import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './App.jsx';
+import App from './App';
 import './index.css';
 
-createRoot(document.getElementById('root')).render(
+createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
   </StrictMode>
@@ -107,6 +134,15 @@ npm run dev
 \`\`\`
 
 Open http://localhost:5173
+
+## TypeScript
+
+The project is TypeScript (\`src/*.tsx\`, strict). \`npm run typecheck\` runs \`tsc --noEmit\`;
+\`npm run build\` only bundles, so a type error never blocks a deploy.
+
+## Notes
+
+- Element \`id\`s come from the canvas. A component placed more than once on a page renders the same ids for each instance (duplicate DOM ids) — rename them or switch to \`className\` if you target them from CSS or scripts.
 `;
 
 /**
@@ -171,7 +207,7 @@ export function buildProjectFileMap(nodesByFile, projectName = 'my-bluepainter-a
   const pageId = FILE_ORDER.find((id) => WORKSPACE_FILES[id].isPage && id !== 'marketing') || 'dashboard';
   const page = WORKSPACE_FILES[pageId];
 
-  files['src/App.jsx'] = `import { ${page.componentName} } from './${exportFilename(page.label)}';
+  files['src/App.tsx'] = `import { ${page.componentName} } from './${page.label.replace(/\.[jt]sx?$/, '')}';
 
 export default function App() {
   return (
@@ -181,10 +217,12 @@ export default function App() {
   );
 }
 `;
-  files['src/main.jsx'] = MAIN_JSX;
+  files['src/main.tsx'] = MAIN_TSX;
+  files['src/vite-env.d.ts'] = VITE_ENV_DTS;
   files['src/index.css'] = INDEX_CSS;
   files['index.html'] = INDEX_HTML.replace('My App — exported from BluePainter', `${safeName} — exported from BluePainter`);
-  files['vite.config.js'] = VITE_CONFIG;
+  files['vite.config.ts'] = VITE_CONFIG;
+  files['tsconfig.json'] = TSCONFIG_JSON;
   files['package.json'] = scaffoldPackageJson(safeName);
   files['vercel.json'] = VERCEL_JSON;
   files['DEPLOY.md'] = DEPLOY_MD;

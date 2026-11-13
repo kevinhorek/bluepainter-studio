@@ -10,14 +10,18 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "deploy:vercel": "npm run build && npx vercel --prod",
-    "deploy:netlify": "npm run build && npx netlify deploy --prod --dir=dist",
     "site:dev": "npm --prefix site run dev",
     "site:build": "npm --prefix site run build",
     "site:guides": "node scripts/generate-guides.mjs",
     "mcp:start": "npm --prefix mcp start",
     "repurpose": "node scripts/repurpose.mjs",
     "verify:export": "node --import ./scripts/esm-resolve.mjs ./scripts/verify-export.mjs",
-    "test:features": "node --import ./scripts/esm-resolve.mjs ./scripts/feature-tests.mjs"
+    "test:features": "node --import ./scripts/esm-resolve.mjs ./scripts/feature-tests.mjs",
+    "test:api": "node scripts/api-tests.mjs",
+    "test:export": "node --import ./scripts/esm-resolve.mjs ./scripts/export-tests.mjs",
+    "sync:extension": "node scripts/sync-extension-libs.mjs",
+    "check:extension": "node scripts/sync-extension-libs.mjs --check",
+    "test": "npm run test:features && npm run test:api && npm run test:export && npm run check:extension"
   },
   "dependencies": {
     "@babel/parser": "^8.0.0",

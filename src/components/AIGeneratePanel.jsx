@@ -1,8 +1,17 @@
 import { useState, useMemo } from 'react';
 import { GENERATION_TYPES, PROMPT_SUGGESTIONS, GENERATION_SCHEMAS } from '../utils/aiPrompts';
 import { generateWithAI } from '../utils/aiGenerate';
-import { loadOpenAIKey, saveOpenAIKey, maskKey } from '../utils/aiStorage';
+import * as aiStorage from '../utils/aiStorage';
 import { buildAIContext } from '../utils/aiApply';
+
+const { loadOpenAIKey, saveOpenAIKey, maskKey } = aiStorage;
+
+/** "Remember" starts ticked only when the key is already persisted on this device. */
+function keyRemembered() {
+  return typeof aiStorage.isOpenAIKeyRemembered === 'function'
+    ? aiStorage.isOpenAIKeyRemembered()
+    : Boolean(loadOpenAIKey());
+}
 
 export default function AIGeneratePanel({
   isOpen,
@@ -19,10 +28,16 @@ export default function AIGeneratePanel({
   const [generating, setGenerating] = useState(false);
   const [preview, setPreview] = useState(null);
   const [apiKey, setApiKey] = useState(() => loadOpenAIKey());
+  const [rememberKey, setRememberKey] = useState(keyRemembered);
   const [showKeyInput, setShowKeyInput] = useState(false);
 
   // Reset generation type when the panel opens (or opener changes type).
   if (isOpen && (!syncedOpenType.open || syncedOpenType.type !== initialType)) {
+    // Drop a key that was forgotten elsewhere ("Forget saved tokens") so it isn't saved again.
+    if (!syncedOpenType.open && apiKey && !loadOpenAIKey()) {
+      setApiKey('');
+      setRememberKey(false);
+    }
     setSyncedOpenType({ open: true, type: initialType });
     setType(initialType);
     setPreview(null); // a preview built for another type would apply against the wrong allow-list
@@ -46,7 +61,8 @@ export default function AIGeneratePanel({
     setGenerating(true);
     setPreview(null);
     try {
-      saveOpenAIKey(apiKey.trim());
+      // Unticked "Remember" keeps the key for this tab only (sessionStorage).
+      saveOpenAIKey(apiKey.trim(), { remember: rememberKey });
       const result = await generateWithAI({
         type,
         prompt: prompt.trim(),
@@ -163,8 +179,12 @@ export default function AIGeneratePanel({
                   className="ai-key-input"
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="sk-… (stored locally in your browser)"
+                  placeholder="sk-… (kept in your browser)"
                 />
+                <label className="mk-checkbox">
+                  <input type="checkbox" checked={rememberKey} onChange={(e) => setRememberKey(e.target.checked)} />
+                  Remember on this device
+                </label>
                 <p className="ai-settings-note">
                   Without a key, demo mode uses smart templates. Add <code>OPENAI_API_KEY</code> on Vercel for live AI for all users.
                 </p>

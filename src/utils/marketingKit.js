@@ -2,15 +2,15 @@ import JSZip from 'jszip';
 import { generateTSX } from './syncEngine';
 import { WORKSPACE_FILES } from '../data/workspaceFiles';
 import { applyCopyTone } from './copyToneVariants';
-import { normalizeComponentRoot } from './projectExport';
-
-function exportFilename(label) {
-  return label.replace(/\.tsx$/, '.jsx');
-}
-
-function fixImportPaths(code) {
-  return code.replace(/from '\.\/([^']+)'/g, (_, name) => `from './${name}.jsx'`);
-}
+import {
+  normalizeComponentRoot,
+  exportFilename,
+  fixImportPaths,
+  scaffoldPackageJson,
+  TSCONFIG_JSON,
+  VITE_ENV_DTS,
+  VITE_CONFIG
+} from './projectExport';
 
 /** Only plain colour values may be interpolated into generated CSS/JS. */
 function safeCssColor(value, fallback) {
@@ -281,8 +281,8 @@ function jsxText(value) {
 }
 
 function buildReactLandingPage(ctx, copy) {
-  return `import { HeroSection } from './HeroSection.jsx';
-import { PricingCard } from './PricingCard.jsx';
+  return `import { HeroSection } from './HeroSection';
+import { PricingCard } from './PricingCard';
 
 export default function MarketingLanding() {
   return (
@@ -502,6 +502,42 @@ export function buildMarketingStaticFileMap(nodesByFile, toneId = 'default') {
   };
 }
 
+/**
+ * The `landing-site/` folder of the marketing kit: a Vite + React + TypeScript
+ * project. Pure (no DOM, no zip) so the export tests can install and build it.
+ */
+export function buildLandingSiteFileMap(nodesByFile, { projectName = 'marketing-kit', toneId = 'default' } = {}) {
+  const ctx = extractMarketingContext(nodesByFile);
+  const copy = generateMarketingCopy(ctx, toneId);
+  const safeName = String(projectName).trim().replace(/[^a-z0-9-]/gi, '-').toLowerCase() || 'marketing-kit';
+  const files = {};
+
+  const marketingFile = WORKSPACE_FILES.marketing;
+  if (nodesByFile.marketing && marketingFile) {
+    files[`src/${exportFilename(marketingFile.label)}`] = fixImportPaths(generateTSX(marketingFile.rootId, nodesByFile.marketing));
+  }
+  ['hero', 'pricing'].forEach((fileId) => {
+    const file = WORKSPACE_FILES[fileId];
+    files[`src/${exportFilename(file.label)}`] = fixImportPaths(
+      generateTSX(file.rootId, normalizeComponentRoot(file.rootId, nodesByFile[fileId]))
+    );
+  });
+  files['src/MarketingLanding.tsx'] = buildReactLandingPage(ctx, copy);
+  files['src/App.tsx'] = `import MarketingLanding from './MarketingLanding';\nexport default function App() { return <MarketingLanding />; }\n`;
+  files['src/main.tsx'] = `import { createRoot } from 'react-dom/client';\nimport './index.css';\nimport App from './App';\ncreateRoot(document.getElementById('root')!).render(<App />);\n`;
+  files['src/vite-env.d.ts'] = VITE_ENV_DTS;
+  files['src/index.css'] = '* { box-sizing: border-box; margin: 0; } body { font-family: Inter, system-ui, sans-serif; }\n';
+
+  files['index.html'] = `<!doctype html><html><head><meta charset="UTF-8"/><title>${escapeHtml(copy.metaTitle)}</title></head><body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body></html>`;
+  files['package.json'] = scaffoldPackageJson(`${safeName}-landing`);
+  files['tsconfig.json'] = TSCONFIG_JSON;
+  files['vite.config.ts'] = VITE_CONFIG;
+  files['vercel.json'] = JSON.stringify({ rewrites: [{ source: '/(.*)', destination: '/index.html' }] }, null, 2);
+  files['DEPLOY.md'] = LANDING_DEPLOY_MD;
+
+  return { projectName: `${safeName}-landing`, files };
+}
+
 export async function downloadMarketingKitZip(nodesByFile, projectName = 'marketing-kit', options = {}) {
   const { toneId = 'default', screenshotBlob = null } = options;
   const ctx = extractMarketingContext(nodesByFile);
@@ -546,33 +582,10 @@ export async function downloadMarketingKitZip(nodesByFile, projectName = 'market
     landingSocial.file(spec.filename, await blob.arrayBuffer());
   }
 
-  const landingSrc = zip.folder('landing-site/src');
-  const marketingFile = WORKSPACE_FILES.marketing;
-  if (nodesByFile.marketing && marketingFile) {
-    landingSrc.file(exportFilename(marketingFile.label), fixImportPaths(generateTSX(marketingFile.rootId, nodesByFile.marketing)));
-  }
-  ['hero', 'pricing'].forEach((fileId) => {
-    const file = WORKSPACE_FILES[fileId];
-    const code = fixImportPaths(generateTSX(file.rootId, normalizeComponentRoot(file.rootId, nodesByFile[fileId])));
-    landingSrc.file(exportFilename(file.label), code);
+  const landingSite = buildLandingSiteFileMap(nodesByFile, { projectName: safeName, toneId });
+  Object.entries(landingSite.files).forEach(([path, content]) => {
+    zip.file(`landing-site/${path}`, content);
   });
-  landingSrc.file('MarketingLanding.jsx', buildReactLandingPage(ctx, copy));
-  landingSrc.file('App.jsx', `import MarketingLanding from './MarketingLanding.jsx';\nexport default function App() { return <MarketingLanding />; }\n`);
-  landingSrc.file('main.jsx', `import { createRoot } from 'react-dom/client';\nimport './index.css';\nimport App from './App.jsx';\ncreateRoot(document.getElementById('root')).render(<App />);\n`);
-  landingSrc.file('index.css', '* { box-sizing: border-box; margin: 0; } body { font-family: Inter, system-ui, sans-serif; }\n');
-
-  zip.file('landing-site/index.html', `<!doctype html><html><head><meta charset="UTF-8"/><title>${escapeHtml(copy.metaTitle)}</title></head><body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body></html>`);
-  zip.file('landing-site/package.json', JSON.stringify({
-    name: `${safeName}-landing`,
-    private: true,
-    type: 'module',
-    scripts: { dev: 'vite', build: 'vite build' },
-    dependencies: { react: '^19.0.0', 'react-dom': '^19.0.0' },
-    devDependencies: { '@vitejs/plugin-react': '^4.3.4', vite: '^6.0.0' }
-  }, null, 2));
-  zip.file('landing-site/vite.config.js', `import { defineConfig } from 'vite';\nimport react from '@vitejs/plugin-react';\nexport default defineConfig({ plugins: [react()] });\n`);
-  zip.file('landing-site/vercel.json', JSON.stringify({ rewrites: [{ source: '/(.*)', destination: '/index.html' }] }, null, 2));
-  zip.file('landing-site/DEPLOY.md', LANDING_DEPLOY_MD);
   zip.file('DEPLOY.md', LANDING_DEPLOY_MD);
   zip.file('README.md', `# ${ctx.brandName} Marketing Kit
 
@@ -584,7 +597,7 @@ Generated from your BluePainter canvas (MarketingPage, Hero, Pricing).
 - \`BLOG.md\` / \`PRESS.md\` — long-form templates
 - \`social/\` — OG, Twitter, LinkedIn images${screenshotBlob ? ' + app screenshot' : ''}
 - \`landing/\` — static HTML + vercel.json (deploy with \`cd landing && npx vercel\`)
-- \`landing-site/\` — full React project with your MarketingPage component
+- \`landing-site/\` — full React + TypeScript project with your MarketingPage component
 
 ## Quick deploy
 

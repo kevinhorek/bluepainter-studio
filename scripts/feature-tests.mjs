@@ -24,6 +24,8 @@ import { getEmptyFigmaImportNodes, figmaFileToNodes } from '../src/utils/figmaIm
 import { getAllowedNodeKeys } from '../src/utils/aiPrompts.js';
 import { buildSessionScorecard } from '../src/utils/sessionScorecard.js';
 import { getLearningSummary, logLearningEvent, clearLearningEvents } from '../src/utils/learningLoop.js';
+import { importTSXFile } from '../src/utils/syncEngine.js';
+import { createHistory, historyReducer, loadWorkspace, saveWorkspace, clearWorkspace } from '../src/utils/workspaceStore.js';
 
 if (typeof globalThis.localStorage === 'undefined') {
   const store = new Map();
@@ -160,8 +162,8 @@ test('buildProjectFileMap', () => {
   };
   const { projectName, files } = buildProjectFileMap(nodesByFile, 'Test App');
   assert.equal(projectName, 'test-app');
-  assert.ok(files['src/PricingCard.jsx']?.includes('Unlimited projects'));
-  assert.ok(files['src/DashboardPage.jsx']);
+  assert.ok(files['src/PricingCard.tsx']?.includes('Unlimited projects'));
+  assert.ok(files['src/DashboardPage.tsx']);
   assert.ok(files['package.json']);
 });
 
@@ -309,15 +311,15 @@ test('export: component roots are in-flow, Figma page included once imported', (
     figma: getEmptyFigmaImportNodes()
   };
   const { files } = buildProjectFileMap(nodesByFile, 'demo');
-  const pricingRoot = files['src/PricingCard.jsx'].split('\n').find((l) => l.includes('id="pricing-card-frame"'));
+  const pricingRoot = files['src/PricingCard.tsx'].split('\n').find((l) => l.includes('id="pricing-card-frame"'));
   assert.ok(pricingRoot.includes("position: 'relative'") && !pricingRoot.includes('left:'), pricingRoot);
-  assert.ok(!files['src/FigmaImport.jsx'], 'placeholder Figma page should not be exported');
+  assert.ok(!files['src/FigmaImport.tsx'], 'placeholder Figma page should not be exported');
 
   const imported = figmaFileToNodes({ document: { children: [{ type: 'CANVAS', children: [{ type: 'FRAME', name: 'F', absoluteBoundingBox: { x: 0, y: 0, width: 100, height: 100 }, children: [{ type: 'FRAME', children: [{ type: 'TEXT', characters: 'hi' }, { type: 'TEXT', characters: 'gone', visible: false }] }] }] }] } });
   assert.ok(Object.values(imported.nodes).every(Boolean), 'id-less Figma nodes must not collide');
   assert.ok(!JSON.stringify(imported.nodes).includes('gone'), 'hidden layer imported');
   const withFigma = buildProjectFileMap({ ...nodesByFile, figma: imported.nodes }, 'demo');
-  assert.ok(withFigma.files['src/FigmaImport.jsx']);
+  assert.ok(withFigma.files['src/FigmaImport.tsx']);
 });
 
 test('text edit keeps multi-line formatting', () => {
@@ -331,6 +333,236 @@ test('text edit keeps multi-line formatting', () => {
   assert.ok(/<button id="btn">\n\s+Go now\n\s+<\/button>/.test(out), out);
   assert.ok(out.includes('<div id="root">\n      <button id="btn">'), 'untouched lines reformatted');
   assert.strictEqual(parseTSX(out, nodes).btn.text, 'Go now');
+});
+
+test('code → canvas: add, remove, reorder and retag elements', () => {
+  const nodes = getFreshPricingNodes();
+  const code = generateTSX('pricing-card-frame', nodes);
+  const [first, second] = nodes['features-list'].children;
+
+  // add a paragraph + a nested frame with a button, in code
+  const withNew = code.replace(
+    '</ul>',
+    '</ul>\n      <p id="fine-print" style={{ fontSize: 12 }}>Cancel anytime</p>\n      <div id="extras"><button id="secondary-cta">Talk to sales</button></div>'
+  );
+  const added = parseTSX(withNew, nodes, 'pricing-card-frame');
+  assert.strictEqual(added['fine-print'].type, 'text');
+  assert.strictEqual(added['fine-print'].text, 'Cancel anytime');
+  assert.strictEqual(added['fine-print'].style.fontSize, 12);
+  assert.strictEqual(added.extras.type, 'frame');
+  assert.deepStrictEqual(added.extras.children, ['secondary-cta']);
+  assert.strictEqual(added['secondary-cta'].type, 'button');
+  const rootKids = added['pricing-card-frame'].children;
+  assert.ok(rootKids.indexOf('fine-print') === rootKids.indexOf('features-list') + 1, 'new node placed where it was typed');
+  // a later canvas edit must keep the user's code (patch, not regenerate)
+  const edited = { ...added, 'fine-print': { ...added['fine-print'], text: 'No lock-in' } };
+  const out = generateTSX('pricing-card-frame', edited, withNew);
+  assert.ok(out.includes('<div id="extras"><button id="secondary-cta">Talk to sales</button></div>'), 'user code regenerated');
+  assert.ok(out.includes('No lock-in'));
+
+  // remove an element in code
+  const line = code.split('\n').find((l) => l.includes(`id="${first}"`));
+  const removed = parseTSX(code.replace(line + '\n', ''), nodes, 'pricing-card-frame');
+  assert.ok(!removed[first], 'deleted element still on canvas');
+  assert.ok(!removed['features-list'].children.includes(first));
+
+  // reorder in code
+  const l1 = code.split('\n').find((l) => l.includes(`id="${first}"`));
+  const l2 = code.split('\n').find((l) => l.includes(`id="${second}"`));
+  const swapped = code.replace(l1, '@@').replace(l2, l1).replace('@@', l2);
+  const reordered = parseTSX(swapped, nodes, 'pricing-card-frame');
+  assert.deepStrictEqual(reordered['features-list'].children.slice(0, 2), [second, first]);
+
+  // without a rootId nothing structural happens (extension / legacy callers)
+  assert.ok(!parseTSX(withNew, nodes)['fine-print']);
+});
+
+test('code → canvas: component usage becomes an instance; broken code changes nothing', () => {
+  const nodes = getFreshDashboardNodes();
+  const code = generateTSX('dashboard-page', nodes);
+  const root = code.split('\n').find((l) => l.includes('id="dashboard-page"'));
+  const withInstance = code.replace(root, root + '\n      <div id="second-pricing"><PricingCard /></div>');
+  const parsed = parseTSX(withInstance, nodes, 'dashboard-page');
+  assert.strictEqual(parsed['second-pricing'].type, 'component-instance');
+  assert.strictEqual(parsed['second-pricing'].refFile, 'pricing');
+
+  const broken = parseTSX(code.replace('</div>', '</di'), nodes, 'dashboard-page');
+  assert.deepStrictEqual(Object.keys(broken).sort(), Object.keys(nodes).sort(), 'mid-typing syntax error must not delete layers');
+});
+
+test('canvas → code structure is patched in place (author code survives)', () => {
+  const nodes = {
+    root: { id: 'root', type: 'frame', tag: 'div', style: { padding: 8 }, children: ['title', 'list', 'cta'] },
+    title: { id: 'title', type: 'text', tag: 'h2', style: {}, text: 'Hi' },
+    list: { id: 'list', type: 'list', tag: 'ul', style: {}, children: ['a', 'b'] },
+    a: { id: 'a', type: 'list-item', tag: 'li', style: {}, text: 'A' },
+    b: { id: 'b', type: 'list-item', tag: 'li', style: {}, text: 'B' },
+    cta: { id: 'cta', type: 'button', tag: 'button', style: {}, text: 'Go' }
+  };
+  const code = [
+    "import { useState } from 'react';",
+    '',
+    'export function Card({ onGo }) {',
+    '  const [n, setN] = useState(0); // keep me',
+    '  return (',
+    '    <div id="root" style={{ padding: 8 }}>',
+    '      <h2 id="title">Hi</h2>',
+    '      <ul id="list">',
+    '        <li id="a">A</li>',
+    '        <li id="b">B</li>',
+    '      </ul>',
+    '      <button id="cta" onClick={() => { setN(n + 1); onGo(); }}>Go</button>',
+    '    </div>',
+    '  );',
+    '}'
+  ].join('\n');
+  assert.strictEqual(generateTSX('root', nodes, code), code);
+
+  // add a layer on the canvas
+  const added = {
+    ...nodes,
+    root: { ...nodes.root, children: ['title', 'note', 'list', 'cta'] },
+    note: { id: 'note', type: 'text', tag: 'p', style: { fontSize: 12 }, text: 'New' }
+  };
+  const withAdd = generateTSX('root', added, code);
+  assert.ok(withAdd.includes('useState(0); // keep me'), 'logic lost');
+  assert.ok(withAdd.includes('onClick={() => { setN(n + 1); onGo(); }}'), 'handler lost');
+  // the inserted element is pretty-printed by recast; everything else is untouched
+  assert.ok(/id="title">Hi<\/h2>\s+<p\s+id="note"\s+style=\{\{\s*fontSize: 12\s*\}\}>New<\/p>\s+<ul id="list">/.test(withAdd), withAdd);
+  assert.ok(withAdd.includes('      <ul id="list">\n        <li id="a">A</li>'), 'siblings reformatted');
+  assert.deepStrictEqual(parseTSX(withAdd, added, 'root').root.children, ['title', 'note', 'list', 'cta']);
+
+  // delete a layer
+  const removed = { ...nodes, list: { ...nodes.list, children: ['b'] } };
+  delete removed.a;
+  const withRemove = generateTSX('root', removed, code);
+  assert.ok(!withRemove.includes('id="a"') && withRemove.includes('// keep me'));
+  assert.ok(withRemove.includes('      <ul id="list">\n        <li id="b">B</li>\n      </ul>'), withRemove);
+
+  // reorder siblings
+  const reordered = { ...nodes, list: { ...nodes.list, children: ['b', 'a'] } };
+  const withOrder = generateTSX('root', reordered, code);
+  assert.ok(withOrder.indexOf('id="b"') < withOrder.indexOf('id="a"') && withOrder.includes('// keep me'));
+
+  // add into an empty / self-closing container
+  const empty = { root: { id: 'root', type: 'frame', tag: 'div', style: {}, children: ['x'] }, x: { id: 'x', type: 'text', tag: 'p', style: {}, text: 'X' } };
+  const selfClosing = 'export function E() {\n  // c\n  return <div id="root" />;\n}';
+  const filled = generateTSX('root', empty, selfClosing);
+  assert.ok(filled.includes('// c') && /<p\s+id="x">X<\/p>/.test(filled) && filled.includes('</div>'), filled);
+});
+
+test('className round-trips and dynamic classNames are left alone', () => {
+  const nodes = {
+    root: { id: 'root', type: 'frame', tag: 'div', style: {}, children: ['t'] },
+    t: { id: 't', type: 'text', tag: 'p', style: {}, text: 'x' }
+  };
+  const code = 'export function A({ on }) {\n  return (\n    <div id="root" className={on ? "a" : "b"}>\n      <p id="t" className="text-sm font-bold">x</p>\n    </div>\n  );\n}';
+  const parsed = parseTSX(code, nodes, 'root');
+  assert.strictEqual(parsed.t.className, 'text-sm font-bold');
+  assert.strictEqual(generateTSX('root', parsed, code), code);
+  const edited = { ...parsed, t: { ...parsed.t, className: 'text-lg' } };
+  const out = generateTSX('root', edited, code);
+  assert.ok(out.includes('className="text-lg"') && out.includes('className={on ? "a" : "b"}'));
+});
+
+test('receipts work on arbitrary components (no demo ids)', () => {
+  const nodes = {
+    wrap: { id: 'wrap', type: 'frame', tag: 'section', style: { padding: 30, borderRadius: 7 }, children: ['h', 'menu', 'go'] },
+    h: { id: 'h', type: 'text', tag: 'h2', style: {}, text: 'Plans' },
+    menu: { id: 'menu', type: 'list', tag: 'ul', style: {}, children: ['i1', 'i2', 'i3', 'i4', 'i5', 'i6'] },
+    ...Object.fromEntries(['i1', 'i2', 'i3', 'i4', 'i5', 'i6'].map((id) => [id, { id, type: 'list-item', tag: 'li', style: {}, text: id }])),
+    go: { id: 'go', type: 'button', tag: 'button', style: { background: '#e2e8f0', color: '#ffffff' }, text: 'Submit' }
+  };
+  for (const selected of ['wrap', 'h', 'i3', 'go']) {
+    const { rules } = evaluateReceipts(nodes, nodes[selected], DEFAULT_RECEIPT_POLICY);
+    const failing = rules.filter((r) => !r.valid).map((r) => r.id).sort();
+    assert.deepStrictEqual(failing, ['contrast', 'copy', 'features', 'radius', 'spacing'], `selected ${selected}: ${failing}`);
+    rules.filter((r) => !r.valid).forEach((r) => assert.ok(nodes[r.fixMeta.nodeId], `${r.id} fix has no target`));
+  }
+  // fixes land on the right nodes
+  const patches = {};
+  const { rules } = evaluateReceipts(nodes, nodes.h, DEFAULT_RECEIPT_POLICY);
+  rules.filter((r) => !r.valid && r.fixLabel).forEach((r) => applyReceiptFix(r.fixKey, r.fixMeta, nodes, (id, patch) => { patches[id] = { ...(patches[id] || {}), ...patch }; }));
+  assert.ok(patches.wrap && patches.go && patches.menu);
+});
+
+test('undo/redo history coalesces bursts and is bounded', () => {
+  let h = createHistory({ v: 0 });
+  h = historyReducer(h, { type: 'set', updater: { v: 1 }, at: 1000 });
+  h = historyReducer(h, { type: 'set', updater: (p) => ({ v: p.v + 1 }), at: 1100 }); // same burst (drag)
+  h = historyReducer(h, { type: 'set', updater: { v: 3 }, at: 5000 });
+  assert.strictEqual(h.past.length, 2);
+  h = historyReducer(h, { type: 'undo' });
+  assert.deepStrictEqual(h.present, { v: 2 });
+  h = historyReducer(h, { type: 'undo' });
+  assert.deepStrictEqual(h.present, { v: 0 });
+  assert.strictEqual(historyReducer(h, { type: 'undo' }), h, 'undo past the start is a no-op');
+  h = historyReducer(h, { type: 'redo' });
+  h = historyReducer(h, { type: 'redo' });
+  assert.deepStrictEqual(h.present, { v: 3 });
+  h = historyReducer(h, { type: 'undo' });
+  h = historyReducer(h, { type: 'set', updater: { v: 9 }, at: 9000 });
+  assert.strictEqual(h.future.length, 0, 'a new edit clears redo');
+  const same = historyReducer(h, { type: 'set', updater: (p) => p, at: 9999 });
+  assert.strictEqual(same, h, 'no-op updates add no history');
+  for (let i = 0; i < 300; i += 1) h = historyReducer(h, { type: 'set', updater: { v: i }, at: 20000 + i * 1000 });
+  assert.ok(h.past.length <= 100);
+});
+
+test('workspace autosave round-trips and survives corrupt storage', () => {
+  clearWorkspace();
+  assert.strictEqual(loadWorkspace().restored, false);
+  const nodes = loadWorkspace().nodesByFile;
+  const edited = { ...nodes, pricing: { ...nodes.pricing, 'cta-button': { ...nodes.pricing['cta-button'], text: 'Saved!' } } };
+  assert.ok(saveWorkspace({ nodesByFile: edited, codeByFile: { pricing: '// my formatting' }, fileViewports: {}, activeFile: 'pricing' }));
+  const restored = loadWorkspace();
+  assert.ok(restored.restored);
+  assert.strictEqual(restored.activeFile, 'pricing');
+  assert.strictEqual(restored.nodesByFile.pricing['cta-button'].text, 'Saved!');
+  assert.strictEqual(restored.codeBaseByFile.pricing.code, '// my formatting');
+  assert.strictEqual(restored.codeBaseByFile.pricing.nodes, restored.nodesByFile.pricing, 'code must be tied to the restored node map');
+
+  localStorage.setItem('bluepainter-workspace-v1', '{not json');
+  assert.strictEqual(loadWorkspace().restored, false);
+  localStorage.setItem('bluepainter-workspace-v1', JSON.stringify({ version: 1, nodesByFile: { pricing: { nope: 1 }, hero: 'x' }, activeFile: 'ghost' }));
+  const partial = loadWorkspace();
+  assert.ok(partial.nodesByFile.pricing['pricing-card-frame'], 'corrupt file falls back to fresh');
+  assert.strictEqual(partial.activeFile, 'dashboard');
+  clearWorkspace();
+});
+
+test('open a real TSX file: ids added, logic preserved, edits patch in place', () => {
+  const source = [
+    "import { useState } from 'react';",
+    '',
+    'export default function Banner({ title, items }) {',
+    '  const [open, setOpen] = useState(false);',
+    '  return (',
+    '    <section className="p-8 bg-slate-900">',
+    '      <h1 className="text-3xl">Welcome back</h1>',
+    '      <p>{title}</p>',
+    '      <ul>{items.map((it) => <li key={it}>{it}</li>)}</ul>',
+    '      <button onClick={() => setOpen(!open)}>Toggle</button>',
+    '    </section>',
+    '  );',
+    '}'
+  ].join('\n');
+  const file = importTSXFile(source, 'Banner.tsx');
+  assert.strictEqual(file.componentName, 'Banner');
+  assert.ok(file.addedIds >= 5);
+  const root = file.nodes[file.rootId];
+  assert.strictEqual(root.className, 'p-8 bg-slate-900');
+  const h1 = Object.values(file.nodes).find((n) => n.tag === 'h1');
+  assert.strictEqual(h1.text, 'Welcome back');
+  const p = Object.values(file.nodes).find((n) => n.tag === 'p');
+  assert.strictEqual(p.placeholder, '{title}', 'dynamic content gets a stand-in');
+  assert.strictEqual(generateTSX(file.rootId, file.nodes, file.code), file.code, 'opening must not rewrite the file');
+
+  const edited = { ...file.nodes, [h1.id]: { ...h1, text: 'Hello again', style: { fontSize: 40 } } };
+  const out = generateTSX(file.rootId, edited, file.code);
+  assert.ok(out.includes('Hello again') && out.includes('fontSize: 40'));
+  assert.ok(out.includes('const [open, setOpen] = useState(false);') && out.includes('onClick={() => setOpen(!open)}') && out.includes('{title}') && out.includes('items.map'));
+  assert.throws(() => importTSXFile('export const x = 1;', 'x.ts'));
 });
 
 const failed = results.filter((r) => !r.ok);
