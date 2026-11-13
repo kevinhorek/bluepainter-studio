@@ -144,6 +144,9 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [activeFile, setActiveFile] = useState(initialWorkspace.activeFile);
   const [selectedNodeId, setSelectedNodeId] = useState(() => getWorkspaceFile(initialWorkspace.activeFile).defaultSelection);
+  // Extra selected layers beside `selectedNodeId` (the primary). Tied to the primary
+  // they were built around, so any plain setSelectedNodeId() drops them.
+  const [extraSelection, setExtraSelection] = useState({ anchor: null, ids: [] });
   const [activeCanvasTool, setActiveCanvasTool] = useState('select');
   const [focusedPanel, setFocusedPanel] = useState('canvas');
 
@@ -181,6 +184,7 @@ export default function App() {
   const toastTimerRef = useRef(null);
   const lastLearningRef = useRef({ key: '', at: 0 });
   const deleteNodeRef = useRef(null);
+  const nudgeRef = useRef(null);
   const backupStateRef = useRef(null);
 
   const refreshLearningSummary = () => setLearningSummary(getLearningSummary());
@@ -191,6 +195,41 @@ export default function App() {
   };
   const activeNodesMap = nodesByFile[activeFile];
   const activeRootId = fileConfig.rootId;
+
+  const selectedNodeIds = useMemo(() => {
+    if (!selectedNodeId) return [];
+    const extras = extraSelection.anchor === selectedNodeId
+      ? extraSelection.ids.filter((id) => id !== selectedNodeId && activeNodesMap?.[id])
+      : [];
+    return [selectedNodeId, ...extras];
+  }, [selectedNodeId, extraSelection, activeNodesMap]);
+
+  /**
+   * Select a layer. `additive` (shift / ⌘-click) toggles it in the selection;
+   * `ids` replaces the selection with a set (rubber-band).
+   */
+  const handleSelectNode = useCallback((nodeId, options = {}) => {
+    if (Array.isArray(options.ids)) {
+      const [first = null, ...rest] = options.ids;
+      setSelectedNodeId(first);
+      setExtraSelection({ anchor: first, ids: rest });
+      return;
+    }
+    if (!options.additive || !nodeId || !selectedNodeIds.length) {
+      setSelectedNodeId(nodeId);
+      setExtraSelection({ anchor: nodeId, ids: [] });
+      return;
+    }
+    if (selectedNodeIds.includes(nodeId)) {
+      const rest = selectedNodeIds.filter((id) => id !== nodeId);
+      if (!rest.length) return;
+      setSelectedNodeId(rest[0]);
+      setExtraSelection({ anchor: rest[0], ids: rest.slice(1) });
+    } else {
+      setSelectedNodeId(nodeId);
+      setExtraSelection({ anchor: nodeId, ids: selectedNodeIds });
+    }
+  }, [selectedNodeIds]);
 
   // The code panel is derived from the active file's nodes. Keeping it per file
   // means switching files can never show — or patch — another file's code.
@@ -452,6 +491,12 @@ export default function App() {
         dispatchHistory({ type: 'redo' });
         return;
       }
+      if (e.key.startsWith('Arrow') && !e.metaKey && !e.ctrlKey && !e.altKey && !isActivatable(e.target)) {
+        const step = e.shiftKey ? 10 : 1;
+        const delta = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
+        if (delta && nudgeRef.current?.(delta[0], delta[1])) e.preventDefault();
+        return;
+      }
       if ((e.key === 'Delete' || e.key === 'Backspace') && !e.metaKey && !e.ctrlKey && !isActivatable(e.target)) {
         if (selectedNodeId && selectedNodeId !== activeRootId) {
           e.preventDefault();
@@ -698,7 +743,7 @@ export default function App() {
     logLearningOnce('code', 'editor', () => learningLoop.logCodeToCanvasSync(activeFile, Object.keys(parsedNodes).length));
   };
 
-  const handleUpdateNode = (nodeId, updatedFields) => {
+  const handleUpdateNode = (nodeId, updatedFields, options = {}) => {
     // Conflict detection (CONFLICT_MODEL.md v2): the code panel holds text the
     // canvas could not read, so a canvas edit would regenerate over it. Ask first.
     if (activeCodeBase?.unsynced && activeCodeBase.nodes === activeNodesMap) {
@@ -715,6 +760,18 @@ export default function App() {
     }
 
     applyNodeUpdate(nodeId, updatedFields);
+
+    // With several layers selected, a style change made on the primary (inspector,
+    // receipt fix) applies to the rest. Drags and resizes pass `single`.
+    if (!options.single && updatedFields.style && nodeId === selectedNodeId && selectedNodeIds.length > 1) {
+      const before = activeNodesMap[nodeId]?.style || {};
+      const changed = Object.fromEntries(
+        Object.entries(updatedFields.style).filter(([key, value]) => before[key] !== value)
+      );
+      if (Object.keys(changed).length) {
+        selectedNodeIds.slice(1).forEach((id) => applyNodeUpdate(id, { style: changed }));
+      }
+    }
   };
 
   const applyNodeUpdate = (nodeId, updatedFields) => {
@@ -758,17 +815,19 @@ export default function App() {
   };
 
   const handleDeleteNode = (nodeId) => {
-    if (nodeId === activeRootId) return;
+    // Deleting one of several selected layers deletes the whole selection.
+    const targets = (selectedNodeIds.includes(nodeId) ? selectedNodeIds : [nodeId]).filter((id) => id !== activeRootId);
+    if (!targets.length) return;
     setActiveNodesMap(prev => {
-      if (!prev[nodeId]) return prev;
-      // Remove the node and everything under it, without mutating previous state.
+      if (!targets.some((id) => prev[id])) return prev;
+      // Remove the nodes and everything under them, without mutating previous state.
       const doomed = new Set();
       const collect = (id) => {
         if (doomed.has(id) || !prev[id]) return;
         doomed.add(id);
         (prev[id].children || []).forEach(collect);
       };
-      collect(nodeId);
+      targets.forEach(collect);
 
       const updated = {};
       Object.keys(prev).forEach(id => {
@@ -786,6 +845,72 @@ export default function App() {
   useEffect(() => {
     deleteNodeRef.current = handleDeleteNode;
   });
+
+  // Arrow keys move the selected free-positioned layers (1px, or 10px with Shift).
+  useEffect(() => {
+    nudgeRef.current = (dx, dy) => {
+      const movable = selectedNodeIds.filter((id) => id !== activeRootId && activeNodesMap?.[id]?.style?.position === 'absolute');
+      if (!movable.length) return false;
+      movable.forEach((id) => {
+        const style = activeNodesMap[id].style;
+        handleUpdateNode(id, { style: { left: (Number(style.left) || 0) + dx, top: (Number(style.top) || 0) + dy } }, { single: true });
+      });
+      return true;
+    };
+  });
+
+  /**
+   * Move layers into another container (drag on the canvas or in the layers panel).
+   * options.beforeId / afterId place them next to a sibling; options.positions gives
+   * new left/top per layer so they stay where they were dropped.
+   */
+  const handleReparentNodes = (nodeIds, newParentId, options = {}) => {
+    setActiveNodesMap((prev) => {
+      const target = prev[newParentId];
+      if (!target || !canDropIntoNode(target)) return prev;
+      const parentOf = {};
+      Object.values(prev).forEach((n) => (n?.children || []).forEach((cid) => { parentOf[cid] = n.id; }));
+      const isWithin = (id, ancestorId) => {
+        for (let cur = id, guard = 0; cur && guard < 500; cur = parentOf[cur], guard += 1) {
+          if (cur === ancestorId) return true;
+        }
+        return false;
+      };
+      // Never the root, never into itself or its own subtree; and a layer whose
+      // ancestor is also moving just travels with that ancestor.
+      const candidates = nodeIds.filter((id) => prev[id] && id !== activeRootId && !isWithin(newParentId, id));
+      const moving = candidates.filter((id) => !candidates.some((other) => other !== id && isWithin(id, other)));
+      if (!moving.length) return prev;
+
+      const next = { ...prev };
+      Object.values(prev).forEach((n) => {
+        if (n?.children?.some((cid) => moving.includes(cid))) {
+          next[n.id] = { ...n, children: n.children.filter((cid) => !moving.includes(cid)) };
+        }
+      });
+      const siblings = next[newParentId].children || [];
+      let at = siblings.length;
+      if (options.beforeId && siblings.includes(options.beforeId)) at = siblings.indexOf(options.beforeId);
+      else if (options.afterId && siblings.includes(options.afterId)) at = siblings.indexOf(options.afterId) + 1;
+      const children = [...siblings.slice(0, at), ...moving, ...siblings.slice(at)];
+
+      const sameOrder = (prev[newParentId].children || []).join('|') === children.join('|');
+      if (sameOrder && !options.positions) return prev;
+      next[newParentId] = { ...next[newParentId], children };
+
+      moving.forEach((id) => {
+        const pos = options.positions?.[id];
+        const style = next[id].style || {};
+        if (pos) {
+          next[id] = { ...next[id], style: { ...style, position: 'absolute', left: pos.left, top: pos.top } };
+        } else if (style.position === 'absolute' && parentOf[id] !== newParentId) {
+          // Old coordinates mean nothing in the new parent; put it near the corner.
+          next[id] = { ...next[id], style: { ...style, left: 16, top: 16 } };
+        }
+      });
+      return next;
+    });
+  };
 
   // Reorder a layer among its siblings (dir: -1 = up/earlier, 1 = down/later).
   const handleMoveNode = (nodeId, dir) => {
@@ -1152,8 +1277,10 @@ export default function App() {
     rootNodeId: activeRootId,
     nodesMap: activeNodesMap,
     selectedNodeId,
-    onSelectNode: setSelectedNodeId,
+    selectedNodeIds,
+    onSelectNode: handleSelectNode,
     onUpdateNode: handleUpdateNode,
+    onReparentNodes: handleReparentNodes,
     onDeleteNode: handleDeleteNode,
     onMoveNode: handleMoveNode,
     onDuplicateNode: handleDuplicateNode,

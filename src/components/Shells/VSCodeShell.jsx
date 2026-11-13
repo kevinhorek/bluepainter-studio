@@ -15,8 +15,10 @@ export default function VSCodeShell({
   rootNodeId,
   nodesMap,
   selectedNodeId,
+  selectedNodeIds,
   onSelectNode,
   onUpdateNode,
+  onReparentNodes,
   onDeleteNode,
   onMoveNode,
   onDuplicateNode,
@@ -51,8 +53,8 @@ export default function VSCodeShell({
     setDrawerOpen(true);
   };
 
-  const handleSelectNode = (id) => {
-    onSelectNode(id);
+  const handleSelectNode = (id, options) => {
+    onSelectNode(id, options);
     if (id) openDrawer('inspect');
   };
 
@@ -112,8 +114,10 @@ export default function VSCodeShell({
                   rootNodeId={rootNodeId}
                   nodesMap={nodesMap}
                   selectedNodeId={selectedNodeId}
+                  selectedNodeIds={selectedNodeIds}
                   onSelectNode={handleSelectNode}
                   onUpdateNode={onUpdateNode}
+                  onReparentNodes={onReparentNodes}
                   onAddNode={onAddNode}
                   onAddComponentInstance={onAddComponentInstance}
                   activeCanvasTool={activeCanvasTool}
@@ -230,10 +234,14 @@ export default function VSCodeShell({
             rootNodeId={rootNodeId}
             nodesMap={nodesMap}
             selectedNodeId={selectedNodeId}
-            onSelectNode={(id) => {
-              handleSelectNode(id);
+            selectedNodeIds={selectedNodeIds}
+            onSelectNode={(id, options) => {
+              // Keep the layers list open while building a multi-selection.
+              if (options?.additive) onSelectNode(id, options);
+              else handleSelectNode(id, options);
             }}
             onUpdateNode={onUpdateNode}
+            onReparentNodes={onReparentNodes}
             onDeleteNode={onDeleteNode}
             onMoveNode={onMoveNode}
             onDuplicateNode={onDuplicateNode}
@@ -242,6 +250,7 @@ export default function VSCodeShell({
         inspect={
           <InspectorPanel
             selectedNodeId={selectedNodeId}
+            selectionCount={selectedNodeIds?.length || 0}
             nodesMap={nodesMap}
             onUpdateNode={onUpdateNode}
             onOpenComponentFile={onOpenComponentFile}

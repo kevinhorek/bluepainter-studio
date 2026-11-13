@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { getWorkspaceFile } from '../data/workspaceFiles';
 import { isPlacableTool, getCanvasTool } from '../data/canvasTools';
-import { isLeafNode } from '../utils/nodeFactory';
+import { isLeafNode, canDropIntoNode } from '../utils/nodeFactory';
 import CanvasToolbar from './CanvasToolbar';
 import ViewportSwitcher from './ViewportSwitcher';
 import { VIEWPORT_PRESETS } from '../data/viewportPresets';
@@ -10,8 +10,10 @@ export default function CanvasView({
   rootNodeId,
   nodesMap,
   selectedNodeId,
+  selectedNodeIds = null,
   onSelectNode,
   onUpdateNode,
+  onReparentNodes = null,
   onAddNode,
   onAddComponentInstance = null,
   theme = 'dark',
@@ -51,9 +53,27 @@ export default function CanvasView({
   const [isResizing, setIsResizing] = useState(false);
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
 
-  // Drag-to-Move Positioning state
+  // Drag-to-Move Positioning state. `items` are all the layers moving together.
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ nodeId: '', startX: 0, startY: 0, startLeft: 0, startTop: 0 });
+  const [dragStart, setDragStart] = useState({ nodeId: '', startX: 0, startY: 0, items: [] });
+  // Frame under the pointer that the dragged layers would move into on release.
+  const [dropTargetId, setDropTargetId] = useState(null);
+  const dropTargetRef = useRef(null);
+  // A drag or marquee ends with a click event; this stops it changing the selection.
+  const suppressClickRef = useRef(false);
+  // Rubber-band selection, in viewport coordinates.
+  const [marquee, setMarquee] = useState(null);
+
+  const selectedIds = selectedNodeIds || (selectedNodeId ? [selectedNodeId] : []);
+  const isAdditive = (e) => e.shiftKey || e.metaKey || e.ctrlKey;
+
+  const parentIdOf = (nodeId) => Object.values(nodesMap || {}).find((n) => n?.children?.includes(nodeId))?.id || null;
+  const isInsideAny = (nodeId, ancestorIds) => {
+    for (let cur = nodeId, guard = 0; cur && guard < 200; cur = parentIdOf(cur), guard += 1) {
+      if (ancestorIds.includes(cur)) return true;
+    }
+    return false;
+  };
 
   // Determine if this is a page view
   const isPageView = Boolean(pageViewport);
@@ -111,17 +131,21 @@ export default function CanvasView({
       const currentLeft = typeof node.style.left === 'number' ? node.style.left : 0;
       const currentTop = typeof node.style.top === 'number' ? node.style.top : 0;
 
-      setIsDragging(true);
-      setDragStart({
-        nodeId: nodeId,
-        startX: e.clientX,
-        startY: e.clientY,
-        startLeft: currentLeft,
-        startTop: currentTop
-      });
+      // Dragging one of several selected layers moves them all; otherwise just this one.
+      const group = selectedIds.includes(nodeId) && !isAdditive(e)
+        ? selectedIds.filter((id) => nodesMap[id]?.style?.position === 'absolute')
+        : [nodeId];
+      const items = group.map((id) => ({
+        id,
+        left: id === nodeId ? currentLeft : (typeof nodesMap[id].style.left === 'number' ? nodesMap[id].style.left : 0),
+        top: id === nodeId ? currentTop : (typeof nodesMap[id].style.top === 'number' ? nodesMap[id].style.top : 0)
+      }));
 
-      // Automatically select node on drag click
-      onSelectNode(nodeId);
+      setIsDragging(true);
+      setDragStart({ nodeId, startX: e.clientX, startY: e.clientY, items });
+
+      // Select on drag start, unless it is already part of the selection.
+      if (!selectedIds.includes(nodeId)) onSelectNode(nodeId, { additive: isAdditive(e) });
     }
   };
 
@@ -143,29 +167,61 @@ export default function CanvasView({
               width: newWidth,
               height: newHeight
             }
-          });
+          }, { single: true });
         }
       } else if (isDragging) {
         const deltaX = (e.clientX - dragStart.startX) / zoom;
         const deltaY = (e.clientY - dragStart.startY) / zoom;
 
-        const newLeft = Math.round(dragStart.startLeft + deltaX);
-        const newTop = Math.round(dragStart.startTop + deltaY);
+        if (Math.abs(deltaX) + Math.abs(deltaY) > 2) suppressClickRef.current = true;
 
-        const node = nodesMap[dragStart.nodeId];
-        if (node) {
-          onUpdateNode(dragStart.nodeId, {
+        dragStart.items.forEach((item) => {
+          const node = nodesMap[item.id];
+          if (!node) return;
+          onUpdateNode(item.id, {
             style: {
               ...node.style,
-              left: newLeft,
-              top: newTop
+              left: Math.round(item.left + deltaX),
+              top: Math.round(item.top + deltaY)
             }
+          }, { single: true });
+        });
+
+        // Which frame is under the pointer? Releasing there moves the layers into it.
+        if (onReparentNodes) {
+          const movingIds = dragStart.items.map((item) => item.id);
+          const under = document.elementsFromPoint(e.clientX, e.clientY).find((el) => {
+            const candidate = el.id && nodesMap[el.id];
+            return candidate && canDropIntoNode(candidate) && !isInsideAny(el.id, movingIds);
           });
+          const target = under && under.id !== parentIdOf(dragStart.nodeId) ? under.id : null;
+          if (dropTargetRef.current !== target) {
+            dropTargetRef.current = target;
+            setDropTargetId(target);
+          }
         }
       }
     };
 
     const handleMouseUp = () => {
+      const target = dropTargetRef.current;
+      if (isDragging && target && onReparentNodes) {
+        // Keep each layer where it visually is, expressed in the new parent's coordinates.
+        const targetEl = document.getElementById(target);
+        const targetRect = targetEl?.getBoundingClientRect();
+        const positions = {};
+        dragStart.items.forEach((item) => {
+          const rect = document.getElementById(item.id)?.getBoundingClientRect();
+          if (!rect || !targetRect) return;
+          positions[item.id] = {
+            left: Math.round((rect.left - targetRect.left) / zoom - (targetEl.clientLeft || 0)),
+            top: Math.round((rect.top - targetRect.top) / zoom - (targetEl.clientTop || 0))
+          };
+        });
+        onReparentNodes(dragStart.items.map((item) => item.id), target, { positions });
+      }
+      dropTargetRef.current = null;
+      setDropTargetId(null);
       setIsResizing(false);
       setIsDragging(false);
     };
@@ -179,7 +235,8 @@ export default function CanvasView({
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isResizing, isDragging, resizeStart, dragStart, nodesMap, onUpdateNode, zoom]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- helpers read the same nodesMap
+  }, [isResizing, isDragging, resizeStart, dragStart, nodesMap, onUpdateNode, onReparentNodes, zoom]);
 
   useEffect(() => {
     if (!activeViewportMode || !onViewportChange || !isPageView) return;
@@ -231,7 +288,49 @@ export default function CanvasView({
     };
   }, [activeCanvasTool, isPanning]);
 
+  // Rubber-band selection: drag on empty canvas with the select tool.
+  useEffect(() => {
+    if (!marquee) return undefined;
+    const onMove = (e) => setMarquee((m) => (m ? { ...m, x1: e.clientX, y1: e.clientY } : m));
+    const onUp = (e) => {
+      const box = {
+        left: Math.min(marquee.x0, e.clientX),
+        right: Math.max(marquee.x0, e.clientX),
+        top: Math.min(marquee.y0, e.clientY),
+        bottom: Math.max(marquee.y0, e.clientY)
+      };
+      setMarquee(null);
+      if (box.right - box.left < 4 && box.bottom - box.top < 4) return; // a click, not a drag
+      suppressClickRef.current = true;
+      const inside = Object.keys(nodesMap).filter((id) => {
+        if (id === rootNodeId) return false;
+        const rect = document.getElementById(id)?.getBoundingClientRect();
+        return rect && rect.width > 0 && rect.left >= box.left && rect.right <= box.right && rect.top >= box.top && rect.bottom <= box.bottom;
+      });
+      // A container and its contents both fit: keep the outermost layer only.
+      const outermost = inside.filter((id) => !isInsideAny(parentIdOf(id), inside));
+      onSelectNode(outermost[0] || null, { ids: outermost });
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    return () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- bound once per marquee drag
+  }, [Boolean(marquee)]);
+
   const handlePanStart = (e) => {
+    if (activeCanvasTool === 'select' && e.button === 0) {
+      const onNode = e.target.closest?.('[id]') && nodesMap?.[e.target.closest('[id]').id];
+      const onChrome = e.target.closest?.('.canvas-zoom, .canvas-toolbar, .viewport-switcher, .canvas-status-bar, button');
+      // Empty canvas, or the root frame itself (which can't be dragged anyway).
+      const rootIsFixed = nodesMap?.[rootNodeId]?.style?.position !== 'absolute';
+      if (!onChrome && (!onNode || (onNode.id === rootNodeId && rootIsFixed && e.target.id === rootNodeId))) {
+        setMarquee({ x0: e.clientX, y0: e.clientY, x1: e.clientX, y1: e.clientY });
+      }
+      return;
+    }
     if (activeCanvasTool !== 'hand') return;
     e.preventDefault();
     setIsPanning(true);
@@ -295,6 +394,10 @@ export default function CanvasView({
       return;
     }
     if (!isPlacableTool(activeCanvasTool)) {
+      if (suppressClickRef.current) {
+        suppressClickRef.current = false; // the click that ends a marquee or drag
+        return;
+      }
       if (activeCanvasTool === 'select') onSelectNode(null);
       return;
     }
@@ -349,7 +452,9 @@ export default function CanvasView({
     if (!node) return null;
 
     const isEmbeddedRoot = embedRootId === nodeId;
-    const isSelected = selectedNodeId === nodeId && sourceMap === nodesMap;
+    const isSelected = sourceMap === nodesMap && selectedIds.includes(nodeId);
+    const isPrimary = isSelected && selectedNodeId === nodeId;
+    const isDropTarget = sourceMap === nodesMap && dropTargetId === nodeId;
     const selectionColor = isFigma ? 'var(--purple-figma)' : 'var(--blue-primary)';
 
     if (node.type === 'component-instance') {
@@ -365,7 +470,7 @@ export default function CanvasView({
       const clickHandler = (e) => {
         e.stopPropagation();
         if (onFocus) onFocus();
-        onSelectNode(nodeId);
+        onSelectNode(nodeId, { additive: isAdditive(e) });
       };
 
       const selectionBorderMarkup = isSelected && (
@@ -434,7 +539,8 @@ export default function CanvasView({
       left: isEmbeddedRoot ? 0 : node.style?.left,
       top: isEmbeddedRoot ? 0 : node.style?.top,
       outline: 'none',
-      userSelect: 'none'
+      userSelect: 'none',
+      ...(isDropTarget ? { outline: '2px dashed #22c55e', outlineOffset: -2 } : {})
     };
 
     const isEditable = node.type === 'text' || node.type === 'button' || node.type === 'list-item' || node.type === 'comment';
@@ -470,8 +576,10 @@ export default function CanvasView({
         zoomBy(e.altKey ? 1 / 1.25 : 1.25);
       } else if (activeCanvasTool && isPlacableTool(activeCanvasTool)) {
         handleCanvasClick(e, nodeId);
+      } else if (suppressClickRef.current) {
+        suppressClickRef.current = false; // the click that ends a drag keeps the selection
       } else {
-        onSelectNode(nodeId);
+        onSelectNode(nodeId, { additive: isAdditive(e) });
       }
     };
 
@@ -493,8 +601,8 @@ export default function CanvasView({
           boxShadow: `0 0 8px ${selectionColor}40`
         }}
       >
-        {/* Corner resize handle square */}
-        <span 
+        {/* Corner resize handle square (primary selection only) */}
+        {isPrimary && <span 
           style={{
             display: 'block',
             position: 'absolute',
@@ -509,9 +617,9 @@ export default function CanvasView({
             zIndex: 40
           }}
           onMouseDown={(e) => handleResizeMouseDown(e, nodeId)}
-        />
+        />}
         {/* Outline dimension label */}
-        <span 
+        {isPrimary && <span 
           style={{
             position: 'absolute',
             top: -18,
@@ -526,8 +634,8 @@ export default function CanvasView({
             lineHeight: 1
           }}
         >
-          {node.name}
-        </span>
+          {selectedIds.length > 1 ? `${node.name} +${selectedIds.length - 1}` : node.name}
+        </span>}
       </span>
     );
 
@@ -717,6 +825,18 @@ export default function CanvasView({
             </>
           )}
         </div>
+      )}
+
+      {marquee && (
+        <div
+          className="canvas-marquee"
+          style={{
+            left: Math.min(marquee.x0, marquee.x1),
+            top: Math.min(marquee.y0, marquee.y1),
+            width: Math.abs(marquee.x1 - marquee.x0),
+            height: Math.abs(marquee.y1 - marquee.y0)
+          }}
+        />
       )}
 
       <div className="canvas-zoom" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>

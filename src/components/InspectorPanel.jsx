@@ -2,6 +2,7 @@ import { getWorkspaceFile } from '../data/workspaceFiles';
 
 export default function InspectorPanel({
   selectedNodeId,
+  selectionCount = 0,
   nodesMap,
   onUpdateNode,
   onOpenComponentFile
@@ -107,7 +108,12 @@ export default function InspectorPanel({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', color: '#cbd5e1' }}>
-      
+      {selectionCount > 1 && (
+        <p className="inspector-multi-note" style={{ margin: '10px 12px 0' }}>
+          {selectionCount} layers selected — showing <strong>{node.name}</strong>. Style changes apply to all of them.
+        </p>
+      )}
+
       {/* 1. Header Title */}
       <div style={{
         padding: '12px 16px',
