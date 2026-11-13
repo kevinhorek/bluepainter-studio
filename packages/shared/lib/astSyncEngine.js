@@ -1,12 +1,16 @@
-import * as recast from 'recast';
+import * as recastModule from 'recast';
 import { parse } from '@babel/parser';
 import * as traverseModule from '@babel/traverse';
 import * as t from '@babel/types';
 
-const traverse = traverseModule.default || traverseModule;
+// Namespace imports so the same file loads under Vite, Node ESM and require(esm).
+const recast = recastModule.default?.parse ? recastModule.default : recastModule;
+const traverse = traverseModule.default?.default || traverseModule.default || traverseModule;
 
 const babelParser = {
   parse(source) {
+    // Recast requires tokens on the AST; without them it throws
+    // "Invalid regular expression: missing /" on ordinary JSX.
     return parse(source, {
       sourceType: 'module',
       plugins: ['jsx', 'typescript'],
@@ -16,223 +20,767 @@ const babelParser = {
   }
 };
 
+/** Attribute that identifies a layer when `id` can't be used (a component rendered more than once). */
+const LAYER_ID_ATTRIBUTE = 'data-bp-id';
+
 function getJsxId(openingElement) {
   if (!openingElement?.attributes) return null;
+  let fallback = null;
   for (const attr of openingElement.attributes) {
-    if (!t.isJSXAttribute(attr) || !t.isJSXIdentifier(attr.name, { name: 'id' })) continue;
-    if (t.isStringLiteral(attr.value)) return attr.value.value;
-    if (t.isJSXExpressionContainer(attr.value) && t.isStringLiteral(attr.value.expression)) {
-      return attr.value.expression.value;
+    if (!t.isJSXAttribute(attr)) continue;
+    const isId = t.isJSXIdentifier(attr.name, { name: 'id' });
+    if (!isId && !t.isJSXIdentifier(attr.name, { name: LAYER_ID_ATTRIBUTE })) continue;
+    let value = null;
+    if (t.isStringLiteral(attr.value)) value = attr.value.value;
+    else if (t.isJSXExpressionContainer(attr.value) && t.isStringLiteral(attr.value.expression)) {
+      value = attr.value.expression.value;
     }
+    if (value == null) continue;
+    if (isId) return value;
+    fallback = value;
   }
-  return null;
+  return fallback;
 }
 
 function literalForValue(val) {
-  if (val === null) return t.nullLiteral();
-  if (val === undefined) return t.identifier('undefined');
-  if (typeof val === 'boolean') return t.booleanLiteral(val);
-  if (typeof val === 'number' && !Number.isNaN(val)) {
-    if (val < 0) {
-      return t.unaryExpression('-', t.numericLiteral(Math.abs(val)));
-    }
-    return t.numericLiteral(val);
+  if (typeof val === 'number' && Number.isFinite(val)) {
+    // Babel 8 rejects negative NumericLiterals — emit `-n` as a unary expression.
+    return val < 0 ? t.unaryExpression('-', t.numericLiteral(-val)) : t.numericLiteral(val);
   }
-  return t.stringLiteral(String(val));
+  if (typeof val === 'boolean') return t.booleanLiteral(val);
+  return t.stringLiteral(String(val ?? ''));
 }
 
+/** Read a static style value. Returns undefined for anything dynamic. */
+function readLiteral(valueNode) {
+  if (t.isNumericLiteral(valueNode) || t.isStringLiteral(valueNode) || t.isBooleanLiteral(valueNode)) return valueNode.value;
+  if (
+    t.isUnaryExpression(valueNode, { operator: '-' }) &&
+    t.isNumericLiteral(valueNode.argument)
+  ) {
+    return -valueNode.argument.value;
+  }
+  if (t.isTemplateLiteral(valueNode) && valueNode.expressions.length === 0) {
+    return valueNode.quasis[0]?.value?.cooked ?? '';
+  }
+  return undefined;
+}
+
+function propKey(prop) {
+  if (!t.isObjectProperty(prop) || prop.computed) return null;
+  if (t.isIdentifier(prop.key)) return prop.key.name;
+  if (t.isStringLiteral(prop.key)) return prop.key.value;
+  return null;
+}
+
+/**
+ * Read a style object literal.
+ * `values` holds static props; `dynamicKeys` are props whose value is an
+ * expression we can't represent on the canvas; `opaque` is true when the
+ * object contains spreads/computed keys, so absent keys can't be treated as deleted.
+ */
 function readObjectExpression(expr) {
   if (!t.isObjectExpression(expr)) return null;
-  const out = {};
+  const values = {};
+  const dynamicKeys = [];
+  let opaque = false;
   for (const prop of expr.properties) {
-    if (!t.isObjectProperty(prop)) continue;
-    let key;
-    if (t.isIdentifier(prop.key)) key = prop.key.name;
-    else if (t.isStringLiteral(prop.key)) key = prop.key.value;
-    else continue;
-
-    if (t.isNumericLiteral(prop.value)) out[key] = prop.value.value;
-    else if (t.isStringLiteral(prop.value)) out[key] = prop.value.value;
-    else if (t.isBooleanLiteral(prop.value)) out[key] = prop.value.value;
-    else if (t.isNullLiteral(prop.value)) out[key] = null;
-    else if (t.isTemplateLiteral(prop.value) && prop.value.expressions.length === 0) {
-      out[key] = prop.value.quasis[0]?.value.cooked || '';
+    const key = propKey(prop);
+    if (key == null) {
+      opaque = true;
+      continue;
     }
+    const val = readLiteral(prop.value);
+    if (val === undefined) dynamicKeys.push(key);
+    else values[key] = val;
   }
-  return out;
+  return { values, dynamicKeys, opaque };
 }
 
-function styleObjectExpression(styleObj) {
-  const props = Object.entries(styleObj || {})
-    .filter(([, v]) => v !== undefined && v !== '')
-    .map(([key, val]) => t.objectProperty(t.identifier(key), literalForValue(val), false, true));
-  return t.objectExpression(props);
+function isStyleValuePresent(v) {
+  return v !== undefined && v !== null && v !== '';
 }
 
+function findAttribute(openingElement, name) {
+  return openingElement.attributes.findIndex(
+    (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name })
+  );
+}
+
+/**
+ * Sync the style attribute to `styleObj`, touching only what changed so recast
+ * can keep the author's formatting. Dynamic props and spreads are left alone.
+ */
 function upsertStyleAttribute(openingElement, styleObj) {
-  const idx = openingElement.attributes.findIndex(
-    (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'style' })
-  );
-  const styleAttr = t.jsxAttribute(
-    t.jsxIdentifier('style'),
-    t.jsxExpressionContainer(styleObjectExpression(styleObj))
-  );
-  if (idx >= 0) openingElement.attributes[idx] = styleAttr;
-  else openingElement.attributes.push(styleAttr);
+  const wanted = Object.entries(styleObj || {}).filter(([, v]) => isStyleValuePresent(v));
+  const idx = findAttribute(openingElement, 'style');
+  const existing = idx >= 0 ? openingElement.attributes[idx] : null;
+  const objExpr =
+    existing && t.isJSXExpressionContainer(existing.value) && t.isObjectExpression(existing.value.expression)
+      ? existing.value.expression
+      : null;
+
+  if (!objExpr) {
+    if (existing && !wanted.length) return;
+    // A non-literal style (e.g. style={styles.card}) is the author's — don't clobber it.
+    if (existing && t.isJSXExpressionContainer(existing.value)) return;
+    if (!wanted.length) return;
+    const attr = t.jsxAttribute(
+      t.jsxIdentifier('style'),
+      t.jsxExpressionContainer(
+        t.objectExpression(
+          wanted.map(([key, val]) => t.objectProperty(t.identifier(key), literalForValue(val)))
+        )
+      )
+    );
+    if (idx >= 0) openingElement.attributes[idx] = attr;
+    else openingElement.attributes.push(attr);
+    return;
+  }
+
+  const wantedMap = new Map(wanted);
+  const seen = new Set();
+  const nextProps = [];
+  for (const prop of objExpr.properties) {
+    const key = propKey(prop);
+    if (key == null) {
+      nextProps.push(prop);
+      continue;
+    }
+    const current = readLiteral(prop.value);
+    if (current === undefined) {
+      // Dynamic value: keep the author's expression.
+      seen.add(key);
+      nextProps.push(prop);
+      continue;
+    }
+    if (!wantedMap.has(key) || seen.has(key)) continue; // removed on canvas (or duplicate)
+    seen.add(key);
+    if (current !== wantedMap.get(key)) prop.value = literalForValue(wantedMap.get(key));
+    nextProps.push(prop);
+  }
+  for (const [key, val] of wanted) {
+    if (seen.has(key)) continue;
+    const validIdent = /^[A-Za-z_$][\w$]*$/.test(key);
+    nextProps.push(
+      t.objectProperty(validIdent ? t.identifier(key) : t.stringLiteral(key), literalForValue(val))
+    );
+  }
+  const changed =
+    nextProps.length !== objExpr.properties.length ||
+    nextProps.some((p, i) => p !== objExpr.properties[i]);
+  if (changed) objExpr.properties = nextProps;
 }
 
 function upsertStringAttribute(openingElement, name, value) {
-  const idx = openingElement.attributes.findIndex(
-    (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name })
-  );
-  const attr = t.jsxAttribute(t.jsxIdentifier(name), t.stringLiteral(String(value ?? '')));
+  const idx = findAttribute(openingElement, name);
+  const next = String(value ?? '');
+  if (idx >= 0) {
+    const current = openingElement.attributes[idx].value;
+    if (t.isStringLiteral(current) && current.value === next) return;
+    if (t.isJSXExpressionContainer(current) && !t.isStringLiteral(current.expression)) return;
+  }
+  const attr = t.jsxAttribute(t.jsxIdentifier(name), t.stringLiteral(next));
   if (idx >= 0) openingElement.attributes[idx] = attr;
   else openingElement.attributes.push(attr);
 }
 
-function readJsxText(jsxElement) {
-  for (const child of jsxElement.children || []) {
-    if (t.isJSXText(child)) return child.value.trim();
-    if (t.isJSXExpressionContainer(child) && t.isStringLiteral(child.expression)) {
-      return child.expression.value;
-    }
+function readStringAttribute(openingElement, name) {
+  const idx = findAttribute(openingElement, name);
+  if (idx < 0) return null;
+  const value = openingElement.attributes[idx].value;
+  if (t.isStringLiteral(value)) return value.value;
+  if (t.isJSXExpressionContainer(value) && t.isStringLiteral(value.expression)) {
+    return value.expression.value;
   }
   return null;
 }
 
-function setJsxText(jsxElement, text) {
-  jsxElement.children = [t.jsxText(String(text ?? ''))];
+/** Collapse JSX text whitespace the way React does (roughly): trim + single spaces. */
+function normalizeJsxText(value) {
+  return String(value ?? '').replace(/\s+/g, ' ').trim();
 }
 
-function parseTSXWithAST(code, nodesMap) {
+function readJsxText(jsxElement) {
+  const children = jsxElement.children || [];
+  // Elements with nested markup aren't plain-text nodes; leave them alone.
+  if (children.some((c) => t.isJSXElement(c) || t.isJSXFragment(c))) return null;
+  let out = '';
+  let sawText = false;
+  for (const child of children) {
+    if (t.isJSXText(child)) {
+      out += child.value;
+      sawText = true;
+    } else if (t.isJSXExpressionContainer(child)) {
+      if (t.isJSXEmptyExpression(child.expression)) continue;
+      const val = readLiteral(child.expression);
+      if (val === undefined) return null; // dynamic text, e.g. {price}
+      out += String(val);
+      sawText = true;
+    }
+  }
+  if (!sawText) return children.length === 0 ? '' : null;
+  return normalizeJsxText(out);
+}
+
+/** Characters that can't appear raw in JSX text. */
+const JSX_UNSAFE_TEXT = /[{}<>&]/;
+
+export function jsxTextNeedsExpression(text) {
+  return JSX_UNSAFE_TEXT.test(String(text ?? ''));
+}
+
+function setJsxText(jsxElement, text) {
+  const next = String(text ?? '');
+  const current = readJsxText(jsxElement);
+  if (current === null && (jsxElement.children || []).length) {
+    // Dynamic or nested content — the canvas can't own this text.
+    return;
+  }
+  if (current === normalizeJsxText(next)) return;
+  if (jsxElement.openingElement.selfClosing) {
+    jsxElement.openingElement.selfClosing = false;
+    jsxElement.closingElement = t.jsxClosingElement(jsxElement.openingElement.name);
+  }
+  // Keep the author's line breaks/indentation around multi-line text:
+  //   <button>\n  Submit\n</button>  stays multi-line after a rename.
+  const kids = jsxElement.children || [];
+  const only = kids.length === 1 && t.isJSXText(kids[0]) ? kids[0].value : '';
+  const lead = /^\s*\n\s*/.exec(only)?.[0] ?? '';
+  const trail = /\s*\n\s*$/.exec(only)?.[0] ?? '';
+  if (jsxTextNeedsExpression(next)) {
+    jsxElement.children = lead || trail
+      ? [t.jsxText(lead), t.jsxExpressionContainer(t.stringLiteral(next)), t.jsxText(trail)]
+      : [t.jsxExpressionContainer(t.stringLiteral(next))];
+  } else if (only) {
+    // Mutate the existing text node in place so recast doesn't re-indent the element.
+    kids[0].value = `${lead}${next}${trail}`;
+    if (kids[0].extra) kids[0].extra = { ...kids[0].extra, raw: kids[0].value, rawValue: kids[0].value };
+  } else {
+    jsxElement.children = [t.jsxText(next)];
+  }
+}
+
+const TEXT_NODE_TYPES = new Set(['text', 'button', 'list-item', 'link']);
+
+const INLINE_TEXT_TAGS = new Set(['p', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'label', 'strong', 'em', 'small', 'b', 'i']);
+
+function jsxTagName(openingElement) {
+  return t.isJSXIdentifier(openingElement.name) ? openingElement.name.name : null;
+}
+
+/** Guess a canvas node type for an element that exists in code but not on the canvas yet. */
+function inferNodeType(tag, jsxElement) {
+  if (tag === 'button') return 'button';
+  if (tag === 'img') return 'image';
+  if (tag === 'input') return 'input';
+  if (tag === 'textarea') return 'textarea';
+  if (tag === 'hr') return 'line';
+  if (tag === 'li') return readJsxText(jsxElement) != null ? 'list-item' : 'frame';
+  if (tag === 'ul' || tag === 'ol') return 'list';
+  if (tag === 'svg') return 'vector';
+  if (INLINE_TEXT_TAGS.has(tag)) {
+    const kids = (jsxElement.children || []).filter((c) => !(t.isJSXText(c) && !c.value.trim()));
+    if (kids.length && readJsxText(jsxElement) != null) return 'text';
+  }
+  return 'frame';
+}
+
+function nodeNameFromId(id, tag) {
+  const words = String(id).replace(/[-_]+/g, ' ').trim();
+  return words ? words.charAt(0).toUpperCase() + words.slice(1) : tag;
+}
+
+/** Apply an element's style / text / src from code onto a canvas node. */
+function readElementInto(node, jsxElement) {
+  const opening = jsxElement.openingElement;
+  const styleIdx = findAttribute(opening, 'style');
+  if (styleIdx < 0) {
+    // style attribute deleted in code → clear it on the canvas too
+    node.style = {};
+  } else {
+    const styleAttr = opening.attributes[styleIdx];
+    const parsed = t.isJSXExpressionContainer(styleAttr.value)
+      ? readObjectExpression(styleAttr.value.expression)
+      : null;
+    if (parsed) {
+      const prev = node.style || {};
+      if (parsed.opaque) {
+        node.style = { ...prev, ...parsed.values };
+      } else {
+        // Code is the source of truth: keys removed in code are removed here.
+        const next = { ...parsed.values };
+        parsed.dynamicKeys.forEach((key) => {
+          if (prev[key] !== undefined) next[key] = prev[key];
+        });
+        node.style = next;
+      }
+    }
+  }
+
+  const classIdx = findAttribute(opening, 'className');
+  if (classIdx < 0) delete node.className;
+  else if (t.isStringLiteral(opening.attributes[classIdx].value)) node.className = opening.attributes[classIdx].value.value;
+
+  if (TEXT_NODE_TYPES.has(node.type)) {
+    const text = readJsxText(jsxElement);
+    if (text != null) node.text = text;
+  }
+
+  if (node.type === 'image' && t.isJSXIdentifier(opening.name, { name: 'img' })) {
+    const src = readStringAttribute(opening, 'src');
+    if (src != null) node.src = src;
+  }
+
+  if (node.type === 'link' && t.isJSXIdentifier(opening.name, { name: 'a' })) {
+    const href = readStringAttribute(opening, 'href');
+    if (href != null) node.href = href;
+  }
+
+  if (node.type === 'input') {
+    const inputType = readStringAttribute(opening, 'type');
+    if (inputType != null) node.inputType = inputType;
+  }
+  if (node.type === 'input' || node.type === 'textarea') {
+    const placeholder = readStringAttribute(opening, 'placeholder');
+    if (placeholder != null) node.placeholder = placeholder;
+  }
+}
+
+/** Record why parts of a file may not be editable on the canvas. */
+function noteIssues(opening, id, issues) {
+  const tag = jsxTagName(opening);
+  if (!id) {
+    const idIdx = findAttribute(opening, 'id');
+    if (idIdx >= 0) issues.hasComputedIds = true;
+    else if (tag && /^[a-z]/.test(tag)) issues.missingIds = true;
+    return;
+  }
+  if (findAttribute(opening, 'style') < 0 && findAttribute(opening, 'className') >= 0) {
+    issues.hasTailwindOnly = true;
+  }
+}
+
+const NON_CONTAINER_TYPES = new Set(['text', 'button', 'list-item', 'link', 'input', 'textarea', 'image', 'line', 'shape', 'vector', 'comment', 'component-instance']);
+
+/**
+ * Parse TSX → nodes map (AST). Returns null on failure.
+ *
+ * With `options.structural` (and `options.rootId`), the element tree in the code
+ * is authoritative too: elements with a new `id` become canvas layers, elements
+ * removed from the code are removed from the canvas, and child order follows the
+ * code. Elements without an `id` are transparent (their id'd children attach to
+ * the nearest id'd ancestor). `options.resolveComponent(name)` maps a
+ * `<PricingCard />` inside a wrapper to a component file id.
+ */
+export function parseTSXWithAST(code, nodesMap, options = {}) {
   if (!code?.trim() || !nodesMap) return null;
+  const { structural = false, rootId = null, resolveComponent = null } = options;
 
   const updated = JSON.parse(JSON.stringify(nodesMap));
-  let foundIdsCount = 0;
-  const detectedIssues = {
-    hasComputedIds: false,
-    hasTailwindOnly: false,
-    missingIds: false
-  };
+  let foundIds = 0;
+  const issues = { hasComputedIds: false, hasTailwindOnly: false, missingIds: false };
 
   try {
     const ast = recast.parse(code, { parser: babelParser });
+    const rootScoped = structural && Boolean(rootId) && hasJsxId(ast, rootId);
+    const seen = new Set();
+    const childrenOf = new Map(); // parent id → ordered child ids as written in code
 
     traverse(ast, {
       JSXElement(path) {
         const opening = path.node.openingElement;
         const id = getJsxId(opening);
-        
-        if (!id) {
-          detectedIssues.missingIds = true;
+        if (rootScoped && !isWithinRoot(path, rootId)) return; // another component in the same file
+        noteIssues(opening, id, issues);
+        if (!id || seen.has(id)) return;
+
+        if (!structural) {
+          if (updated[id]) {
+            foundIds += 1;
+            readElementInto(updated[id], path.node);
+          }
           return;
         }
-        
-        const idAttr = opening.attributes.find(
-          (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'id' })
-        );
-        if (idAttr && t.isJSXExpressionContainer(idAttr.value) && !t.isStringLiteral(idAttr.value.expression)) {
-          detectedIssues.hasComputedIds = true;
-        }
-        
-        const styleAttrPresent = opening.attributes.find(
-          (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'style' })
-        );
-        const classAttrPresent = opening.attributes.find(
-          (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'className' })
-        );
-        if (!styleAttrPresent && classAttrPresent) {
-          detectedIssues.hasTailwindOnly = true;
-        }
-        
-        if (!updated[id]) return;
-        
-        foundIdsCount++;
-        const node = updated[id];
+        foundIds += 1;
 
-        const styleAttr = opening.attributes.find(
-          (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'style' })
-        );
-        if (styleAttr && t.isJSXExpressionContainer(styleAttr.value)) {
-          const parsed = readObjectExpression(styleAttr.value.expression);
-          if (parsed) node.style = { ...(node.style || {}), ...parsed };
+        seen.add(id);
+        const tag = jsxTagName(opening);
+
+        // nearest ancestor element that carries an id
+        const parentPath = id === rootId ? null : path.findParent((p) => p.isJSXElement() && getJsxId(p.node.openingElement));
+        const parentId = parentPath ? getJsxId(parentPath.node.openingElement) : null;
+        if (parentId) {
+          if (!childrenOf.has(parentId)) childrenOf.set(parentId, []);
+          childrenOf.get(parentId).push(id);
         }
 
-        const classAttr = opening.attributes.find(
-          (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'className' })
-        );
-        if (classAttr && t.isStringLiteral(classAttr.value)) {
-          node.className = classAttr.value.value;
-        }
-
-        if (node.type === 'text' || node.type === 'button' || node.type === 'list-item' || node.type === 'link') {
-          const text = readJsxText(path.node);
-          if (text != null) node.text = text;
-        }
-
-        if (node.type === 'link' && t.isJSXIdentifier(opening.name, { name: 'a' })) {
-          const hrefAttr = opening.attributes.find(
-            (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'href' })
-          );
-          if (hrefAttr && t.isStringLiteral(hrefAttr.value)) {
-            node.href = hrefAttr.value.value;
+        const isNew = !updated[id];
+        if (isNew) {
+          // New element typed in code → new canvas layer.
+          const componentChild = resolveComponent
+            ? (path.node.children || []).find(
+                (c) => t.isJSXElement(c) && t.isJSXIdentifier(c.openingElement.name) && resolveComponent(c.openingElement.name.name)
+              )
+            : null;
+          if (componentChild) {
+            const compName = componentChild.openingElement.name.name;
+            updated[id] = { id, type: 'component-instance', name: compName, refFile: resolveComponent(compName), tag: 'div', style: {} };
+          } else {
+            const type = inferNodeType(tag, path.node);
+            updated[id] = { id, type, name: nodeNameFromId(id, tag), tag: tag || 'div', style: {} };
+            if (TEXT_NODE_TYPES.has(type)) updated[id].text = '';
+            if (!NON_CONTAINER_TYPES.has(type)) updated[id].children = [];
           }
         }
 
-        if (node.type === 'image' && t.isJSXIdentifier(opening.name, { name: 'img' })) {
-          const srcAttr = opening.attributes.find(
-            (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'src' })
-          );
-          if (srcAttr && t.isStringLiteral(srcAttr.value)) node.src = srcAttr.value.value;
+        if (!isNew && tag && /^[a-z]/.test(tag) && updated[id].type !== 'component-instance' && updated[id].tag !== tag) {
+          const node = updated[id];
+          const swappable = (node.type === 'text' && INLINE_TEXT_TAGS.has(tag)) || (node.type === 'frame' && !['img', 'hr', 'svg', 'button'].includes(tag));
+          if (swappable) node.tag = tag; // <h3> → <h2> in code
         }
 
-        if (node.type === 'input') {
-          const typeAttr = opening.attributes.find(
-            (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'type' })
+        // Content the canvas can't evaluate ({title}, <Icon />, items.map(...)):
+        // remember its source so the layer shows a readable stand-in instead of nothing.
+        if (updated[id].type !== 'component-instance') {
+          const opaque = (path.node.children || []).filter(
+            (c) => !(t.isJSXText(c)) && !(t.isJSXExpressionContainer(c) && t.isJSXEmptyExpression(c.expression)) &&
+              !(t.isJSXElement(c) && getJsxId(c.openingElement))
           );
-          if (typeAttr && t.isStringLiteral(typeAttr.value)) {
-            node.inputType = typeAttr.value.value;
-          }
-          const placeholderAttr = opening.attributes.find(
-            (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'placeholder' })
-          );
-          if (placeholderAttr && t.isStringLiteral(placeholderAttr.value)) {
-            node.placeholder = placeholderAttr.value.value;
+          const hasIdDescendant = (path.node.children || []).some((c) => t.isJSXElement(c) && getJsxId(c.openingElement));
+          if (opaque.length && !hasIdDescendant && readJsxText(path.node) == null && Number.isFinite(opaque[0].start)) {
+            const src = code.slice(opaque[0].start, opaque[opaque.length - 1].end).replace(/\s+/g, ' ').trim();
+            updated[id].dynamicSource = src.length > 48 ? `${src.slice(0, 47)}…` : src;
+          } else {
+            delete updated[id].dynamicSource;
           }
         }
 
-        if (node.type === 'textarea') {
-          const placeholderAttr = opening.attributes.find(
-            (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'placeholder' })
-          );
-          if (placeholderAttr && t.isStringLiteral(placeholderAttr.value)) {
-            node.placeholder = placeholderAttr.value.value;
-          }
-        }
+        readElementInto(updated[id], path.node);
       }
     });
 
-    if (foundIdsCount > 0) {
-      updated._astMeta = { issues: detectedIssues, foundIds: foundIdsCount };
+    if (structural && rootId && seen.has(rootId)) {
+      // Child order and membership follow the code.
+      Object.keys(updated).forEach((id) => {
+        const node = updated[id];
+        if (!seen.has(id) || NON_CONTAINER_TYPES.has(node.type)) return;
+        const fromCode = childrenOf.get(id) || [];
+        // Comment pins have no element in code; keep them where they were.
+        const pins = (node.children || []).filter((cid) => updated[cid]?.type === 'comment');
+        node.children = [...fromCode, ...pins];
+      });
+
+      // Drop layers whose element was deleted from the code.
+      const reachable = new Set();
+      const walk = (id) => {
+        if (reachable.has(id) || !updated[id]) return;
+        reachable.add(id);
+        (updated[id].children || []).forEach(walk);
+      };
+      walk(rootId);
+      Object.keys(updated).forEach((id) => {
+        if (!reachable.has(id)) delete updated[id];
+      });
     }
 
+    if (foundIds > 0) {
+      // Non-enumerable: the result stays a plain id → node map for callers that iterate it.
+      Object.defineProperty(updated, '_astMeta', { value: { issues, foundIds }, enumerable: false, configurable: true });
+    }
     return updated;
   } catch (err) {
-    const errorMsg = err.message || 'Unknown error';
-    console.error('[astSync] parse failed:', errorMsg);
-    console.error('[astSync] Hint: Check for syntax errors, unclosed tags, or malformed JSX');
-    console.error('[astSync] Common issues: missing closing tags, invalid attribute syntax, computed id attributes');
-    
-    const errorResult = { _astError: { message: errorMsg, type: 'parse_error', detectedIssues } };
-    return errorResult;
+    console.warn('[astSync] parse failed:', err.message);
+    console.warn('[astSync] Hint: check for syntax errors, unclosed tags or malformed JSX');
+    return null;
   }
 }
 
-function patchTSXWithAST(code, nodesMap) {
+/** Is this element the layer `rootId`, or inside it? */
+function isWithinRoot(path, rootId) {
+  if (getJsxId(path.node.openingElement) === rootId) return true;
+  return Boolean(path.findParent((p) => p.isJSXElement() && getJsxId(p.node.openingElement) === rootId));
+}
+
+function hasJsxId(ast, wantedId) {
+  let found = false;
+  traverse(ast, {
+    JSXElement(path) {
+      if (getJsxId(path.node.openingElement) !== wantedId) return;
+      found = true;
+      path.stop();
+    }
+  });
+  return found;
+}
+
+/**
+ * Layer ids in document order, their paths, and each one's nearest layer ancestor.
+ * With `rootId` (when that element exists) only its subtree counts, so helper
+ * components elsewhere in the file are never treated as part of this one.
+ */
+function collectJsxIds(ast, rootId = null) {
+  const ids = [];
+  const paths = new Map();
+  const parents = new Map();
+  const scoped = Boolean(rootId) && hasJsxId(ast, rootId);
+  traverse(ast, {
+    JSXElement(path) {
+      const id = getJsxId(path.node.openingElement);
+      if (!id) return;
+      if (scoped && !isWithinRoot(path, rootId)) return;
+      ids.push(id);
+      if (paths.has(id)) return;
+      paths.set(id, path);
+      if (scoped && id === rootId) return;
+      const parentPath = path.findParent((p) => p.isJSXElement() && getJsxId(p.node.openingElement));
+      if (parentPath) parents.set(id, getJsxId(parentPath.node.openingElement));
+    }
+  });
+  return { ids, paths, parents };
+}
+
+/** Which layer each layer sits in, according to the canvas tree. */
+function expectedParents(nodesMap, expectedIds) {
+  const expected = new Set(expectedIds);
+  const parentOf = new Map();
+  expectedIds.forEach((id) => {
+    const node = nodesMap[id];
+    if (!node || NON_CONTAINER_TYPES.has(node.type)) return;
+    (node.children || []).forEach((cid) => {
+      if (expected.has(cid) && !parentOf.has(cid)) parentOf.set(cid, id);
+    });
+  });
+  return parentOf;
+}
+
+function sameParents(codeParents, wantedParents, ids) {
+  return ids.every((id) => (codeParents.get(id) || null) === (wantedParents.get(id) || null));
+}
+
+function sameOrder(a, b) {
+  return a.length === b.length && a.every((id, i) => id === b[i]);
+}
+
+/** Parse a JSX snippet (one element) into an AST node. */
+function parseJsxSnippet(source) {
+  const file = parse(`<>${source}</>`, { sourceType: 'module', plugins: ['jsx', 'typescript'] });
+  const fragment = file.program.body[0]?.expression;
+  return (fragment?.children || []).find((c) => t.isJSXElement(c)) || null;
+}
+
+function elementIndent(path) {
+  const col = path.node.loc?.start?.column;
+  return ' '.repeat(Number.isFinite(col) ? col : 4);
+}
+
+function openElement(jsxElement) {
+  if (!jsxElement.openingElement.selfClosing) return;
+  jsxElement.openingElement.selfClosing = false;
+  jsxElement.closingElement = t.jsxClosingElement(jsxElement.openingElement.name);
+}
+
+/** Remove a JSX child together with the whitespace line that preceded it. */
+function removeJsxChild(path) {
+  const parent = path.parentPath?.node;
+  const list = parent && Array.isArray(parent.children) ? parent.children : null;
+  if (!list) return false;
+  const idx = list.indexOf(path.node);
+  if (idx < 0) return false;
+  const prev = list[idx - 1];
+  if (prev && t.isJSXText(prev) && !prev.value.trim()) list.splice(idx - 1, 2);
+  else list.splice(idx, 1);
+  return true;
+}
+
+/**
+ * Make the element tree in `ast` match the canvas tree: delete elements whose
+ * layer was removed, insert JSX for new layers, and reorder siblings — touching
+ * only the affected parents so the rest of the author's file is untouched.
+ */
+function applyStructure(ast, nodesMap, expectedIds, renderNode) {
+  const expected = new Set(expectedIds);
+  const rootId = expectedIds[0];
+  const parentOf = expectedParents(nodesMap, expectedIds);
+
+  // 1. removals (outermost only — descendants go with their ancestor)
+  const before = collectJsxIds(ast, rootId);
+  const doomed = before.ids.filter((id) => !expected.has(id));
+  doomed.forEach((id) => {
+    const path = before.paths.get(id);
+    const ancestor = path.findParent((p) => p.isJSXElement() && doomed.includes(getJsxId(p.node.openingElement)));
+    if (!ancestor) removeJsxChild(path);
+  });
+
+  // 2. insertions and moves, in document order so earlier siblings exist first.
+  // A layer that exists under the wrong parent is lifted out — with everything
+  // inside it, as written — and placed in its new parent.
+  let { ids, paths, parents } = collectJsxIds(ast, rootId);
+  let present = new Set(ids);
+  for (const id of expectedIds) {
+    const parentId = parentOf.get(id);
+    const misplaced = present.has(id) && id !== rootId && (parents.get(id) || null) !== (parentId || null);
+    if (present.has(id) && !misplaced) continue;
+    if (!parentId || !present.has(parentId)) continue; // arrives inside its parent's snippet, or can't be placed
+    let element;
+    if (misplaced) {
+      const movingPath = paths.get(id);
+      element = movingPath.node;
+      if (!removeJsxChild(movingPath)) return false;
+      ({ paths } = collectJsxIds(ast, rootId));
+    }
+    const parentPath = paths.get(parentId);
+    if (!parentPath) return false;
+    const indent = `${elementIndent(parentPath)}  `;
+    if (!element) element = parseJsxSnippet(renderNode(id, indent));
+    if (!element) return false;
+
+    openElement(parentPath.node);
+    const list = parentPath.node.children;
+    const siblings = nodesMap[parentId].children || [];
+    // insert after the nearest earlier sibling that already exists in the code
+    let at = -1;
+    for (let i = siblings.indexOf(id) - 1; i >= 0 && at < 0; i -= 1) {
+      const sibPath = paths.get(siblings[i]);
+      if (sibPath) at = list.indexOf(sibPath.node);
+    }
+    const isWs = (c) => t.isJSXText(c) && !c.value.trim();
+    const closeIndent = `\n${elementIndent(parentPath)}`;
+    if (at >= 0) {
+      list.splice(at + 1, 0, t.jsxText(`\n${indent}`), element);
+    } else if (!list.some((c) => !isWs(c))) {
+      // empty container → becomes a block with the new child on its own line
+      list.splice(0, list.length, t.jsxText(`\n${indent}`), element, t.jsxText(closeIndent));
+    } else if (siblings.indexOf(id) === 0) {
+      // first child: before everything else
+      list.unshift(t.jsxText(`\n${indent}`), element);
+    } else if (isWs(list[list.length - 1])) {
+      // last child: before the closing tag's indentation
+      list.splice(list.length - 1, 0, t.jsxText(`\n${indent}`), element);
+    } else {
+      list.push(t.jsxText(`\n${indent}`), element, t.jsxText(closeIndent));
+    }
+    ({ ids, paths, parents } = collectJsxIds(ast, rootId));
+    present = new Set(ids);
+  }
+
+  // 3. sibling order
+  Object.values(nodesMap).forEach((node) => {
+    if (!node || NON_CONTAINER_TYPES.has(node.type) || !paths.has(node.id)) return;
+    const list = paths.get(node.id).node.children || [];
+    const slots = [];
+    list.forEach((child, i) => {
+      if (t.isJSXElement(child) && expected.has(getJsxId(child.openingElement))) slots.push(i);
+    });
+    if (slots.length < 2) return;
+    const current = slots.map((i) => getJsxId(list[i].openingElement));
+    const wanted = (node.children || []).filter((cid) => current.includes(cid));
+    if (wanted.length !== current.length || sameOrder(current, wanted)) return;
+    const byId = new Map(slots.map((i) => [getJsxId(list[i].openingElement), list[i]]));
+    slots.forEach((slot, k) => { list[slot] = byId.get(wanted[k]); });
+  });
+
+  return true;
+}
+
+function patchClassName(openingElement, node) {
+  // Nodes that never tracked a className (e.g. built without reading the code)
+  // must not strip the author's classes.
+  if (!Object.prototype.hasOwnProperty.call(node, 'className')) return;
+  const idx = findAttribute(openingElement, 'className');
+  const current = idx >= 0 ? openingElement.attributes[idx].value : null;
+  // Leave dynamic classNames (clsx(...), template strings with expressions) to the author.
+  if (current && !t.isStringLiteral(current)) return;
+  const wanted = typeof node.className === 'string' ? node.className.trim() : '';
+  if (!wanted) {
+    if (idx >= 0) openingElement.attributes.splice(idx, 1);
+    return;
+  }
+  upsertStringAttribute(openingElement, 'className', wanted);
+}
+
+/**
+ * Apply plain-text edits straight to the source, before any AST printing.
+ * Recast reprints a whole element when one of its children changes, which
+ * re-indented multi-line text and its tags; splicing the characters between the
+ * opening and closing tag leaves every other byte of the file alone.
+ */
+function spliceTextEdits(code, nodesMap) {
+  let ast;
+  try {
+    ast = babelParser.parse(code);
+  } catch {
+    return code;
+  }
+  const edits = [];
+  const seen = new Set();
+  traverse(ast, {
+    JSXElement(path) {
+      const element = path.node;
+      const id = getJsxId(element.openingElement);
+      const node = id ? nodesMap[id] : null;
+      if (!node || seen.has(id)) return;
+      seen.add(id);
+      if (!TEXT_NODE_TYPES.has(node.type) || node.text === undefined || node.text === null) return;
+      if (!element.closingElement) return; // self-closing: the AST pass opens it
+      const current = readJsxText(element);
+      if (current === null) return; // dynamic or nested content is the author's
+      const next = String(node.text);
+      if (current === normalizeJsxText(next)) return;
+      const start = element.openingElement.end;
+      const end = element.closingElement.start;
+      if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return;
+      const raw = code.slice(start, end);
+      const body = jsxTextNeedsExpression(next) ? `{${JSON.stringify(next)}}` : next;
+      // Keep the author's line breaks and indentation around multi-line text.
+      const lead = raw.trim() ? (/^\s*\n\s*/.exec(raw)?.[0] ?? '') : '';
+      const trail = raw.trim() ? (/\s*\n\s*$/.exec(raw)?.[0] ?? '') : '';
+      edits.push({ start, end, text: next ? `${lead}${body}${trail}` : '' });
+    }
+  });
+  if (!edits.length) return code;
+  edits.sort((x, y) => y.start - x.start);
+  let out = code;
+  edits.forEach((edit) => {
+    out = out.slice(0, edit.start) + edit.text + out.slice(edit.end);
+  });
+  return out;
+}
+
+/**
+ * Patch existing TSX from nodes while preserving formatting/comments.
+ *
+ * `expectedIds` (optional) is the id order the node tree would render. When the
+ * code's element structure differs and `options.renderNode(id, indent)` is given,
+ * elements are inserted / removed / reordered in place. If the structure still
+ * doesn't match afterwards (e.g. the code belongs to another file) we return
+ * null so the caller regenerates instead of leaving the code out of sync.
+ */
+export function patchTSXWithAST(code, nodesMap, expectedIds = null, options = {}) {
   if (!code?.trim() || !nodesMap) return null;
+  const { renderNode = null } = options;
 
   try {
+    // Text first, as source splices; the AST pass below then finds it unchanged.
+    code = spliceTextEdits(code, nodesMap);
     const ast = recast.parse(code, { parser: babelParser });
+
+    if (expectedIds) {
+      const rootId = expectedIds[0];
+      const wantedParents = expectedParents(nodesMap, expectedIds);
+      let { ids, parents } = collectJsxIds(ast, rootId);
+      // Same ids in the same order is not enough: a layer moved into the frame
+      // just before it keeps its place in document order but changes parent.
+      if (!sameOrder(ids, expectedIds) || !sameParents(parents, wantedParents, expectedIds)) {
+        // Only restructure code that is recognisably this component.
+        const overlap = ids.filter((id) => expectedIds.includes(id)).length;
+        const sameRoot = ids[0] === rootId;
+        if (!renderNode || !sameRoot || overlap === 0) return null;
+        if (!applyStructure(ast, nodesMap, expectedIds, renderNode)) return null;
+        ({ ids, parents } = collectJsxIds(ast, rootId));
+        if (!sameOrder(ids, expectedIds) || !sameParents(parents, wantedParents, expectedIds)) return null;
+      }
+    }
 
     traverse(ast, {
       JSXElement(path) {
@@ -241,38 +789,26 @@ function patchTSXWithAST(code, nodesMap) {
         if (!id || !nodesMap[id]) return;
 
         const node = nodesMap[id];
+        upsertStyleAttribute(opening, node.style || {});
         if (node.type === 'component-instance') return;
 
-        if (node.style && Object.keys(node.style).length) {
-          upsertStyleAttribute(opening, node.style);
-        }
+        patchClassName(opening, node);
 
-        if ((node.type === 'text' || node.type === 'button' || node.type === 'link') && node.text !== undefined) {
-          setJsxText(path.node, node.text || '');
-        }
-        
-        if (node.type === 'list-item' && node.text !== undefined && node.text !== null) {
+        // A node with no `text` field never owned this element's text.
+        if (TEXT_NODE_TYPES.has(node.type) && node.text !== undefined && node.text !== null) {
           setJsxText(path.node, node.text);
-        }
-
-        if (node.type === 'link' && node.href) {
-          upsertStringAttribute(opening, 'href', node.href);
         }
 
         if (node.type === 'image' && node.src) {
           upsertStringAttribute(opening, 'src', node.src);
         }
-
-        if (node.type === 'input') {
-          if (node.inputType) {
-            upsertStringAttribute(opening, 'type', node.inputType);
-          }
-          if (node.placeholder) {
-            upsertStringAttribute(opening, 'placeholder', node.placeholder);
-          }
+        if (node.type === 'link' && node.href) {
+          upsertStringAttribute(opening, 'href', node.href);
         }
-
-        if (node.type === 'textarea' && node.placeholder) {
+        if (node.type === 'input' && node.inputType) {
+          upsertStringAttribute(opening, 'type', node.inputType);
+        }
+        if ((node.type === 'input' || node.type === 'textarea') && node.placeholder) {
           upsertStringAttribute(opening, 'placeholder', node.placeholder);
         }
       }
@@ -280,72 +816,183 @@ function patchTSXWithAST(code, nodesMap) {
 
     return recast.print(ast).code;
   } catch (err) {
-    console.error('[astSync] patch failed:', err.message);
-    console.error('[astSync] Hint: Ensure all elements have stable string literal id attributes');
-    console.error('[astSync] Failed elements may have dynamic ids like id={`node-${index}`}');
+    console.warn('[astSync] patch failed:', err.message);
     return null;
   }
 }
 
-function astSyncAvailable() {
-  return true;
-}
+const SKIP_ID_TAGS = new Set(['br', 'wbr', 'script', 'style', 'meta', 'link', 'title', 'head', 'html', 'body', 'option', 'source', 'track']);
 
-function detectStyleSources(code) {
-  if (!code?.trim()) return { hasInlineStyles: false, hasClassNames: false, hasTailwind: false, hasCssModules: false };
-
+/**
+ * Prepare a file for the canvas: give every plain HTML element an `id` so it can
+ * be selected and edited. Existing ids, component elements, anything inside an
+ * <svg>, and elements with spread props are left alone.
+ * Returns { code, rootId, componentName, added } or null if the file can't be parsed / has no JSX.
+ */
+export function prepareTSXForCanvas(code) {
+  if (!code?.trim()) return null;
   try {
     const ast = recast.parse(code, { parser: babelParser });
-    let hasInlineStyles = false;
-    let hasClassNames = false;
-    let hasTailwind = false;
-    let hasCssModules = false;
-
+    const used = new Set();
     traverse(ast, {
-      JSXElement(path) {
-        const opening = path.node.openingElement;
-        
-        const styleAttr = opening.attributes.find(
-          (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'style' })
-        );
-        if (styleAttr && t.isJSXExpressionContainer(styleAttr.value)) {
-          const parsed = readObjectExpression(styleAttr.value.expression);
-          if (parsed && Object.keys(parsed).length > 0) {
-            hasInlineStyles = true;
-          }
-        }
-
-        const classAttr = opening.attributes.find(
-          (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'className' })
-        );
-        if (classAttr) {
-          hasClassNames = true;
-          if (t.isStringLiteral(classAttr.value)) {
-            const classStr = classAttr.value.value;
-            const tailwindPattern = /\b(bg-|text-|p-|m-|flex|grid|rounded|border|shadow|w-|h-)/;
-            if (tailwindPattern.test(classStr)) {
-              hasTailwind = true;
-            }
-          }
-          if (t.isJSXExpressionContainer(classAttr.value)) {
-            hasCssModules = true;
-          }
-        }
+      JSXOpeningElement(path) {
+        const id = getJsxId(path.node);
+        if (id) used.add(id);
       }
     });
 
-    return { hasInlineStyles, hasClassNames, hasTailwind, hasCssModules };
+    let added = 0;
+    const counters = {};
+    traverse(ast, {
+      JSXOpeningElement(path) {
+        const opening = path.node;
+        const tag = jsxTagName(opening);
+        if (!tag || !/^[a-z]/.test(tag) || SKIP_ID_TAGS.has(tag)) return;
+        if (findAttribute(opening, 'id') >= 0 || findAttribute(opening, LAYER_ID_ATTRIBUTE) >= 0) return;
+        if (opening.attributes.some((a) => t.isJSXSpreadAttribute(a))) return;
+        // (start above this element so the <svg> itself still gets an id)
+        const inSvg = path.parentPath.findParent((p) => p.isJSXElement() && jsxTagName(p.node.openingElement) === 'svg');
+        if (inSvg) return;
+        let id;
+        do {
+          counters[tag] = (counters[tag] || 0) + 1;
+          id = `${tag}-${counters[tag]}`;
+        } while (used.has(id));
+        used.add(id);
+        opening.attributes.unshift(t.jsxAttribute(t.jsxIdentifier('id'), t.stringLiteral(id)));
+        added += 1;
+      }
+    });
+
+    const out = added ? recast.print(ast).code : code;
+    const { ids } = collectJsxIds(added ? recast.parse(out, { parser: babelParser }) : ast);
+    if (!ids.length) return null;
+
+    // Which top-level declaration is the component? The default export, else the
+    // first named export, else the last one with JSX (helpers come first).
+    let defaultName = null;
+    const exportedNames = [];
+    const declName = (decl) => {
+      if ((t.isFunctionDeclaration(decl) || t.isClassDeclaration(decl)) && decl.id) return decl.id.name;
+      if (t.isVariableDeclaration(decl) && t.isIdentifier(decl.declarations[0]?.id)) return decl.declarations[0].id.name;
+      return null;
+    };
+    ast.program.body.forEach((stmt) => {
+      if (t.isExportDefaultDeclaration(stmt)) {
+        defaultName = t.isIdentifier(stmt.declaration) ? stmt.declaration.name : (declName(stmt.declaration) || '*default*');
+      } else if (t.isExportNamedDeclaration(stmt)) {
+        if (stmt.declaration) {
+          const name = declName(stmt.declaration);
+          if (name) exportedNames.push(name);
+        }
+        (stmt.specifiers || []).forEach((spec) => {
+          if (!t.isExportSpecifier(spec) || !t.isIdentifier(spec.local)) return;
+          if (t.isIdentifier(spec.exported, { name: 'default' })) defaultName = spec.local.name;
+          else exportedNames.push(spec.local.name);
+        });
+      }
+    });
+    const firstIdByOwner = new Map(); // top-level declaration name → first layer id in it
+    traverse(ast, {
+      JSXElement(path) {
+        const id = getJsxId(path.node.openingElement);
+        if (!id) return;
+        const top = path.findParent((p) => p.parentPath?.isProgram());
+        if (!top) return;
+        let owner = top.node;
+        if (t.isExportDefaultDeclaration(owner)) {
+          const name = declName(owner.declaration);
+          if (!firstIdByOwner.has('*default*')) firstIdByOwner.set('*default*', id);
+          if (name && !firstIdByOwner.has(name)) firstIdByOwner.set(name, id);
+          return;
+        }
+        if (t.isExportNamedDeclaration(owner) && owner.declaration) owner = owner.declaration;
+        const name = declName(owner);
+        if (name && !firstIdByOwner.has(name)) firstIdByOwner.set(name, id);
+      }
+    });
+    const owners = [...firstIdByOwner.keys()];
+    const chosenOwner = (defaultName && firstIdByOwner.has(defaultName) && defaultName)
+      || exportedNames.find((name) => firstIdByOwner.has(name))
+      || owners[owners.length - 1]
+      || null;
+    const chosenRootId = (chosenOwner && firstIdByOwner.get(chosenOwner)) || ids[0];
+
+    let componentName = chosenOwner && chosenOwner !== '*default*' ? chosenOwner : null;
+    traverse(ast, {
+      ExportNamedDeclaration(path) {
+        const decl = path.node.declaration;
+        if (componentName) return;
+        if (t.isFunctionDeclaration(decl) && decl.id) componentName = decl.id.name;
+        else if (t.isVariableDeclaration(decl) && t.isIdentifier(decl.declarations[0]?.id)) componentName = decl.declarations[0].id.name;
+      },
+      ExportDefaultDeclaration(path) {
+        const decl = path.node.declaration;
+        if (componentName) return;
+        if ((t.isFunctionDeclaration(decl) || t.isClassDeclaration(decl)) && decl.id) componentName = decl.id.name;
+        else if (t.isIdentifier(decl)) componentName = decl.name;
+      }
+    });
+
+    return { code: out, rootId: chosenRootId, componentName, added };
   } catch (err) {
-    console.warn('[astSync] detectStyleSources failed:', err.message);
-    return { hasInlineStyles: false, hasClassNames: false, hasTailwind: false, hasCssModules: false };
+    console.warn('[astSync] prepare failed:', err.message);
+    return null;
   }
 }
 
-function getASTMeta(nodesMap) {
-  if (!nodesMap) return null;
-  if (nodesMap._astMeta) return nodesMap._astMeta;
-  if (nodesMap._astError) return { error: nodesMap._astError };
-  return null;
+export function astSyncAvailable() {
+  return true;
 }
 
-export { parseTSXWithAST, patchTSXWithAST, getJsxId, astSyncAvailable, detectStyleSources, getASTMeta };
+/** What kinds of styling a file uses, so the UI can say what is canvas-editable. */
+export function detectStyleSources(code) {
+  const none = { hasInlineStyles: false, hasClassNames: false, hasTailwind: false, hasCssModules: false };
+  if (!code?.trim()) return none;
+  try {
+    const ast = recast.parse(code, { parser: babelParser });
+    const out = { ...none };
+    traverse(ast, {
+      JSXOpeningElement(path) {
+        const opening = path.node;
+        const styleIdx = findAttribute(opening, 'style');
+        if (styleIdx >= 0 && t.isJSXExpressionContainer(opening.attributes[styleIdx].value)) {
+          const parsed = readObjectExpression(opening.attributes[styleIdx].value.expression);
+          if (parsed && (Object.keys(parsed.values).length || parsed.dynamicKeys.length)) out.hasInlineStyles = true;
+        }
+        const classIdx = findAttribute(opening, 'className');
+        if (classIdx < 0) return;
+        out.hasClassNames = true;
+        const value = opening.attributes[classIdx].value;
+        if (t.isStringLiteral(value) && /\b(bg-|text-|p-|m-|flex|grid|rounded|border|shadow|w-|h-)/.test(value.value)) {
+          out.hasTailwind = true;
+        }
+        if (t.isJSXExpressionContainer(value)) out.hasCssModules = true;
+      }
+    });
+    return out;
+  } catch (err) {
+    console.warn('[astSync] detectStyleSources failed:', err.message);
+    return none;
+  }
+}
+
+/** Sync coverage for a parsed nodes map (see parseTSXWithAST). */
+export function getASTMeta(nodesMap) {
+  return nodesMap?._astMeta || null;
+}
+
+// Building blocks for hosts that walk the AST themselves (the VS Code extension).
+export {
+  getJsxId,
+  LAYER_ID_ATTRIBUTE,
+  babelParser,
+  TEXT_NODE_TYPES,
+  findAttribute,
+  readObjectExpression,
+  readStringAttribute,
+  readJsxText,
+  setJsxText,
+  upsertStyleAttribute,
+  upsertStringAttribute
+};

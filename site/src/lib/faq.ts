@@ -1,3 +1,5 @@
+import { DEMO_URL, REPO_URL } from './constants';
+
 export const FAQ_ITEMS = [
   {
     q: 'What is BluePainter?',
@@ -29,7 +31,7 @@ export const FAQ_ITEMS = [
   },
   {
     q: 'What is the JSX id contract?',
-    a: 'Every synced layer needs id="node-id" matching the canvas node map. That id is the join key between visual layers and the AST. See AST_SCOPE.md in the repo.'
+    a: `Every synced layer needs id="node-id" matching the canvas node map. That id is the join key between visual layers and the AST. See AST_SCOPE.md in the repo (${REPO_URL}).`
   },
   {
     q: 'Can I use BluePainter in VS Code?',
@@ -57,7 +59,7 @@ export const FAQ_ITEMS = [
   },
   {
     q: 'Where is the live demo?',
-    a: 'https://bluepainter-studio.vercel.app — open #/app for the studio and #/home for the in-app marketing page.'
+    a: `${DEMO_URL} — open #/app for the studio and #/home for the in-app marketing page.`
   },
   {
     q: 'How do receipts compare to accessibility linters?',
@@ -65,11 +67,11 @@ export const FAQ_ITEMS = [
   },
   {
     q: 'What data do you capture in validation?',
-    a: 'Optional feedback, session scorecards, and learning-loop events (fix/dismiss). Pilot exports are JSON for facilitators. Waitlist emails are used only for pilot/newsletter contact.'
+    a: 'Optional feedback, session scorecards, and learning-loop events (fix/dismiss). Pilot exports are JSON for facilitators. Those stay in your browser (localStorage) unless you export them. Waitlist emails are used only for pilot/newsletter contact. See /privacy.'
   },
   {
-    q: 'Will there be an MCP server?',
-    a: 'Yes. BluePainter ships an MCP server so assistants can open the demo, analyze TSX ids, evaluate receipts, fetch the knowledge catalog, and submit pilot requests.'
+    q: 'Is there an MCP server?',
+    a: 'Yes. BluePainter ships an MCP server (the mcp/ folder of the repo) so assistants can open the demo, analyze TSX ids, evaluate receipts, fetch the knowledge catalog, and submit pilot requests. See /knowledge/mcp.'
   },
   {
     q: 'What happens to pricing after validation?',

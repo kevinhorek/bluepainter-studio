@@ -1,11 +1,14 @@
 ---
-import { BRAND, DEMO_APP, SITE_URL, WAITLIST_URL } from '../lib/constants';
+import Analytics from '@vercel/analytics/astro';
+import { BRAND, DEMO_APP, OG_IMAGE, SITE_URL, WAITLIST_URL } from '../lib/constants';
 
 interface Props {
   title?: string;
   description?: string;
   canonical?: string;
   ogImage?: string;
+  ogImageAlt?: string;
+  noindex?: boolean;
   jsonLd?: Record<string, unknown> | Record<string, unknown>[];
 }
 
@@ -13,7 +16,9 @@ const {
   title = `${BRAND.name} — ${BRAND.tagline}`,
   description = BRAND.description,
   canonical,
-  ogImage = `${SITE_URL}/og-default.svg`,
+  ogImage = `${SITE_URL}/og-default.png`,
+  ogImageAlt = `${BRAND.name} — ${BRAND.tagline}`,
+  noindex = false,
   jsonLd
 } = Astro.props;
 
@@ -29,17 +34,31 @@ const year = new Date().getFullYear();
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonicalUrl} />
+    {noindex && <meta name="robots" content="noindex, follow" />}
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content={BRAND.name} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonicalUrl} />
     <meta property="og:image" content={ogImage} />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content={String(OG_IMAGE.width)} />
+    <meta property="og:image:height" content={String(OG_IMAGE.height)} />
+    <meta property="og:image:alt" content={ogImageAlt} />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImage} />
+    <meta name="twitter:image:alt" content={ogImageAlt} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#060913" />
+    <script is:inline>document.documentElement.classList.add('js');</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Geist:wght@400..700&family=Geist+Mono:wght@400..600&display=swap"
+    />
     <link rel="stylesheet" href="/styles/global.css" />
     {jsonLd && (
       <script type="application/ld+json" set:html={JSON.stringify(Array.isArray(jsonLd) ? jsonLd : jsonLd)} />
@@ -49,7 +68,7 @@ const year = new Date().getFullYear();
     <header class="site-header">
       <div class="site-header-inner">
         <a class="logo" href="/"><img src="/logo.svg" alt={BRAND.name} height="24" /></a>
-        <nav class="nav">
+        <nav class="nav" id="site-nav" aria-label="Primary">
           <a href="/pricing">Pricing</a>
           <a href="/tools">Tools</a>
           <a href="/guides">Guides</a>
@@ -59,6 +78,7 @@ const year = new Date().getFullYear();
         <div class="header-actions">
           <a class="btn btn-ghost" href="/pilot">Request pilot</a>
           <a class="btn btn-primary" href={DEMO_APP}>Open demo</a>
+          <button class="nav-toggle" type="button" aria-label="Menu" aria-controls="site-nav" aria-expanded="false">☰</button>
         </div>
       </div>
     </header>
@@ -69,13 +89,17 @@ const year = new Date().getFullYear();
       <div class="site-footer-inner">
         <div>
           <strong>{BRAND.name}</strong>
-          <p class="muted">Validation prototype · Free demo · Request a pilot</p>
+          <p class="muted">Design, code, ship — one surface.<br />Free live demo · Pilots open for design–dev pairs.</p>
         </div>
         <form class="newsletter-form" action={WAITLIST_URL} method="POST" data-newsletter data-waitlist-url={WAITLIST_URL}>
           <label for="nl-email">Newsletter</label>
           <div class="newsletter-row">
             <input id="nl-email" name="email" type="email" required placeholder="you@company.com" />
             <input type="hidden" name="source" value="newsletter" />
+            <span class="hp" aria-hidden="true">
+              <label for="nl-website">Website (leave this empty)</label>
+              <input id="nl-website" name="website" type="text" tabindex="-1" autocomplete="off" />
+            </span>
             <button type="submit" class="btn btn-primary">Subscribe</button>
           </div>
           <p class="form-status muted" hidden></p>
@@ -86,16 +110,58 @@ const year = new Date().getFullYear();
           <a href="/faq">FAQ</a>
           <a href="/llms.txt">llms.txt</a>
           <a href="/knowledge.json">knowledge.json</a>
+          <a href="/privacy">Privacy</a>
+          <a href="/terms">Terms</a>
         </div>
       </div>
-      <p class="copyright">© {year} {BRAND.name}</p>
+      <p class="copyright">© {year} {BRAND.name} · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
     </footer>
+    <!-- Vercel Web Analytics: cookieless page views. URL fragments (e.g. share-card payloads on /s) are never reported. -->
+    <script is:inline>
+      window.webAnalyticsBeforeSend = function (event) {
+        try {
+          if (event && typeof event.url === 'string') event.url = event.url.split('#')[0];
+        } catch (e) { /* keep the event as-is */ }
+        return event;
+      };
+    </script>
+    <Analytics />
     <script>
+      // Mobile nav
+      const navToggle = document.querySelector('.nav-toggle');
+      const siteNav = document.getElementById('site-nav');
+      navToggle?.addEventListener('click', () => {
+        const open = siteNav.classList.toggle('is-open');
+        navToggle.setAttribute('aria-expanded', String(open));
+      });
+      const here = location.pathname.replace(/\/$/, '') || '/';
+      siteNav?.querySelectorAll('a').forEach((a) => {
+        if (here === a.getAttribute('href') || here.startsWith(a.getAttribute('href') + '/')) a.setAttribute('aria-current', 'page');
+      });
+
+      // Scroll reveal
+      const revealEls = document.querySelectorAll('[data-reveal]');
+      if ('IntersectionObserver' in window) {
+        const io = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            const delay = Number(entry.target.getAttribute('data-reveal')) || 0;
+            setTimeout(() => entry.target.classList.add('is-in'), delay);
+            io.unobserve(entry.target);
+          });
+        }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+        revealEls.forEach((el) => io.observe(el));
+      } else {
+        revealEls.forEach((el) => el.classList.add('is-in'));
+      }
+
       document.querySelectorAll('[data-newsletter]').forEach((form) => {
         form.addEventListener('submit', async (e) => {
           e.preventDefault();
           const status = form.querySelector('.form-status');
           const fd = new FormData(form);
+          const submitBtn = form.querySelector('button[type="submit"]');
+          if (submitBtn) submitBtn.disabled = true;
           try {
             const endpoint = form.getAttribute('data-waitlist-url') || '/api/waitlist';
             const res = await fetch(endpoint, {
@@ -110,6 +176,8 @@ const year = new Date().getFullYear();
           } catch {
             status.hidden = false;
             status.textContent = 'Network error — try again.';
+          } finally {
+            if (submitBtn) submitBtn.disabled = false;
           }
         });
       });

@@ -1,13 +1,45 @@
 {
   "name": "bluepainter-mcp",
   "version": "0.1.0",
-  "private": true,
+  "description": "MCP server for BluePainter — canvas ↔ TSX sync with Designer's Receipts. Demo links, TSX id analysis, receipt checks, knowledge catalog, pilot waitlist and Figma import.",
   "type": "module",
-  "bin": {
-    "bluepainter-mcp": "./src/index.js"
+  "license": "MIT",
+  "author": "BluePainter",
+  "homepage": "https://bluepainter-launch.vercel.app/knowledge/mcp",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kevinhorek/bluepainter-studio.git",
+    "directory": "mcp"
   },
+  "bugs": {
+    "url": "https://github.com/kevinhorek/bluepainter-studio/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "mcp-server",
+    "bluepainter",
+    "react",
+    "tsx",
+    "design",
+    "figma",
+    "accessibility"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "bluepainter-mcp": "src/index.js"
+  },
+  "main": "src/index.js",
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "start": "node src/index.js",
+    "test": "node test/smoke.mjs",
     "inspect": "npx @modelcontextprotocol/inspector node src/index.js"
   },
   "dependencies": {

@@ -7,6 +7,8 @@ const guides = defineCollection({
     title: z.string(),
     description: z.string(),
     pattern: z.string().optional(),
+    // Set by scripts/generate-guides.mjs; hand-written guides omit it and are never deleted by the generator.
+    generated: z.boolean().optional(),
     pubDate: z.coerce.date().optional()
   })
 });

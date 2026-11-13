@@ -50,7 +50,7 @@ export async function deployProjectToVercel({ nodesByFile, projectName, vercelTo
   return res.json();
 }
 
-export async function pushAndDeploy({ nodesByFile, projectName, githubToken, vercelToken, repoName, isPrivate = true }) {
+export async function pushAndDeploy({ nodesByFile, projectName, githubToken, vercelToken, vercelTeamId, repoName, isPrivate = true }) {
   const github = await pushProjectToGithub({
     nodesByFile,
     projectName,
@@ -59,13 +59,18 @@ export async function pushAndDeploy({ nodesByFile, projectName, githubToken, ver
     isPrivate
   });
 
-  const vercel = await deployProjectToVercel({
-    nodesByFile,
-    projectName: repoName || projectName,
-    vercelToken
-  });
-
-  return { github, vercel };
+  try {
+    const vercel = await deployProjectToVercel({
+      nodesByFile,
+      projectName: repoName || projectName,
+      vercelToken,
+      teamId: vercelTeamId
+    });
+    return { github, vercel };
+  } catch (err) {
+    // The push already happened — don't lose the repo link because the deploy failed.
+    return { github, vercel: null, vercelError: err.message || 'Vercel deploy failed' };
+  }
 }
 
 export async function pushMarketingToGithub({ nodesByFile, githubToken, repoName, toneId = 'default', isPrivate = true }) {
@@ -87,7 +92,7 @@ export async function pushMarketingToGithub({ nodesByFile, githubToken, repoName
   return res.json();
 }
 
-export async function deployMarketingToVercel({ nodesByFile, vercelToken, projectName, toneId = 'default' }) {
+export async function deployMarketingToVercel({ nodesByFile, vercelToken, teamId, projectName, toneId = 'default' }) {
   const { projectName: safeName, files } = buildMarketingStaticFileMap(nodesByFile, toneId);
   const name = projectName || safeName;
 
@@ -98,6 +103,7 @@ export async function deployMarketingToVercel({ nodesByFile, vercelToken, projec
       token: vercelToken,
       projectName: name,
       files,
+      teamId: teamId || undefined,
       staticSite: true
     })
   });

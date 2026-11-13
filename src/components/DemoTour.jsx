@@ -156,5 +156,3 @@ export default function DemoTour({ isActive, onComplete, onSkip, currentStep, se
     </div>
   );
 }
-
-export { TOUR_STEPS };

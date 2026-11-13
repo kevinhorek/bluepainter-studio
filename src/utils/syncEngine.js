@@ -1,35 +1,82 @@
 // syncEngine.js - Canvas ↔ TSX sync (AST-first with regex fallback)
-import { getComponentName, getWorkspaceFile, getImportPath, collectComponentRefs } from '../data/workspaceFiles';
-import { parseTSXWithAST, patchTSXWithAST, getASTMeta } from '@bluepainter/shared/astSyncEngine';
+import { getComponentName, getWorkspaceFile, getImportPath, collectComponentRefs, WORKSPACE_FILES } from '../data/workspaceFiles';
+import { parseTSXWithAST, patchTSXWithAST, jsxTextNeedsExpression, prepareTSXForCanvas, getASTMeta } from '@bluepainter/shared/astSyncEngine';
+
+function formatStyleValue(v) {
+  if (typeof v === 'number') return v;
+  const str = String(v);
+  // Values like fontFamily: "'Inter', sans-serif" contain single quotes.
+  return str.includes("'") || str.includes('\\') || str.includes('\n')
+    ? JSON.stringify(str)
+    : `'${str}'`;
+}
 
 function formatStyleAttr(styleObj) {
   const styleEntries = Object.entries(styleObj || {})
-    .filter(([, v]) => v !== undefined && v !== '')
+    .filter(([, v]) => v !== undefined && v !== null && v !== '')
     .map(([k, v]) => {
-      const formattedVal = typeof v === 'number' ? v : `'${v}'`;
-      return `${k}: ${formattedVal}`;
+      const key = /^[A-Za-z_$][\w$]*$/.test(k) ? k : JSON.stringify(k);
+      return `${key}: ${formatStyleValue(v)}`;
     })
     .join(', ');
   return styleEntries ? ` style={{ ${styleEntries} }}` : '';
 }
 
+function formatJsxText(text) {
+  const value = String(text ?? '').replace(/\s+/g, ' ').trim();
+  // Braces, angle brackets and ampersands would break (or change) the JSX.
+  return jsxTextNeedsExpression(value) ? `{${JSON.stringify(value)}}` : value;
+}
+
+function escapeAttr(value) {
+  return String(value ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+}
+
+/**
+ * The element ids the node tree renders, in document order.
+ * Comment pins have no element in the code, so they are left out — they must
+ * never force the author's file to be regenerated.
+ */
+function expectedIdOrder(rootNodeId, nodesMap) {
+  const ids = [];
+  const seen = new Set();
+  function walk(nodeId) {
+    const node = nodesMap[nodeId];
+    if (!node || seen.has(nodeId)) return;
+    seen.add(nodeId);
+    if (node.type === 'comment') return;
+    ids.push(node.id);
+    if (node.type === 'component-instance') return;
+    const leaf = ['text', 'button', 'list-item', 'link', 'input', 'textarea', 'image', 'line', 'shape', 'vector'].includes(node.type);
+    if (!leaf) (node.children || []).forEach(walk);
+  }
+  walk(rootNodeId);
+  return ids;
+}
+
 // 1. GENERATE TSX CODE FROM NODE TREE STATE
 // Fail-loud: returns null when AST patch fails on existing code (SPEC §5)
 export function generateTSX(rootNodeId, nodesMap, existingCode = null) {
-  if (existingCode?.trim()) {
-    const patched = patchTSXWithAST(existingCode, nodesMap);
-    if (patched) return patched;
-    // AST patch failed - return null to trigger error handling (fail-loud)
-    console.error('[syncEngine] AST patch failed - refusing to regenerate template');
-    return null;
+  if (existingCode?.trim() && rootNodeId && nodesMap) {
+    // Only patch when the code has exactly the tree's structure. If a layer was
+    // added, removed or reordered — or the code belongs to another file — the
+    // patcher can't express that, so regenerate from the tree.
+    const expected = expectedIdOrder(rootNodeId, nodesMap);
+    if (expected) {
+      // The patcher inserts / removes / reorders elements for structural canvas
+      // edits, so the author's file survives; it returns null if it can't.
+      const patched = patchTSXWithAST(existingCode, nodesMap, expected, {
+        renderNode: (id, indent) => renderNodeJSX(id, nodesMap, indent)
+      });
+      if (patched) return patched;
+    }
   }
   // No existing code - generate from template (fresh component)
   return generateTSXFromTemplate(rootNodeId, nodesMap);
 }
 
-function generateTSXFromTemplate(rootNodeId, nodesMap) {
-  if (!rootNodeId || !nodesMap) return '';
-
+/** Render one node (and its subtree) as JSX source. */
+export function renderNodeJSX(rootId, nodesMap, baseIndent = '    ') {
   function renderNode(nodeId, indent = '  ') {
     const node = nodesMap[nodeId];
     if (!node) return '';
@@ -44,14 +91,21 @@ function generateTSXFromTemplate(rootNodeId, nodesMap) {
       return `${indent}<div${idAttr}${styleAttr}>\n${indent}  <${compName} />\n${indent}</div>`;
     }
 
-    if (node.type === 'text' || node.type === 'button' || node.type === 'list-item') {
-      const textVal = node.text || '';
-      return `${indent}<${tag}${idAttr}${styleAttr}${classAttr}>${textVal}</${tag}>`;
+    if (node.type === 'text' || node.type === 'button' || node.type === 'list-item' || node.type === 'link') {
+      const textVal = formatJsxText(node.text);
+      const hrefAttr = node.type === 'link' && node.href ? ` href="${escapeAttr(node.href)}"` : '';
+      return `${indent}<${tag}${idAttr}${hrefAttr}${styleAttr}${classAttr}>${textVal}</${tag}>`;
+    }
+
+    if (node.type === 'input' || node.type === 'textarea') {
+      const typeAttr = node.type === 'input' && node.inputType ? ` type="${escapeAttr(node.inputType)}"` : '';
+      const placeholderAttr = node.placeholder ? ` placeholder="${escapeAttr(node.placeholder)}"` : '';
+      return `${indent}<${node.type}${idAttr}${typeAttr}${placeholderAttr}${styleAttr}${classAttr} />`;
     }
 
     if (node.type === 'image') {
       const imgSrc = node.src || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200';
-      return `${indent}<img${idAttr} src="${imgSrc}"${styleAttr}${classAttr} />`;
+      return `${indent}<img${idAttr} src="${escapeAttr(imgSrc)}" alt=""${styleAttr}${classAttr} />`;
     }
 
     if (node.type === 'line') {
@@ -72,7 +126,7 @@ function generateTSXFromTemplate(rootNodeId, nodesMap) {
     }
 
     if (node.type === 'comment') {
-      return `${indent}{/* Comment: ${(node.text || '').replace(/\*/g, '')} */}`;
+      return `${indent}{/* Comment: ${(node.text || '').replace(/\*\//g, '* /').replace(/\s+/g, ' ')} */}`;
     }
 
     const childrenJSX = (node.children || [])
@@ -85,7 +139,13 @@ function generateTSXFromTemplate(rootNodeId, nodesMap) {
     return `${indent}<${tag}${idAttr}${styleAttr}${classAttr} />`;
   }
 
-  const renderedContent = renderNode(rootNodeId, '    ');
+  return renderNode(rootId, baseIndent);
+}
+
+function generateTSXFromTemplate(rootNodeId, nodesMap) {
+  if (!rootNodeId || !nodesMap) return '';
+
+  const renderedContent = renderNodeJSX(rootNodeId, nodesMap, '    ');
   const componentName = getComponentName(rootNodeId);
   const refs = collectComponentRefs(rootNodeId, nodesMap);
   const importLines = [...refs]
@@ -104,11 +164,22 @@ ${renderedContent}
 }
 
 // 2. PARSE TSX CODE BACK TO NODE TREE STATE
-export function parseTSX(code, nodesMap) {
+function resolveComponentByName(name) {
+  const entry = Object.values(WORKSPACE_FILES).find((f) => !f.isPage && f.componentName === name);
+  return entry ? entry.id : null;
+}
+
+/**
+ * `rootId` turns on structural sync: elements added/removed/reordered in code
+ * add/remove/reorder canvas layers. Without it only style/text/src are read.
+ */
+export function parseTSX(code, nodesMap, rootId = null) {
   if (!code || !nodesMap) return nodesMap;
 
-  const astResult = parseTSXWithAST(code, nodesMap);
-  if (astResult && !astResult._astError) return astResult;
+  const astResult = parseTSXWithAST(code, nodesMap, rootId
+    ? { structural: true, rootId, resolveComponent: resolveComponentByName }
+    : {});
+  if (astResult) return astResult;
 
   return parseTSXWithRegex(code, nodesMap);
 }
@@ -170,4 +241,31 @@ function parseTSXWithRegex(code, nodesMap) {
   }
 
   return updatedNodes;
+}
+
+/**
+ * Open an arbitrary TSX/JSX file on the canvas.
+ * Returns { code, nodes, rootId, componentName, addedIds } or throws with a readable message.
+ */
+export function importTSXFile(source, fileName = 'Imported.tsx') {
+  const prepared = prepareTSXForCanvas(source);
+  if (!prepared) {
+    throw new Error('Could not find JSX in that file — is it a React component (.tsx / .jsx)?');
+  }
+  const nodes = parseTSXWithAST(prepared.code, {}, {
+    structural: true,
+    rootId: prepared.rootId,
+    resolveComponent: resolveComponentByName
+  });
+  if (!nodes || !nodes[prepared.rootId]) {
+    throw new Error('That file parsed, but its JSX could not be mapped to canvas layers.');
+  }
+  const fallbackName = fileName.replace(/\.[jt]sx?$/i, '').replace(/[^A-Za-z0-9_$]/g, '') || 'Imported';
+  return {
+    code: prepared.code,
+    nodes,
+    rootId: prepared.rootId,
+    componentName: prepared.componentName || fallbackName,
+    addedIds: prepared.added
+  };
 }

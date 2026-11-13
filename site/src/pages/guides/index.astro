@@ -1,26 +1,102 @@
 ---
 import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import { GUIDE_GROUPS, guideGroup } from '../../lib/guides';
 
 const guides = (await getCollection('guides')).sort((a, b) => a.data.title.localeCompare(b.data.title));
+
+const known = GUIDE_GROUPS.map((group) => ({
+  ...group,
+  guides: guides.filter((g) => g.data.pattern === group.id)
+}));
+const rest = guides.filter((g) => !GUIDE_GROUPS.some((group) => group.id === g.data.pattern));
+const groups = [...known, ...(rest.length ? [{ ...guideGroup(), guides: rest }] : [])].filter((g) => g.guides.length);
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: 'BluePainter guides',
+  description: 'Guides on Figma-to-React handoff, canvas ↔ TSX sync and design policy checks.'
+};
 ---
 
 <BaseLayout
   title="BluePainter Guides — Figma to React, Sync & Receipts"
-  description="Programmatic guides on Figma→React handoff, canvas↔TSX sync, competitor comparisons, and Designer's Receipts."
+  description="Guides on Figma-to-React handoff, keeping canvas and TSX in sync, tool comparisons, and design policy checks with Designer's Receipts."
+  jsonLd={jsonLd}
 >
-  <section class="section">
-    <p class="eyebrow">Guides</p>
-    <h1>SEO guides ({guides.length})</h1>
-    <p class="lead">Original BluePainter-positioned pages for handoff, sync, and policy topics. Indexation MVP — edit top performers after Search Console data.</p>
-    <div class="grid-2" style="margin-top:32px">
-      {guides.map((g) => (
-        <a class="card" href={`/guides/${g.id}`} style="color:inherit">
-          <span class="badge">{g.data.pattern || 'guide'}</span>
-          <h3>{g.data.title}</h3>
-          <p class="muted">{g.data.description}</p>
-        </a>
-      ))}
+  <section class="section" data-guides>
+    <div class="page-head">
+      <p class="eyebrow">Guides</p>
+      <h1>Handoff, sync and design policy — explained.</h1>
+      <p class="lead">
+        Short, practical reads for design–dev pairs shipping React: how to keep a component editable on the
+        canvas and in code, what each Designer's Receipt checks, and how BluePainter compares with the tools
+        you already use.
+      </p>
     </div>
+
+    <div class="filter-bar" role="group" aria-label="Filter guides">
+      <button type="button" class="chip" data-filter="all" aria-pressed="true">All <span>{guides.length}</span></button>
+      {groups.map((group) => (
+        <button type="button" class="chip" data-filter={group.id} aria-pressed="false">
+          {group.label} <span>{group.guides.length}</span>
+        </button>
+      ))}
+      <input type="search" data-search placeholder="Search guides…" aria-label="Search guides" autocomplete="off" />
+    </div>
+    <p class="muted" data-empty hidden>No guides match that search.</p>
+
+    {groups.map((group) => (
+      <section class="guide-group" data-group={group.id} aria-labelledby={`group-${group.id}`}>
+        <h2 id={`group-${group.id}`}>{group.label}</h2>
+        {group.intro && <p class="muted">{group.intro}</p>}
+        <div class="guide-list">
+          {group.guides.map((g) => (
+            <a class="card" href={`/guides/${g.id}`} style="color:inherit" data-guide data-text={`${g.data.title} ${g.data.description}`.toLowerCase()}>
+              <h3>{g.data.title}</h3>
+              <p class="muted">{g.data.description}</p>
+            </a>
+          ))}
+        </div>
+      </section>
+    ))}
   </section>
 </BaseLayout>
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-guides]');
+  if (root) {
+    const chips = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-filter]'));
+    const groups = Array.from(root.querySelectorAll<HTMLElement>('[data-group]'));
+    const search = root.querySelector<HTMLInputElement>('[data-search]');
+    const empty = root.querySelector<HTMLElement>('[data-empty]');
+    let active = 'all';
+
+    const apply = () => {
+      const q = (search?.value || '').trim().toLowerCase();
+      let visible = 0;
+      groups.forEach((group) => {
+        const inFilter = active === 'all' || group.dataset.group === active;
+        let shown = 0;
+        group.querySelectorAll<HTMLElement>('[data-guide]').forEach((card) => {
+          const match = inFilter && (!q || (card.dataset.text || '').includes(q));
+          card.hidden = !match;
+          if (match) shown += 1;
+        });
+        group.hidden = shown === 0;
+        visible += shown;
+      });
+      if (empty) empty.hidden = visible > 0;
+    };
+
+    chips.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        active = chip.dataset.filter || 'all';
+        chips.forEach((c) => c.setAttribute('aria-pressed', String(c === chip)));
+        apply();
+      });
+    });
+    search?.addEventListener('input', apply);
+  }
+</script>

@@ -1,32 +1,34 @@
 ---
 title: "How to sync a modal between canvas and TSX"
-description: "Practical id-contract checklist for keeping a modal editable in BluePainter."
+description: "A practical id-contract checklist for keeping a modal editable on the BluePainter canvas and in code."
 pattern: "how-to-sync"
+generated: true
 pubDate: 2026-07-21
 ---
 
 # How to sync a modal between canvas and TSX
 
-Practical id-contract checklist for keeping a modal editable in BluePainter.
+A practical id-contract checklist for keeping a modal editable on the BluePainter canvas and in code.
 
 ## Goal
 
-Keep a **modal** editable on canvas and in TSX without losing formatting.
+Keep a **modal** editable on the canvas and in TSX without losing comments or formatting.
 
 ## Id contract
 
 ```tsx
-<button id="cta-button" style={{ background: '#2563eb' }}>Start free trial</button>
+<section id="modal-frame" style={{ padding: 32 }}>
+  <button id="modal-cta" style={{ background: '#2563eb' }}>Start free trial</button>
+</section>
 ```
 
-The `id` is the join key. Synced fields today: inline `style`, text, and `img` `src`.
+The `id` is the join key between a canvas layer and its JSX element. Synced fields today: inline `style`, text, and `img` `src`.
 
 ## Steps
 
-1. Open the component in BluePainter (or the VS Code extension)
-2. Confirm every layer you care about has a stable id
-3. Edit canvas or code — receipts flag policy issues
-4. Export / write-back when ready
+1. Open the modal in BluePainter (or the VS Code extension)
+2. Give every layer you want to edit visually a stable, unique `id` — the [TSX id analyzer](/tools/tsx-id-analyzer) lists what the canvas can map
+3. Edit on the canvas or in code; receipts flag policy issues as you go
+4. Export or write back when the diff looks right
 
-See [AST scope](https://github.com/kevinhorek/bluepainter-studio/blob/main/AST_SCOPE.md).
-
+See the [AST scope](https://github.com/kevinhorek/bluepainter-studio/blob/main/AST_SCOPE.md) for what is and is not synced.

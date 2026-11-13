@@ -1,11 +1,11 @@
-const { evaluateReceipts, applyReceiptFix } = require('./receiptPolicy');
-const { parseTSXWithAST, patchTSXWithAST, getJsxId, astSyncAvailable } = require('./astSyncEngine');
-
-module.exports = {
-  evaluateReceipts,
-  applyReceiptFix,
+export { evaluateReceipts, applyReceiptFix } from './receiptPolicy.js';
+export {
   parseTSXWithAST,
   patchTSXWithAST,
+  prepareTSXForCanvas,
+  detectStyleSources,
+  getASTMeta,
   getJsxId,
+  jsxTextNeedsExpression,
   astSyncAvailable
-};
+} from './astSyncEngine.js';

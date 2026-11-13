@@ -64,6 +64,31 @@ npm run desktop
 
 Opens BluePainter in a native desktop window (Electron). See [desktop/README.md](./desktop/README.md).
 
+Without `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` the Studio skips sign-in and keeps the workspace in the browser. Environment variables are documented in [`.env.example`](./.env.example).
+
+## Tests
+
+```bash
+npm run lint
+npm test               # every offline suite below (well under a minute)
+npm run verify:export  # writes the real export to a temp dir, then npm install + typecheck + build (needs network)
+npm run build
+```
+
+| Script | Covers |
+|--------|--------|
+| `test:features` | Canvas ↔ TSX sync engine, receipts, AI apply, Figma import, export file map |
+| `test:ast` | 18 sync-engine suites over realistic component patterns |
+| `test:integration` | Real-file workflow: detect, parse, patch, round-trip |
+| `test:api` | `api/` handlers (including OAuth) with mocked upstreams |
+| `test:export` | Every file of the app export and the marketing kit `landing-site` parses as TSX; `package.json` / `tsconfig.json` shape |
+| `test:figma-plugin` | The Figma plugin's JSON goes through the Studio's import path |
+| `test:desktop` | Desktop file-access rules (path allow-list, extensions) |
+
+The sync engine and receipt policy live in `packages/shared` and are used by both the Studio and the extension.
+
+`mcp/` and `extension/` have their own `npm test`. CI (`.github/workflows/ci.yml`) runs lint, tests and build for the Studio, the Astro site build, and the extension and MCP tests on every push and pull request.
+
 ## Validation workflow
 
 1. Share **https://bluepainter-studio.vercel.app**
@@ -80,6 +105,17 @@ Opens BluePainter in a native desktop window (Electron). See [desktop/README.md]
 ```bash
 npm run deploy:vercel
 ```
+
+Vercel is the only supported host (the `api/` functions are Vercel serverless functions); set the variables from `.env.example` in the project settings.
+
+### OAuth sign-in (optional)
+
+The export/deploy dialog can offer **Sign in with GitHub** and **Sign in with Vercel** instead of pasted tokens. Each button appears only when its variables are set on the Studio deployment; without them the dialog shows the token fields only, and pasted tokens keep working either way.
+
+- **GitHub:** create an OAuth App (GitHub → Settings → Developer settings → OAuth Apps) with the authorization callback URL `https://<studio-host>/api/oauth/github/callback`, then set `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`. The app requests the `repo` scope.
+- **Vercel:** create an integration in the Vercel Integrations Console with the Redirect URL `https://<studio-host>/api/oauth/vercel/callback` and read/write access to deployments (and projects), then set `VERCEL_CLIENT_ID`, `VERCEL_CLIENT_SECRET` and `VERCEL_INTEGRATION_SLUG`.
+
+`<studio-host>` is the production host, e.g. `bluepainter-studio.vercel.app`. For `npx vercel dev`, register `http://localhost:3000/api/oauth/<provider>/callback` on a separate dev app. The token is handed to the Studio tab that opened the sign-in window and stored like a pasted one (this tab only unless "Remember on this device" is ticked); the server keeps nothing.
 
 ### Optional: Team Audit Log Backend
 
@@ -158,7 +194,8 @@ code --install-extension extension/bluepainter-0.2.0.vsix
 | Feature | Where |
 |---------|--------|
 | Page layout | `DashboardPage.tsx` |
-| Component files | `PricingCard.tsx`, `HeroSection.tsx` |
+| Component files | `PricingCard.tsx`, `HeroSection.tsx` — code is tracked per file, so switching files never shows or patches another file's TSX |
+| Export / deploy | **Export** → zip, GitHub push or Vercel deploy of a Vite + React + **TypeScript** project (`src/*.tsx`, strict `tsconfig.json`, `npm run typecheck`) |
 | Drag components onto page | Sidebar → **Library** tab |
 | Receipt issues | Pills at bottom → click for sidebar |
 | Inspect / layers / code | Icon rail on canvas |
@@ -179,7 +216,7 @@ cd site && npm install && npm run dev
 - Pricing / pilot: `/pricing`, `/pilot`
 - Free tools: `/tools/*`
 - AEO: `/faq`, `/knowledge`, `/llms.txt`, `/knowledge.json`
-- MCP: `mcp/` — see [mcp/README.md](./mcp/README.md)
+- MCP: `mcp/` — see [mcp/README.md](./mcp/README.md) (`cd mcp && npm install && npm test`; publishable as `bluepainter-mcp`, not yet published)
 - Repurpose pillar content: `npm run repurpose -- scripts/fixtures/pillar-transcript.txt`
 - Newsletter ESP: [site/NEWSLETTER.md](./site/NEWSLETTER.md)
 - Marketplace checklist: [extension/MARKETPLACE.md](./extension/MARKETPLACE.md)
@@ -196,7 +233,7 @@ Repo-native editing in VS Code — canvas preview, inspector, receipts, and AST 
 cd extension && npm install
 ```
 
-Then **F5** in VS Code (Extension Development Host) or install from `extension/` folder. See [extension/README.md](./extension/README.md).
+Then **F5** in VS Code (launch config **BluePainter Extension**), or build and install the VSIX: `npm run package && code --install-extension bluepainter-0.3.0.vsix`. `npm test` runs the write-back round-trip test. See [extension/README.md](./extension/README.md) and [extension/CHANGELOG.md](./extension/CHANGELOG.md).
 
 Try `extension/test-fixtures/PricingCard.tsx` — edit on canvas, changes write back to the file.
 
@@ -213,6 +250,11 @@ See [FIGMA_IMPORT.md](./FIGMA_IMPORT.md) for supported node types, limitations, 
 ## Prototype limitations
 
 - Browser demo sync uses AST-first with regex fallback; Recast parse can fail on some JSX in Node (extension uses Babel generator fallback)
+- Elements the canvas inserts into existing code are pretty-printed; text and style edits change only the characters involved
+- The workspace, learning loop and feedback are kept in `localStorage` (feedback is also posted to `/api/feedback` when the API is running)
+- Deploy / Figma / OpenAI tokens stay in the browser: this tab only by default, or `localStorage` when **Remember on this device** is ticked
+- In an exported app, a component placed more than once uses `data-bp-id` instead of `id` on its elements (no duplicate DOM ids)
+- The Phase 2–4 layouts under `?facilitator=1` are demo layouts of the same editor; the real desktop app is `npm run desktop`, the real Figma plugin is `figma-plugin/`, and responsive preview is the viewport switcher on page files
 - Learning loop uses localStorage by default; optional team backend available (see [docs/AUDIT_BACKEND.md](./docs/AUDIT_BACKEND.md))
 - Figma import is one-way (no bidirectional sync)
 

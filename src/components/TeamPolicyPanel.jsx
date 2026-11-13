@@ -132,7 +132,11 @@ export default function TeamPolicyPanel({ policy, onPolicyChange, learningConfig
             min={3}
             max={10}
             value={policy.maxFeatureCount}
-            onChange={(e) => update('maxFeatureCount', Number(e.target.value))}
+            onChange={(e) => {
+              // Clearing the field gave Number('') === 0, which was saved as the limit.
+              const n = parseInt(e.target.value, 10);
+              if (Number.isFinite(n)) update('maxFeatureCount', Math.min(10, Math.max(1, n)));
+            }}
           />
         </label>
         <label style={{ gridColumn: '1 / -1' }}>

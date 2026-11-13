@@ -10,8 +10,10 @@
   };
 
   function getContrastRatio(hexcolor) {
-    if (!hexcolor || String(hexcolor).length < 6) return 8.7;
-    const color = String(hexcolor).replace('#', '');
+    if (!hexcolor) return 8.7;
+    let color = String(hexcolor).trim().replace('#', '');
+    // #abc shorthand → #aabbcc (was silently reported as a passing 8.7:1)
+    if (/^[0-9a-f]{3}$/i.test(color)) color = color.split('').map((c) => c + c).join('');
     if (color.length < 6) return 8.7;
     const r = parseInt(color.substring(0, 2), 16);
     const g = parseInt(color.substring(2, 4), 16);

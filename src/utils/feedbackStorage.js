@@ -3,7 +3,8 @@ const STORAGE_KEY = 'bluepainter-demo-feedback';
 export function getStoredFeedback() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }
@@ -11,7 +12,36 @@ export function getStoredFeedback() {
 
 export function saveFeedback(entry) {
   const existing = getStoredFeedback();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify([...existing, entry]));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([...existing, entry]));
+    return true;
+  } catch {
+    // storage blocked or full (private mode) — caller can still show a thank-you
+    return false;
+  }
+}
+
+/**
+ * Saves feedback locally (as before) AND sends it to /api/feedback in the background.
+ * Returns the local-save result synchronously. Never throws and never waits on the network:
+ * a missing endpoint (404 under plain `npm run dev`), offline, or a 503 are all tolerated —
+ * the local copy remains and can still be exported from the facilitator tools.
+ */
+export function submitFeedback(entry) {
+  const savedLocally = saveFeedback(entry);
+  try {
+    if (typeof fetch === 'function') {
+      fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(entry),
+        keepalive: true // let it finish if the tab closes right after the thank-you
+      }).catch(() => {});
+    }
+  } catch {
+    // serialisation or fetch setup failed — local copy is still there
+  }
+  return savedLocally;
 }
 
 export function buildCurrentSessionMetrics() {
@@ -101,9 +131,13 @@ export function downloadFeedbackJSON() {
   anchor.href = url;
   anchor.download = `bluepainter-feedback-${new Date().toISOString().slice(0, 10)}.json`;
   anchor.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 2000); // sync revoke can cancel the download in Safari
 }
 
 export function clearStoredFeedback() {
-  localStorage.removeItem(STORAGE_KEY);
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // storage unavailable
+  }
 }

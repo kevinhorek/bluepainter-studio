@@ -1,30 +1,30 @@
 ---
 title: "v0 vs BluePainter"
-description: "v0 generates UI from prompts. BluePainter keeps canvas and TSX in sync with Designer's Receipts inside your repo."
+description: "v0 focuses on generating React UI from a prompt. BluePainter keeps canvas and TSX in sync inside your repo and checks design policy with Designer's Receipts."
 pattern: "vs"
+generated: true
 pubDate: 2026-07-21
 ---
 
 # v0 vs BluePainter
 
-**v0** optimizes for prompt-to-UI generation. **BluePainter** optimizes for AST-preserving canvas↔TSX sync plus team policy receipts inside existing repos.
+v0 focuses on generating React UI from a prompt. BluePainter keeps canvas and TSX in sync inside your repo and checks design policy with Designer's Receipts.
 
 ## Short answer
 
-If you need a new screen from a prompt, start with a generator. If you need ongoing visual edits that survive in production TSX — with contrast/spacing/CTA governance — use BluePainter.
+**v0** focuses on generating React UI from a prompt. **BluePainter** focuses on AST-preserving canvas ↔ TSX sync plus team policy checks, inside the repo you already have. Many teams will use both.
 
 ## Comparison lens
 
-| Lens | v0 | BluePainter |
-|------|-----|-------------|
-| Generation | Core | Secondary |
-| Format-preserving edit | Weak | Core |
-| Design policy receipts | Rare | Core |
-| Repo-native VS Code path | Limited | Scaffolded |
-| Validation pricing | Paid product | Free demo + pilot |
+| Lens | What to ask of v0 | BluePainter |
+|------|------------------------|-------------|
+| Starting point | Does it start from a design, a prompt, or your code? | Your existing TSX files |
+| Editing existing code | Does a visual edit keep your comments and formatting? | Core — one-line diffs |
+| Design policy | Can it enforce your contrast, spacing and copy rules? | Core — Designer's Receipts |
+| Where the result lives | Its platform, or your repo? | Your repo |
+
+This page describes positioning, not a feature-by-feature benchmark — check v0's own documentation for its current capabilities.
 
 ## Try before you decide
 
-- [Free demo](https://bluepainter-studio.vercel.app/#/app)
-- [Request pilot](https://bluepainter-launch.vercel.app/pilot)
-- [FAQ](https://bluepainter-launch.vercel.app/faq)
+Use the [free demo](https://bluepainter-studio.vercel.app/#/app), or request a [pilot](/pilot) if you want a facilitated session on your own components.

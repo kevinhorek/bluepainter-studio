@@ -1,0 +1,24 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { DEMO_APP, SITE_URL } from '../lib/constants';
+---
+
+<BaseLayout
+  title="Page not found — BluePainter"
+  description="That page does not exist. Head back to the BluePainter homepage, the free tools or the guides."
+  canonical={`${SITE_URL}/404`}
+  noindex
+>
+  <section class="section notfound">
+    <p class="notfound-code" aria-hidden="true">404</p>
+    <p class="eyebrow">Page not found</p>
+    <h1>This layer isn't on the canvas.</h1>
+    <p class="lead">The link may be old, or the page may have moved. These will get you back on track.</p>
+    <div class="actions">
+      <a class="btn btn-primary btn-lg" href="/">Back to home</a>
+      <a class="btn btn-ghost btn-lg" href="/guides">Browse guides</a>
+      <a class="btn btn-ghost btn-lg" href="/tools">Free tools</a>
+      <a class="btn btn-ghost btn-lg" href={DEMO_APP}>Open the live studio</a>
+    </div>
+  </section>
+</BaseLayout>

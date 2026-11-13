@@ -47,7 +47,8 @@ Expected size: ~27-30 KB with 23-25 files.
 Install locally without publishing:
 
 ```bash
-code --install-extension extension/bluepainter-0.2.0.vsix
+cd extension && npm install && npm run package
+code --install-extension bluepainter-0.3.0.vsix
 ```
 
 Or from VS Code:

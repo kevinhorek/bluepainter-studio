@@ -2,139 +2,76 @@ name: CI
 
 on:
   pull_request:
-    branches:
-      - main
   push:
     branches:
       - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   conflict-markers:
     name: Check for conflict markers
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
+      - uses: actions/checkout@v4
       - name: Scan for conflict markers
         run: |
-          echo "Scanning for Git conflict markers..."
-          if git grep -n "^<<<<<<<" -- ':!*.md' ':!CI.md'; then
-            echo "❌ Found conflict markers in code files"
+          if git grep -nE "^(<<<<<<<|>>>>>>>) " -- ':!*.md'; then
+            echo "Found conflict markers in code files"
             exit 1
           fi
-          if git grep -n "^>>>>>>>" -- ':!*.md' ':!CI.md'; then
-            echo "❌ Found conflict markers in code files"
-            exit 1
-          fi
-          echo "✅ No conflict markers found"
 
-  lint:
-    name: Lint
+  studio:
+    name: Studio (lint, test, build)
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'npm'
-      
-      - name: Install dependencies
-        run: npm ci
-      
-      - name: Run ESLint
-        run: npm run lint
-        continue-on-error: true
-      
-      - name: Lint summary
-        if: always()
-        run: |
-          echo "## Lint Results" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Note: Pre-existing lint errors are allowed (see AGENTS.md)" >> $GITHUB_STEP_SUMMARY
-          echo "This check currently runs with continue-on-error until baseline is clean" >> $GITHUB_STEP_SUMMARY
+          node-version: 22
+          cache: npm
+      # Installs the workspaces too (packages/shared, extension).
+      - run: npm ci
+      - run: npm run lint
+      # features, AST sync suites, real-file integration, API handlers, export
+      - run: npm test
+      - run: npm run build
+      - name: Extension tests
+        run: npm test --workspace extension
 
-  build:
-    name: Build
+  site:
+    name: Site (Astro build)
     runs-on: ubuntu-latest
-    
+    defaults:
+      run:
+        working-directory: site
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'npm'
-      
-      - name: Install dependencies
-        run: npm ci
-      
-      - name: Build application
-        run: npm run build
-      
-      - name: Check build output
-        run: |
-          if [ ! -d "dist" ]; then
-            echo "❌ Build failed - dist directory not created"
-            exit 1
-          fi
-          echo "✅ Build successful - dist directory created"
-      
-      - name: Build summary
-        if: always()
-        run: |
-          echo "## Build Results" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          if [ -d "dist" ]; then
-            echo "✅ Build completed successfully" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Build artifacts:" >> $GITHUB_STEP_SUMMARY
-            ls -lh dist/ | tail -n +2 | awk '{printf "- %s (%s)\n", $9, $5}' >> $GITHUB_STEP_SUMMARY || echo "- dist/ contents not available" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "❌ Build failed" >> $GITHUB_STEP_SUMMARY
-          fi
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - run: npm ci
+      - run: npm run build
 
-  test:
-    name: Test
+  mcp:
+    name: MCP server (smoke test)
     runs-on: ubuntu-latest
-    
+    defaults:
+      run:
+        working-directory: mcp
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'npm'
-      
-      - name: Install dependencies
-        run: npm ci
-      
-      - name: Run AST sync tests
-        run: npm run test:ast
-      
-      - name: Run feature tests
-        run: npm run test:features
-      
-      - name: Run integration tests
-        run: npm run test:integration
-      
-      - name: Test summary
-        if: always()
-        run: |
-          echo "## Test Results" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ All tests completed" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Test suites run:" >> $GITHUB_STEP_SUMMARY
-          echo "- AST sync tests" >> $GITHUB_STEP_SUMMARY
-          echo "- Feature tests" >> $GITHUB_STEP_SUMMARY
-          echo "- Integration tests" >> $GITHUB_STEP_SUMMARY
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mcp/package-lock.json
+      - run: npm ci
+      - run: npm test

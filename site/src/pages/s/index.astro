@@ -1,0 +1,121 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ShareCard from '../../components/ShareCard.astro';
+import { SITE_URL } from '../../lib/constants';
+import { DEMO_SHARE_CARDS } from '../../lib/share';
+
+// The real numbers arrive in the URL fragment (/s#<payload>) and are decoded in the
+// browser only — the fragment is never sent to the server, so this page is fully static.
+const demo = DEMO_SHARE_CARDS['demo-scorecard'];
+---
+
+<BaseLayout
+  title="Shared BluePainter scorecard"
+  description="A design policy scorecard shared from the BluePainter Studio — canvas ↔ code sync checked by Designer's Receipts."
+  canonical={`${SITE_URL}/s`}
+  ogImage={`${SITE_URL}/og-share.png`}
+  ogImageAlt="BluePainter design policy scorecard"
+  noindex
+>
+  <section class="section" data-share-page data-site-url={SITE_URL}>
+    <ShareCard payload={demo} shareUrl={`${SITE_URL}/s`} />
+    <p class="muted share-note" data-share-note>
+      Sample card with example numbers. Run a session in the Studio to share your own.
+    </p>
+  </section>
+</BaseLayout>
+
+<script>
+  // Decode /s#<base64url(JSON)> written by the Studio (src/utils/shareViral.js):
+  //   { v: 1, t: 's' | 'w', s: score, n: nodes, f: fixes, c: contrastPasses, r?: recommendation }
+  // Everything is validated and clamped, and only ever written with textContent / setAttribute.
+  type Card = {
+    type: 'scorecard' | 'wrapped';
+    score: number;
+    nodes: number;
+    fixes: number;
+    contrastPasses: number;
+    label: string;
+    name: string;
+    raw: string;
+  };
+
+  const MAX_HASH = 400;
+  const RECOMMENDATIONS = ['GO', 'CONTINUE', 'NO-GO'];
+
+  function int(value: unknown, max: number): number | null {
+    if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+    return Math.min(max, Math.max(0, Math.round(value)));
+  }
+
+  function decode(hash: string): Card | null {
+    const raw = hash.replace(/^#/, '');
+    if (!raw || raw.length > MAX_HASH || !/^[A-Za-z0-9_-]+$/.test(raw)) return null;
+    let data: unknown;
+    try {
+      const b64 = raw.replace(/-/g, '+').replace(/_/g, '/');
+      data = JSON.parse(atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4)));
+    } catch {
+      return null;
+    }
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
+    const d = data as Record<string, unknown>;
+    if (d.v !== 1 || (d.t !== 's' && d.t !== 'w')) return null;
+
+    const score = int(d.s, 100);
+    const nodes = int(d.n, 99999);
+    const fixes = int(d.f, 99999);
+    const contrastPasses = int(d.c, 99999);
+    if (score === null || nodes === null || fixes === null || contrastPasses === null) return null;
+
+    const wrapped = d.t === 'w';
+    const rec = typeof d.r === 'string' && RECOMMENDATIONS.includes(d.r) ? d.r : null;
+    return {
+      type: wrapped ? 'wrapped' : 'scorecard',
+      score,
+      nodes,
+      fixes,
+      contrastPasses,
+      label: wrapped ? 'Sync Wrapped' : 'Design policy score',
+      name: wrapped ? 'BluePainter session' : rec ? `Session · ${rec}` : 'Validation session',
+      raw
+    };
+  }
+
+  function render() {
+    const page = document.querySelector<HTMLElement>('[data-share-page]');
+    if (!page) return;
+    const card = decode(location.hash);
+    if (!card) return; // keep the server-rendered sample card
+
+    const set = (key: string, value: string) => {
+      const el = page.querySelector<HTMLElement>(`[data-share="${key}"]`);
+      if (el) el.textContent = value;
+    };
+    set('name', card.name);
+    set('score', String(card.score));
+    set('label', card.label);
+    set('nodes', card.nodes.toLocaleString('en-US'));
+    set('fixes', card.fixes.toLocaleString('en-US'));
+    set('contrastPasses', card.contrastPasses.toLocaleString('en-US'));
+
+    // `raw` passed the [A-Za-z0-9_-] check above, so it is safe to put back in a URL.
+    const shareUrl = `${page.dataset.siteUrl || location.origin}/s#${card.raw}`;
+    const text = `My BluePainter ${card.label}: ${card.score}. Canvas ↔ code with Designer's Receipts.`;
+    page.querySelector('[data-share="x"]')?.setAttribute(
+      'href',
+      `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`
+    );
+    page.querySelector('[data-share="linkedin"]')?.setAttribute(
+      'href',
+      `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`
+    );
+
+    const note = page.querySelector<HTMLElement>('[data-share-note]');
+    if (note) note.textContent = 'Shared from a BluePainter Studio session. The numbers live in this link only — nothing is stored on our servers.';
+    document.title = `${card.label}: ${card.score} — BluePainter`;
+  }
+
+  render();
+  window.addEventListener('hashchange', () => location.reload());
+</script>

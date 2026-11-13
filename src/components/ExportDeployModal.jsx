@@ -5,13 +5,25 @@ import {
   deployProjectToVercel,
   pushAndDeploy
 } from '../utils/remoteDeploy';
-import {
-  loadGithubToken,
-  saveGithubToken,
-  loadVercelToken,
-  saveVercelToken,
-  maskToken
-} from '../utils/deployCredentials';
+import * as creds from '../utils/deployCredentials';
+import OAuthSignInButton from './OAuthSignInButton';
+
+const { loadGithubToken, saveGithubToken, loadVercelToken, saveVercelToken, maskToken } = creds;
+
+/** "Remember" starts ticked only when a token is already persisted on this device. */
+function tokensRemembered() {
+  const checks = [creds.isGithubTokenRemembered, creds.isVercelTokenRemembered].filter((fn) => typeof fn === 'function');
+  return checks.length ? checks.some((fn) => fn()) : Boolean(loadGithubToken() || loadVercelToken());
+}
+
+function RememberTokens({ remember, onChange }) {
+  return (
+    <label className="mk-checkbox export-private-check">
+      <input type="checkbox" checked={remember} onChange={(e) => onChange(e.target.checked)} />
+      Remember on this device
+    </label>
+  );
+}
 
 const TABS = [
   { id: 'download', label: 'Download' },
@@ -24,7 +36,18 @@ function DeployResult({ result, onClose }) {
   return (
     <div className="export-modal-body">
       <div className="export-success-icon">✓</div>
-      <h3>Deployed successfully</h3>
+      <h3>
+        {result.vercelError
+          ? 'Pushed to GitHub — Vercel deploy failed'
+          : result.vercel
+            ? 'Deployed successfully'
+            : result.github
+              ? 'Pushed to GitHub'
+              : 'Project downloaded'}
+      </h3>
+      {result.vercelError && (
+        <p className="export-modal-lead" role="alert">Vercel: {result.vercelError}</p>
+      )}
       {result.github && (
         <p className="export-modal-lead">
           GitHub:{' '}
@@ -58,6 +81,9 @@ export default function ExportDeployModal({ isOpen, onClose, nodesByFile, onExpo
   const [repoName, setRepoName] = useState('');
   const [githubToken, setGithubToken] = useState(() => loadGithubToken());
   const [vercelToken, setVercelToken] = useState(() => loadVercelToken());
+  // Team an OAuth-issued Vercel token is tied to; empty for a pasted personal token.
+  const [vercelTeamId, setVercelTeamId] = useState(() => creds.loadVercelTeamId());
+  const [remember, setRemember] = useState(tokensRemembered);
   const [isPrivate, setIsPrivate] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -74,10 +100,46 @@ export default function ExportDeployModal({ isOpen, onClose, nodesByFile, onExpo
     onClose();
   };
 
+  // Save only tokens that are filled in: an empty field here must not wipe a
+  // token saved from the Marketing kit's deploy buttons (and vice versa).
+  // Unticked "Remember" keeps them for this tab only (sessionStorage).
   const persistTokens = () => {
-    saveGithubToken(githubToken.trim());
-    saveVercelToken(vercelToken.trim());
+    if (githubToken.trim()) saveGithubToken(githubToken.trim(), { remember });
+    if (vercelToken.trim()) {
+      saveVercelToken(vercelToken.trim(), { remember });
+      creds.saveVercelTeamId(vercelTeamId, { remember });
+    }
   };
+
+  // "Sign in with …" fills the same field a pasted token would, and is saved the same way.
+  const handleOAuthToken = (provider) => ({ token, teamId }) => {
+    setError('');
+    if (provider === 'github') {
+      setGithubToken(token);
+      saveGithubToken(token, { remember });
+    } else {
+      setVercelToken(token);
+      setVercelTeamId(teamId || '');
+      saveVercelToken(token, { remember });
+      creds.saveVercelTeamId(teamId || '', { remember });
+    }
+  };
+
+  const forgetTokens = () => {
+    if (typeof creds.clearAllCredentials === 'function') {
+      creds.clearAllCredentials();
+    } else {
+      saveGithubToken('');
+      saveVercelToken('');
+    }
+    setGithubToken('');
+    setVercelToken('');
+    setVercelTeamId('');
+    setRemember(false);
+    setError('');
+  };
+
+  const tokenHint = (token) => `${remember ? 'Remembered on this device' : 'This tab only'} · ${maskToken(token)}`;
 
   const handleDownload = async () => {
     setBusy(true);
@@ -85,7 +147,7 @@ export default function ExportDeployModal({ isOpen, onClose, nodesByFile, onExpo
     try {
       const dl = await downloadProjectExport(nodesByFile, projectName);
       setResult({ download: dl });
-      onExported?.(dl);
+      onExported?.(dl, 'download');
     } catch (e) {
       setError(e.message);
     } finally {
@@ -110,7 +172,7 @@ export default function ExportDeployModal({ isOpen, onClose, nodesByFile, onExpo
         isPrivate
       });
       setResult({ github });
-      onExported?.(github);
+      onExported?.(github, 'github');
     } catch (e) {
       setError(e.message);
     } finally {
@@ -130,10 +192,11 @@ export default function ExportDeployModal({ isOpen, onClose, nodesByFile, onExpo
       const vercel = await deployProjectToVercel({
         nodesByFile,
         projectName: effectiveRepo,
-        vercelToken: vercelToken.trim()
+        vercelToken: vercelToken.trim(),
+        teamId: vercelTeamId
       });
       setResult({ vercel });
-      onExported?.(vercel);
+      onExported?.(vercel, 'vercel');
     } catch (e) {
       setError(e.message);
     } finally {
@@ -155,11 +218,12 @@ export default function ExportDeployModal({ isOpen, onClose, nodesByFile, onExpo
         projectName,
         githubToken: githubToken.trim(),
         vercelToken: vercelToken.trim(),
+        vercelTeamId,
         repoName: effectiveRepo,
         isPrivate
       });
       setResult(out);
-      onExported?.(out);
+      onExported?.(out, 'both');
     } catch (e) {
       setError(e.message);
     } finally {
@@ -208,7 +272,7 @@ export default function ExportDeployModal({ isOpen, onClose, nodesByFile, onExpo
 
             <div className="export-modal-body">
               <p className="export-modal-lead">
-                {tab === 'download' && 'Download a Vite + React project from your current design.'}
+                {tab === 'download' && 'Download a Vite + React + TypeScript project from your current design.'}
                 {tab === 'github' && 'Create or update a GitHub repo with your exported project files.'}
                 {tab === 'vercel' && 'Deploy directly to Vercel — builds and hosts your app.'}
                 {tab === 'both' && 'Push to GitHub, then deploy the same project to Vercel in one step.'}
@@ -246,8 +310,9 @@ export default function ExportDeployModal({ isOpen, onClose, nodesByFile, onExpo
                       onChange={(e) => setGithubToken(e.target.value)}
                       placeholder="ghp_… (repo scope)"
                     />
-                    {githubToken && <span className="token-hint">Saved locally · {maskToken(githubToken)}</span>}
+                    {githubToken && <span className="token-hint">{tokenHint(githubToken)}</span>}
                   </label>
+                  <OAuthSignInButton provider="github" disabled={busy} onToken={handleOAuthToken('github')} onError={setError} />
                   <label className="mk-checkbox export-private-check">
                     <input type="checkbox" checked={isPrivate} onChange={(e) => setIsPrivate(e.target.checked)} />
                     Private repository
@@ -255,7 +320,7 @@ export default function ExportDeployModal({ isOpen, onClose, nodesByFile, onExpo
                   <p className="export-modal-note">
                     Create a token at{' '}
                     <a href="https://github.com/settings/tokens" target="_blank" rel="noreferrer">github.com/settings/tokens</a>
-                    {' '}with <code>repo</code> scope. Stored in your browser only.
+                    {' '}with <code>repo</code> scope. Kept for this tab only unless you tick Remember; sent through BluePainter's server only to call GitHub — never stored there.
                   </p>
                 </>
               )}
@@ -267,16 +332,32 @@ export default function ExportDeployModal({ isOpen, onClose, nodesByFile, onExpo
                     <input
                       type="password"
                       value={vercelToken}
-                      onChange={(e) => setVercelToken(e.target.value)}
+                      onChange={(e) => { setVercelToken(e.target.value); setVercelTeamId(''); }}
                       placeholder="vercel_…"
                     />
-                    {vercelToken && <span className="token-hint">Saved locally · {maskToken(vercelToken)}</span>}
+                    {vercelToken && <span className="token-hint">{tokenHint(vercelToken)}</span>}
                   </label>
+                  <OAuthSignInButton provider="vercel" disabled={busy} onToken={handleOAuthToken('vercel')} onError={setError} />
                   <p className="export-modal-note">
                     Create at{' '}
                     <a href="https://vercel.com/account/settings/tokens" target="_blank" rel="noreferrer">vercel.com/account/settings/tokens</a>
                     . Vercel runs <code>npm install && npm run build</code> on their servers.
                   </p>
+                </>
+              )}
+
+              {tab !== 'download' && (
+                <>
+                  <RememberTokens remember={remember} onChange={setRemember} />
+                  <button
+                    type="button"
+                    className="ai-settings-toggle"
+                    style={{ marginBottom: 16 }}
+                    onClick={forgetTokens}
+                    title="Removes the GitHub, Vercel, Figma and OpenAI tokens saved in this browser"
+                  >
+                    Forget saved tokens
+                  </button>
                 </>
               )}
 
@@ -287,7 +368,7 @@ export default function ExportDeployModal({ isOpen, onClose, nodesByFile, onExpo
                     {preview.map((f) => (
                       <li key={f.path}><code>{f.path}</code> · {f.lines} lines</li>
                     ))}
-                    <li><code>package.json</code> · Vite + React</li>
+                    <li><code>package.json</code>, <code>tsconfig.json</code> · Vite + React + TypeScript</li>
                     <li><code>vercel.json</code> · deploy config</li>
                   </ul>
                 </div>

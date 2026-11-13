@@ -142,7 +142,7 @@ function updateBackendStatus(updates) {
   backendStatus = { ...backendStatus, ...updates, lastChecked: Date.now() };
   try {
     localStorage.setItem(BACKEND_STATUS_KEY, JSON.stringify(backendStatus));
-  } catch (err) {
+  } catch {
     // Ignore storage errors for status tracking
   }
 }
@@ -158,7 +158,7 @@ export function getAuditBackendStatus() {
       if (cached) {
         backendStatus = JSON.parse(cached);
       }
-    } catch (err) {
+    } catch {
       // Ignore parse errors
     }
   }

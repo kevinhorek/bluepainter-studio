@@ -33,47 +33,46 @@ export default function CodeEditor({ code, onChange, onFocus, activeFile, onColl
       onChange(newValue);
       
       // Reset cursor position after React re-renders
-      setTimeout(() => {
+      requestAnimationFrame(() => {
         if (textareaRef.current) {
           textareaRef.current.selectionStart = textareaRef.current.selectionEnd = start + 2;
         }
-      }, 0);
+      });
     }
   };
 
-  // High-fidelity syntax highlighting helper using regular expressions
+  // Single-pass tokenizer. The highlight layer sits exactly under a transparent
+  // textarea, so it must emit the same characters the user typed (the old
+  // multi-pass regexes rewrote quotes and re-highlighted inside earlier spans).
   const highlightCode = (rawCode) => {
     if (!rawCode) return '';
-    
-    let esc = rawCode
+
+    const esc = (str) => str
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
+    const KEYWORDS = new Set(['export', 'function', 'return', 'import', 'from', 'default', 'const', 'let', 'var']);
+    const token = /(\{\/\*[\s\S]*?\*\/\}|\/\*[\s\S]*?\*\/|(?<![:'"\w])\/\/[^\n]*)|("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*')|(<\/?[A-Za-z][\w.]*|\/?>)|\b([A-Za-z_$][\w$-]*)(?=\s*=(?!=|>))|\b([A-Za-z_$][\w$]*)(?=\s*:)|\b(\d+(?:\.\d+)?)\b|\b([A-Za-z_$][\w$]*)\b/g;
 
-    // 1. Strings
-    esc = esc.replace(/(["'])(.*?)\1/g, '<span class="code-string">"$2"</span>');
-
-    // 2. Keywords
-    const keywords = ['export', 'function', 'return', 'import', 'from', 'default', 'const', 'let', 'var'];
-    keywords.forEach(word => {
-      const reg = new RegExp(`\\b(${word})\\b`, 'g');
-      esc = esc.replace(reg, '<span class="code-keyword">$1</span>');
-    });
-
-    // 3. Built-in elements / Tags
-    esc = esc.replace(/(&lt;\/?[a-z1-6]+|&gt;)/gi, '<span class="code-tag">$1</span>');
-
-    // 4. Style properties & Attributes
-    esc = esc.replace(/(style|className|href|onClick|type|id)=/g, '<span class="code-attr">$1</span>=');
-    esc = esc.replace(/\b(padding|borderRadius|background|color):\b/g, '<span class="code-attr">$1</span>:');
-
-    // 5. Numbers
-    esc = esc.replace(/\b(\d+)\b/g, '<span class="code-number">$1</span>');
-
-    // 6. Comments
-    esc = esc.replace(/(\/\/.*)/g, '<span class="code-comment">$1</span>');
-
-    return esc;
+    let out = '';
+    let last = 0;
+    let m;
+    while ((m = token.exec(rawCode)) !== null) {
+      out += esc(rawCode.slice(last, m.index));
+      last = token.lastIndex;
+      const [text, comment, string, tag, attr, prop, number, word] = m;
+      if (comment) out += `<span class="code-comment">${esc(text)}</span>`;
+      else if (string) out += `<span class="code-string">${esc(text)}</span>`;
+      else if (tag) out += `<span class="code-tag">${esc(text)}</span>`;
+      else if (attr && !KEYWORDS.has(attr)) out += `<span class="code-attr">${esc(text)}</span>`;
+      else if (prop) out += `<span class="code-attr">${esc(text)}</span>`;
+      else if (number) out += `<span class="code-number">${esc(text)}</span>`;
+      else if (KEYWORDS.has(word || attr)) out += `<span class="code-keyword">${esc(text)}</span>`;
+      else out += esc(text);
+    }
+    out += esc(rawCode.slice(last));
+    // A trailing newline needs a character after it or the layer is one line short.
+    return out.endsWith('\n') ? `${out} ` : out;
   };
 
   // Count lines for line numbering gutter

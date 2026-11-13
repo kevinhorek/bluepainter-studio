@@ -7,10 +7,15 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "generate:guides": "node ../scripts/generate-guides.mjs"
+    "generate:guides": "node ../scripts/generate-guides.mjs",
+    "og": "node scripts/build-og.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.3.0",
+    "@vercel/analytics": "^2.0.1",
     "astro": "^5.7.0"
+  },
+  "devDependencies": {
+    "sharp": "^0.35.5"
   }
 }

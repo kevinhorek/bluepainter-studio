@@ -1,34 +1,45 @@
 /**
  * Waitlist / pilot / newsletter capture.
- * Stores in-memory on cold starts; optionally forwards to RESEND_WEBHOOK or WAITLIST_WEBHOOK.
- * POST { email, source?, name?, company?, role?, message? }
+ * POST { email, source?, name?, company?, role?, message?, website? (honeypot) }
+ *
+ * Durable storage: Upstash list `bluepainter:waitlist` (UPSTASH_REDIS_REST_URL/_TOKEN) and/or
+ * a webhook (WAITLIST_WEBHOOK, falling back to RESEND_WEBHOOK). With neither configured the
+ * route returns 503 in production and keeps entries in memory elsewhere (local dev).
+ *
+ * NOTE: site/api/waitlist.js is a byte-identical copy (the site is its own Vercel project).
+ * scripts/api-tests.mjs fails if they drift — edit this file, then copy it across.
  */
-const store = globalThis.__bpWaitlist || (globalThis.__bpWaitlist = []);
+import { preflight, rateLimited, readJsonBody } from './_lib/http.js';
+import { persistEntry } from './_lib/store.js';
+
+const fail = (error) => ({ ok: false, error });
 
 function isEmail(v) {
   return typeof v === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 }
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') {
-    res.status(204).end();
-    return;
-  }
-
-  if (req.method !== 'POST') {
-    res.status(405).json({ ok: false, error: 'Method not allowed' });
-    return;
-  }
+  if (preflight(req, res, { optionsStatus: 204, errorBody: fail })) return;
 
   try {
-    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
+    if (await rateLimited(req, res, { name: 'waitlist', limit: 10 }, fail)) return;
+
+    const parsed = readJsonBody(req);
+    if (!parsed.ok) {
+      res.status(400).json(fail('Invalid JSON body'));
+      return;
+    }
+    const body = parsed.body;
+
+    // Honeypot: real visitors never see or fill the hidden "website" field.
+    if (String(body.website || '').trim()) {
+      res.status(200).json({ ok: true });
+      return;
+    }
+
     const email = String(body.email || '').trim().toLowerCase();
-    if (!isEmail(email)) {
-      res.status(400).json({ ok: false, error: 'Valid email required' });
+    if (email.length > 254 || !isEmail(email)) {
+      res.status(400).json(fail('Valid email required'));
       return;
     }
 
@@ -42,20 +53,24 @@ export default async function handler(req, res) {
       createdAt: new Date().toISOString()
     };
 
-    store.push(entry);
-    if (store.length > 5000) store.shift();
+    const result = await persistEntry({
+      label: 'waitlist',
+      listKey: 'bluepainter:waitlist',
+      webhook: process.env.WAITLIST_WEBHOOK || process.env.RESEND_WEBHOOK,
+      entry
+    });
 
-    const webhook = process.env.WAITLIST_WEBHOOK || process.env.RESEND_WEBHOOK;
-    if (webhook) {
-      await fetch(webhook, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(entry)
-      }).catch(() => {});
+    if (!result.ok) {
+      res.status(result.status).json(fail(
+        result.status === 503
+          ? 'Signups are not configured yet — please email us'
+          : 'Could not save your request — please try again'
+      ));
+      return;
     }
 
-    res.status(200).json({ ok: true, id: store.length });
+    res.status(200).json({ ok: true });
   } catch (err) {
-    res.status(500).json({ ok: false, error: err.message || 'Server error' });
+    res.status(500).json(fail(err.message || 'Server error'));
   }
 }

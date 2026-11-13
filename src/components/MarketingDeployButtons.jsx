@@ -1,23 +1,55 @@
 import { useState } from 'react';
 import { pushMarketingToGithub, deployMarketingToVercel } from '../utils/remoteDeploy';
-import {
-  loadGithubToken,
-  saveGithubToken,
-  loadVercelToken,
-  saveVercelToken,
-  maskToken
-} from '../utils/deployCredentials';
+import * as creds from '../utils/deployCredentials';
+import OAuthSignInButton from './OAuthSignInButton';
+
+const { loadGithubToken, saveGithubToken, loadVercelToken, saveVercelToken, maskToken } = creds;
+
+/** "Remember" starts ticked only when a token is already persisted on this device. */
+function tokensRemembered() {
+  const checks = [creds.isGithubTokenRemembered, creds.isVercelTokenRemembered].filter((fn) => typeof fn === 'function');
+  return checks.length ? checks.some((fn) => fn()) : Boolean(loadGithubToken() || loadVercelToken());
+}
 
 export default function MarketingDeployButtons({ nodesByFile, toneId, onNotify }) {
   const [githubToken, setGithubToken] = useState(() => loadGithubToken());
   const [vercelToken, setVercelToken] = useState(() => loadVercelToken());
+  // Team an OAuth-issued Vercel token is tied to; empty for a pasted personal token.
+  const [vercelTeamId, setVercelTeamId] = useState(() => creds.loadVercelTeamId());
   const [repoName, setRepoName] = useState('');
   const [busy, setBusy] = useState('');
   const [showTokens, setShowTokens] = useState(false);
+  const [remember, setRemember] = useState(tokensRemembered);
+  const [links, setLinks] = useState([]);
 
+  // Only save filled-in tokens so an empty field can't wipe one saved elsewhere.
+  // Unticked "Remember" keeps them for this tab only (sessionStorage).
   const persist = () => {
-    saveGithubToken(githubToken.trim());
-    saveVercelToken(vercelToken.trim());
+    if (githubToken.trim()) saveGithubToken(githubToken.trim(), { remember });
+    if (vercelToken.trim()) {
+      saveVercelToken(vercelToken.trim(), { remember });
+      creds.saveVercelTeamId(vercelTeamId, { remember });
+    }
+  };
+
+  // "Sign in with …" fills the same field a pasted token would, and is saved the same way.
+  const handleOAuthToken = (provider) => ({ token, teamId }) => {
+    if (provider === 'github') {
+      setGithubToken(token);
+      saveGithubToken(token, { remember });
+    } else {
+      setVercelToken(token);
+      setVercelTeamId(teamId || '');
+      saveVercelToken(token, { remember });
+      creds.saveVercelTeamId(teamId || '', { remember });
+    }
+    onNotify?.(`Signed in with ${provider === 'github' ? 'GitHub' : 'Vercel'}`);
+  };
+
+  // window.open() after an await is popup-blocked, so the result is shown as a link instead.
+  const addLink = (label, url) => {
+    if (!/^https?:\/\//i.test(url || '')) return;
+    setLinks((prev) => [{ label, url }, ...prev.filter((l) => l.label !== label)]);
   };
 
   const handleGithub = async () => {
@@ -36,7 +68,7 @@ export default function MarketingDeployButtons({ nodesByFile, toneId, onNotify }
         toneId
       });
       onNotify?.(`Pushed to ${result.repoUrl}`);
-      window.open(result.repoUrl, '_blank');
+      addLink('GitHub', result.repoUrl);
     } catch (e) {
       onNotify?.(e.message);
     } finally {
@@ -56,11 +88,13 @@ export default function MarketingDeployButtons({ nodesByFile, toneId, onNotify }
       const result = await deployMarketingToVercel({
         nodesByFile,
         vercelToken: vercelToken.trim(),
+        teamId: vercelTeamId,
         projectName: repoName.trim() || undefined,
         toneId
       });
-      onNotify?.('Landing deployed to Vercel');
-      if (result.deploymentUrl) window.open(result.deploymentUrl, '_blank');
+      const liveUrl = result.deploymentUrl || result.inspectorUrl;
+      onNotify?.(liveUrl ? `Landing deployed to ${liveUrl}` : 'Landing deployed to Vercel');
+      addLink('Vercel', liveUrl);
     } catch (e) {
       onNotify?.(e.message);
     } finally {
@@ -89,7 +123,13 @@ export default function MarketingDeployButtons({ nodesByFile, toneId, onNotify }
       {showTokens && (
         <div className="marketing-deploy-tokens">
           <input type="password" placeholder="GitHub token (ghp_…)" value={githubToken} onChange={(e) => setGithubToken(e.target.value)} />
-          <input type="password" placeholder="Vercel token" value={vercelToken} onChange={(e) => setVercelToken(e.target.value)} />
+          <OAuthSignInButton provider="github" disabled={!!busy} onToken={handleOAuthToken('github')} onError={onNotify} />
+          <input type="password" placeholder="Vercel token" value={vercelToken} onChange={(e) => { setVercelToken(e.target.value); setVercelTeamId(''); }} />
+          <OAuthSignInButton provider="vercel" disabled={!!busy} onToken={handleOAuthToken('vercel')} onError={onNotify} />
+          <label className="mk-checkbox">
+            <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+            Remember on this device
+          </label>
         </div>
       )}
       <div className="marketing-deploy-btns">
@@ -100,6 +140,12 @@ export default function MarketingDeployButtons({ nodesByFile, toneId, onNotify }
           {busy === 'vercel' ? 'Deploying…' : 'Deploy to Vercel'}
         </button>
       </div>
+      {links.map((link) => (
+        <p key={link.label} className="export-modal-note" role="status">
+          {link.label}:{' '}
+          <a href={link.url} target="_blank" rel="noreferrer">{link.url}</a>
+        </p>
+      ))}
     </div>
   );
 }

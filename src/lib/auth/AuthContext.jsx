@@ -1,10 +1,13 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase, isSupabaseConfigured } from '../supabaseClient';
+
+const NOT_CONFIGURED = { data: null, error: new Error('Accounts are not configured on this deployment.') };
 
 const AuthContext = createContext({
   session: null,
   user: null,
   loading: true,
+  enabled: false,
   signIn: async () => {},
   signUp: async () => {},
   signInWithOtp: async () => {},
@@ -14,9 +17,10 @@ const AuthContext = createContext({
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(isSupabaseConfigured);
 
   useEffect(() => {
+    if (!supabase) return undefined;
     let mounted = true;
 
     async function initialize() {
@@ -54,6 +58,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const signUp = async (email, password) => {
+    if (!supabase) return NOT_CONFIGURED;
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -65,6 +70,7 @@ export function AuthProvider({ children }) {
   };
 
   const signIn = async (email, password) => {
+    if (!supabase) return NOT_CONFIGURED;
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
@@ -73,6 +79,7 @@ export function AuthProvider({ children }) {
   };
 
   const signInWithOtp = async (email) => {
+    if (!supabase) return NOT_CONFIGURED;
     const { data, error } = await supabase.auth.signInWithOtp({
       email,
       options: {
@@ -83,6 +90,7 @@ export function AuthProvider({ children }) {
   };
 
   const signOut = async () => {
+    if (!supabase) return { error: null };
     const { error } = await supabase.auth.signOut();
     return { error };
   };
@@ -91,6 +99,7 @@ export function AuthProvider({ children }) {
     session,
     user,
     loading,
+    enabled: isSupabaseConfigured,
     signIn,
     signUp,
     signInWithOtp,
@@ -100,6 +109,7 @@ export function AuthProvider({ children }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {

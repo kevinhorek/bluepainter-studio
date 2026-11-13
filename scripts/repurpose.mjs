@@ -8,7 +8,11 @@ import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join, basename, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
+import { SITE_URL, DEMO_URL } from '../site/site.config.mjs';
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const SITE_HOST = SITE_URL.replace(/^https?:\/\//, '');
+const DEMO_APP = `${DEMO_URL}/#/app`;
 const outDir = join(__dirname, '../site/drafts');
 mkdirSync(outDir, { recursive: true });
 
@@ -28,12 +32,12 @@ function templateDrafts(text) {
     thread: [
       '1/ Design-to-code handoff is lossy. BluePainter bets on AST-preserving canvas ↔ TSX sync + Designer’s Receipts — not another generator.',
       `2/ ${excerpt.slice(0, 180)}…`,
-      '3/ Free demo during validation. Request a pilot if you ship React with a design–dev pair → bluepainter.dev/pilot',
-      '4/ Agents: read bluepainter.dev/llms.txt or use the BluePainter MCP server.'
+      `3/ Free demo during validation. Request a pilot if you ship React with a design–dev pair → ${SITE_HOST}/pilot`,
+      `4/ Agents: read ${SITE_HOST}/llms.txt or use the BluePainter MCP server.`
     ].join('\n\n'),
-    linkedin: `Most "AI design tools" generate throwaway UI.\n\nBluePainter is a workflow bet: keep canvas and TSX in sync inside your repo, then enforce contrast/spacing/CTA policy with Designer's Receipts.\n\n${excerpt}\n\nTry the free demo → https://bluepainter-studio.vercel.app/#/app\nPilot → https://bluepainter.dev/pilot`,
-    newsletter: `# BluePainter note — ${stamp}\n\n## The idea\n\n${excerpt}\n\n## Links\n- Demo: https://bluepainter-studio.vercel.app/#/app\n- Pricing: https://bluepainter.dev/pricing\n- Free tools: https://bluepainter.dev/tools\n- FAQ: https://bluepainter.dev/faq\n`,
-    faqDrafts: `### What problem does BluePainter solve?\n${excerpt}\n\n### How do I try it?\nOpen the free demo or request a pilot at https://bluepainter.dev/pilot\n`,
+    linkedin: `Most "AI design tools" generate throwaway UI.\n\nBluePainter is a workflow bet: keep canvas and TSX in sync inside your repo, then enforce contrast/spacing/CTA policy with Designer's Receipts.\n\n${excerpt}\n\nTry the free demo → ${DEMO_APP}\nPilot → ${SITE_URL}/pilot`,
+    newsletter: `# BluePainter note — ${stamp}\n\n## The idea\n\n${excerpt}\n\n## Links\n- Demo: ${DEMO_APP}\n- Pricing: ${SITE_URL}/pricing\n- Free tools: ${SITE_URL}/tools\n- FAQ: ${SITE_URL}/faq\n`,
+    faqDrafts: `### What problem does BluePainter solve?\n${excerpt}\n\n### How do I try it?\nOpen the free demo or request a pilot at ${SITE_URL}/pilot\n`,
     shortClipPrompts: [
       'Hook: "Stop vibe-coding throwaway UI — sync canvas to real TSX."',
       'Demo beat: edit button color on canvas → code updates with id intact.',

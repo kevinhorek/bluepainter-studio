@@ -10,14 +10,24 @@ export function parseFigmaFileKey(input) {
 /** Extract node id from URL node-id param (123-456 → 123:456). */
 export function parseFigmaNodeId(input) {
   const trimmed = (input || '').trim();
-  const fromUrl = trimmed.match(/node-id=([0-9]+-[0-9]+)/);
-  if (fromUrl) return fromUrl[1].replace('-', ':');
+  // Figma has used 1-2, 1:2 and the URL-encoded 1%3A2 in share links.
+  const fromUrl = trimmed.match(/node-id=(\d+)(?:-|:|%3A)(\d+)/i);
+  if (fromUrl) return `${fromUrl[1]}:${fromUrl[2]}`;
   if (/^[0-9]+:[0-9]+$/.test(trimmed)) return trimmed;
   return null;
 }
 
-function slugId(figmaId, index) {
-  return `figma-${String(figmaId || index).replace(/[^a-zA-Z0-9]/g, '-')}`;
+/**
+ * Unique canvas id for a Figma node. Pasted/plugin JSON may omit ids or repeat
+ * them; a parent and child sharing an id made a node its own child (infinite
+ * recursion), so always de-duplicate against what's already been created.
+ */
+function slugId(figmaId, index, nodes) {
+  const base = `figma-${String(figmaId || `n${index}`).replace(/[^a-zA-Z0-9]/g, '-')}`;
+  if (!nodes || !(base in nodes)) return base;
+  let n = 2;
+  while (`${base}-${n}` in nodes) n += 1;
+  return `${base}-${n}`;
 }
 
 function figmaSolidColor(fills) {
@@ -78,9 +88,9 @@ function findNodeById(node, id) {
 }
 
 function convertNode(figmaNode, nodes, parentBox, index, { useAbsolute }) {
-  if (!figmaNode || figmaNode.visible === false) return null;
-  
-  const id = slugId(figmaNode.id, index);
+  if (!figmaNode || figmaNode.visible === false) return null; // hidden layers stay hidden
+  const id = slugId(figmaNode.id, index, nodes);
+  nodes[id] = null; // reserve the id before converting children
   const box = figmaNode.absoluteBoundingBox;
   const hasAutoLayout = Boolean(figmaNode.layoutMode && figmaNode.layoutMode !== 'NONE');
   const bg = figmaSolidColor(figmaNode.fills);

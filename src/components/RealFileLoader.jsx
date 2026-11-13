@@ -1,6 +1,5 @@
 import { useState, useRef } from 'react';
-import { parseTSX } from '../utils/syncEngine';
-import { getEmptyFigmaImportNodes } from '../utils/figmaImport';
+import { importTSXFile } from '../utils/syncEngine';
 import { 
   validateFileExtension, 
   validateFileContent, 
@@ -47,9 +46,10 @@ export default function RealFileLoader({ isOpen, onClose, onFileLoaded }) {
         throw new Error(formatValidationError(contentValidation));
       }
 
-      // Step 3: Parse with AST engine
-      const baseNodes = getEmptyFigmaImportNodes();
-      const parsedNodes = parseTSX(text, baseNodes);
+      // Step 3: Parse with the AST engine. Elements without an id get one so
+      // every layer is selectable; hooks, handlers and imports are left alone.
+      const imported = importTSXFile(text, fileName);
+      const parsedNodes = imported.nodes;
 
       // Step 4: Validate parsed nodes
       const nodesValidation = validateParsedNodes(parsedNodes);
@@ -68,14 +68,13 @@ export default function RealFileLoader({ isOpen, onClose, onFileLoaded }) {
         setWarnings(prev => [...prev, ...patternWarnings]);
       }
 
-      // Find root node
-      const rootId = Object.keys(parsedNodes)[0];
-      
       onFileLoaded({
         fileName,
-        code: text,
+        code: imported.code,
         nodes: parsedNodes,
-        rootId,
+        rootId: imported.rootId,
+        componentName: imported.componentName,
+        addedIds: imported.addedIds,
         warnings: patternWarnings
       });
 
@@ -206,9 +205,9 @@ export default function RealFileLoader({ isOpen, onClose, onFileLoaded }) {
           <div className="file-requirements">
             <h3>Requirements:</h3>
             <ul>
-              <li>Component must have stable <code>id="..."</code> attributes on elements</li>
+              <li>Elements without an <code>id="..."</code> get one added so every layer is selectable</li>
               <li>Use inline <code>style=&#123;&#123;...&#125;&#125;</code> for canvas-editable properties</li>
-              <li>Tailwind classes are preserved but not editable on canvas</li>
+              <li>Class names are preserved and editable as text in the inspector; Tailwind classes are previewed</li>
             </ul>
             <p className="help-text">
               See <a href="https://github.com/kevinhorek/bluepainter-studio/blob/main/AST_SCOPE.md" target="_blank" rel="noopener noreferrer">AST_SCOPE.md</a> for full details.

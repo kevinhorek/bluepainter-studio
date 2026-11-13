@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { saveFeedback, buildCurrentSessionMetrics } from '../utils/feedbackStorage';
+import { submitFeedback, buildCurrentSessionMetrics } from '../utils/feedbackStorage';
 
 export default function FeedbackModal({ isOpen, onClose }) {
   const [interest, setInterest] = useState('');
@@ -25,7 +25,7 @@ export default function FeedbackModal({ isOpen, onClose }) {
       sessionMetrics
     };
 
-    saveFeedback(entry);
+    submitFeedback(entry);
     setSubmitted(true);
   };
 

@@ -412,7 +412,8 @@ export function logLearningEvent(type, payload = {}) {
 export function getLearningEvents() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }
@@ -447,5 +448,9 @@ export function getLearningSummary() {
 }
 
 export function clearLearningEvents() {
-  localStorage.removeItem(STORAGE_KEY);
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // storage unavailable
+  }
 }

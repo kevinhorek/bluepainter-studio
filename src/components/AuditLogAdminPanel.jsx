@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { queryAuditLog, exportAuditLog, getAuditBufferStats } from '../utils/auditLog';
 
 /**
@@ -8,7 +8,7 @@ import { queryAuditLog, exportAuditLog, getAuditBufferStats } from '../utils/aud
  * Requires DATABASE_URL configured in backend to query persisted events.
  */
 export default function AuditLogAdminPanel({ onClose }) {
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState(() => ({
     teamId: '',
     startDate: Date.now() - 7 * 24 * 60 * 60 * 1000, // Last 7 days
     endDate: Date.now(),
@@ -17,19 +17,14 @@ export default function AuditLogAdminPanel({ onClose }) {
     filePath: '',
     limit: 50,
     offset: 0
-  });
+  }));
   
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [total, setTotal] = useState(0);
   const [hasMore, setHasMore] = useState(false);
-  const [bufferStats, setBufferStats] = useState(null);
-
-  useEffect(() => {
-    const stats = getAuditBufferStats();
-    setBufferStats(stats);
-  }, []);
+  const [bufferStats] = useState(() => getAuditBufferStats());
 
   const handleQuery = async () => {
     setLoading(true);

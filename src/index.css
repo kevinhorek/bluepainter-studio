@@ -3028,7 +3028,8 @@ input:checked + .slider-round:before {
   gap: 16px;
 }
 
-.workspace-real-file-btn {
+.workspace-real-file-btn,
+.workspace-restore-btn {
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(147, 51, 234, 0.15));
   border: 1px solid rgba(59, 130, 246, 0.3);
   color: #93c5fd;
@@ -3043,7 +3044,8 @@ input:checked + .slider-round:before {
   gap: 6px;
 }
 
-.workspace-real-file-btn:hover {
+.workspace-real-file-btn:hover,
+.workspace-restore-btn:hover {
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(147, 51, 234, 0.25));
   border-color: rgba(59, 130, 246, 0.5);
   color: #ffffff;
@@ -6639,6 +6641,80 @@ input:checked + .slider-round:before {
   text-align: center;
 }
 
+/* Stand-in for content the canvas can't evaluate ({title}, <Icon />, list.map(...)) */
+.canvas-dynamic-placeholder {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72em;
+  font-weight: 500;
+  color: #7c3aed;
+  background: rgba(124, 58, 237, 0.1);
+  border: 1px dashed rgba(124, 58, 237, 0.45);
+  border-radius: 4px;
+  padding: 1px 5px;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
+
+.workspace-history { display: inline-flex; gap: 2px; margin-left: 8px; }
+.workspace-history-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #cbd5e1;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.workspace-history-btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.1); color: #fff; }
+.workspace-history-btn:disabled { opacity: 0.3; cursor: default; }
+
+.canvas-zoom {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  backdrop-filter: blur(12px);
+}
+.canvas-zoom button {
+  height: 28px;
+  min-width: 28px;
+  padding: 0 8px;
+  border: none;
+  background: transparent;
+  color: #cbd5e1;
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.canvas-zoom button:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+.canvas-zoom-value { min-width: 48px !important; font-variant-numeric: tabular-nums; border-left: 1px solid rgba(255, 255, 255, 0.08) !important; border-right: 1px solid rgba(255, 255, 255, 0.08) !important; }
+
+.layer-action-btn {
+  width: 20px;
+  height: 20px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #cbd5e1;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+.layer-action-btn:hover { background: rgba(124, 58, 237, 0.45); color: #fff; }
+
 /* Viewport Switcher */
 .viewport-switcher {
   position: absolute;
@@ -8052,3 +8128,36 @@ input:checked + .slider-round:before {
     font-size: 2rem;
   }
 }
+
+/* Opened-file scope banner sits above the panes instead of becoming a column. */
+.studio-shell-with-banner { flex-direction: column; }
+.studio-shell-with-banner > .ast-scope-banner { flex: none; margin: 10px 12px 0; max-height: 132px; overflow: auto; }
+.studio-shell-with-banner > .studio-main { flex: 1; }
+
+/* Rubber-band selection on the canvas */
+.canvas-marquee {
+  position: fixed;
+  z-index: 70;
+  pointer-events: none;
+  border: 1px solid var(--blue-primary, #3b82f6);
+  background: rgba(59, 130, 246, 0.12);
+}
+
+/* Layers panel: drag to reorder / move into a frame */
+.layer-row-drop-before { box-shadow: inset 0 2px 0 #22c55e; }
+.layer-row-drop-after { box-shadow: inset 0 -2px 0 #22c55e; }
+.layer-row-drop-into { box-shadow: inset 0 0 0 1.5px #22c55e; background: rgba(34, 197, 94, 0.12) !important; }
+.inspector-multi-note {
+  margin: 0 0 10px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  color: #bfdbfe;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+/* "Sign in with GitHub / Vercel" beside the deploy token fields (shown only when OAuth is configured). */
+.oauth-signin-btn { align-self: flex-start; padding: 7px 12px; font-size: 0.75rem; border-radius: 8px; }
+.oauth-signin-btn:disabled { opacity: 0.6; cursor: default; }
+.export-modal-body > .oauth-signin-btn { display: block; margin: -8px 0 14px; }

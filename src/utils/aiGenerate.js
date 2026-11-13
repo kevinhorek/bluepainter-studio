@@ -11,19 +11,24 @@ export async function generateWithAI({ type, prompt, context, apiKey }) {
       body: JSON.stringify({ type, prompt, context })
     });
 
-    const data = await res.json().catch(() => ({}));
+    // null = the response wasn't JSON (no API on this host, or an SPA rewrite served HTML)
+    const data = await res.json().catch(() => null);
 
-    if (res.status === 503 && data.code === 'NO_KEY') {
+    if (res.ok && Array.isArray(data?.updates)) return data;
+
+    const apiMissing = !data || res.status === 404 || res.status === 405;
+    const noKey = res.status === 503 && data?.code === 'NO_KEY';
+    if (apiMissing || noKey) {
+      // No backend / no key configured: built-in templates, clearly labelled as such.
       return generateFallback({ type, prompt, context });
     }
 
-    if (!res.ok) {
-      throw new Error(data.error || data.details || `Generation failed (${res.status})`);
-    }
-
-    return data;
+    // A real error (bad key, quota, upstream failure) must be shown, not papered
+    // over with template copy the user would mistake for their model's output.
+    throw new Error(data.error || data.details || `Generation failed (${res.status})`);
   } catch (err) {
-    if (apiKey || err.message.includes('Failed to fetch')) {
+    // fetch() rejects with TypeError when the network/API is unreachable (wording varies by browser).
+    if (err instanceof TypeError) {
       return generateFallback({ type, prompt, context });
     }
     throw err;

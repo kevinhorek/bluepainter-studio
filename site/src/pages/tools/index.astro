@@ -1,30 +1,39 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import { DEMO_APP } from '../../lib/constants';
 ---
 
 <BaseLayout
-  title="Free BluePainter Tools — Contrast & Receipt Graders"
-  description="Free top-of-funnel tools: WCAG contrast checker, Designer's Receipts grader, and TSX id analyzer. Unlock full reports with email."
+  title="Free BluePainter Tools — Contrast, Receipts & TSX ids"
+  description="Free browser tools from BluePainter: a WCAG contrast checker, a Designer's Receipts grader, and a TSX id analyzer. No install, no account."
 >
   <section class="section">
-    <p class="eyebrow">Free tools</p>
-    <h1>Instant value. Path to the demo.</h1>
-    <p class="lead">Lightweight graders powered by the same receipt logic as BluePainter. Email unlocks a full report and a direct link into the live studio.</p>
-    <div class="grid-3" style="margin-top:32px">
-      <a class="card" href="/tools/contrast-checker" style="color:inherit">
+    <div class="page-head" data-reveal>
+      <p class="eyebrow">Free tools</p>
+      <h1>Kick the tyres in ten seconds.</h1>
+      <p class="lead">
+        Three small tools built on the same receipt logic as the BluePainter Studio. They run in your browser —
+        nothing you paste is uploaded. Add your email if you want the suggested fixes.
+      </p>
+    </div>
+    <div class="grid-3 stack-lg">
+      <a class="card card-link" href="/tools/contrast-checker" data-reveal>
         <span class="badge">A11y</span>
         <h3>Contrast checker</h3>
-        <p class="muted">WCAG contrast on button backgrounds — same engine as Designer's Receipts.</p>
+        <p class="muted">WCAG ratio for any button colour, with the fix BluePainter would suggest.</p>
+        <span class="go">Open tool →</span>
       </a>
-      <a class="card" href="/tools/receipt-grader" style="color:inherit">
+      <a class="card card-link" href="/tools/receipt-grader" data-reveal="80">
         <span class="badge">Policy</span>
         <h3>Receipt grader</h3>
-        <p class="muted">Score spacing, contrast, CTA copy, radius, and clutter in one pass.</p>
+        <p class="muted">Score spacing, contrast, CTA copy, radius and clutter in one pass.</p>
+        <span class="go">Open tool →</span>
       </a>
-      <a class="card" href="/tools/tsx-id-analyzer" style="color:inherit">
+      <a class="card card-link" href="/tools/tsx-id-analyzer" data-reveal="160">
         <span class="badge">Sync</span>
         <h3>TSX id analyzer</h3>
-        <p class="muted">Count syncable JSX id attributes for BluePainter canvas mapping.</p>
+        <p class="muted">Paste a component, see exactly which elements the canvas can map.</p>
+        <span class="go">Open tool →</span>
       </a>
       <a class="card" href="/tools/roi-calculator" style="color:inherit">
         <span class="badge">ROI</span>
@@ -32,5 +41,8 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         <p class="muted">Estimate the yearly time and cost saved by catching design issues before merge.</p>
       </a>
     </div>
+    <p class="muted stack-lg" data-reveal>
+      Want the full loop — canvas, code and receipts together? <a href={DEMO_APP}>Open the live studio →</a>
+    </p>
   </section>
 </BaseLayout>

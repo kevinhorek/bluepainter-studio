@@ -20,6 +20,12 @@ export default function WorkspaceHeader({
   onDownloadRealFile,
   onOpenAI,
   onCopyLink,
+  onUndo,
+  onRedo,
+  canUndo = false,
+  canRedo = false,
+  onDownloadFile,
+  onResetWorkspace,
   onOpenGitContext,
   realFileLoaded,
   facilitatorActions
@@ -72,7 +78,7 @@ export default function WorkspaceHeader({
           </button>
           {fileOpen && (
             <div className="workspace-dropdown">
-              {FILE_ORDER.map((fileId) => {
+              {FILE_ORDER.filter((fileId) => !WORKSPACE_FILES[fileId].hidden).map((fileId) => {
                 const file = WORKSPACE_FILES[fileId];
                 return (
                   <button
@@ -86,8 +92,28 @@ export default function WorkspaceHeader({
                   </button>
                 );
               })}
+              <div className="workspace-dropdown-divider" />
+              <button
+                type="button"
+                className="workspace-dropdown-item"
+                onClick={() => { onOpenRealFile?.(); setFileOpen(false); }}
+              >
+                <span>Open .tsx file…</span>
+              </button>
+              <button
+                type="button"
+                className="workspace-dropdown-item"
+                onClick={() => { onDownloadFile?.(); setFileOpen(false); }}
+              >
+                <span>Download {active?.label}</span>
+              </button>
             </div>
           )}
+        </div>
+
+        <div className="workspace-history" role="group" aria-label="History">
+          <button type="button" className="workspace-history-btn" onClick={onUndo} disabled={!canUndo} title="Undo (⌘Z)" aria-label="Undo">↶</button>
+          <button type="button" className="workspace-history-btn" onClick={onRedo} disabled={!canRedo} title="Redo (⇧⌘Z)" aria-label="Redo">↷</button>
         </div>
       </div>
 
@@ -222,6 +248,16 @@ export default function WorkspaceHeader({
               </button>
               <button type="button" className="workspace-dropdown-item" onClick={() => { onShowAbout?.(); setMenuOpen(false); }}>
                 About
+              </button>
+              <button
+                type="button"
+                className="workspace-dropdown-item"
+                onClick={() => {
+                  setMenuOpen(false);
+                  if (window.confirm('Reset the workspace to the demo files? Your saved edits and any opened file will be discarded.')) onResetWorkspace?.();
+                }}
+              >
+                Reset workspace
               </button>
               <div className="workspace-dropdown-divider" />
               <button type="button" className="workspace-dropdown-item" onClick={() => { onOpenGitContext?.(); setMenuOpen(false); }}>

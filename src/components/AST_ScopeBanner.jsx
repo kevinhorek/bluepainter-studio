@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { getASTMeta } from '../utils/syncEngine';
 
 export default function ASTScopeBanner({ nodesMap, onDismiss }) {
@@ -6,14 +6,7 @@ export default function ASTScopeBanner({ nodesMap, onDismiss }) {
     return localStorage.getItem('bluepainter-ast-scope-banner-dismissed') === 'true';
   });
 
-  const [astMeta, setAstMeta] = useState(null);
-
-  useEffect(() => {
-    if (nodesMap) {
-      const meta = getASTMeta(nodesMap);
-      setAstMeta(meta);
-    }
-  }, [nodesMap]);
+  const astMeta = useMemo(() => getASTMeta(nodesMap), [nodesMap]);
 
   if (dismissed) return null;
 
@@ -30,7 +23,7 @@ export default function ASTScopeBanner({ nodesMap, onDismiss }) {
 
   const issues = astMeta?.issues || {};
   const hasSpecificIssues = issues.hasComputedIds || issues.hasTailwindOnly || issues.missingIds;
-  const foundIds = astMeta?.foundIds || 0;
+  const foundIds = astMeta?.foundIds || nodeCount;
 
   return (
     <div className={`ast-scope-banner ${hasSpecificIssues ? 'ast-scope-banner-warning' : ''}`}>
@@ -57,7 +50,7 @@ export default function ASTScopeBanner({ nodesMap, onDismiss }) {
           <ul>
             <li><strong>✅ {foundIds} syncable element(s) found</strong></li>
             <li><strong>✅ Inline styles:</strong> <code>style=&#123;&#123;...&#125;&#125;</code> editable on canvas</li>
-            <li><strong>⚠️ Tailwind/CSS Modules:</strong> Classes preserved but NOT editable on canvas</li>
+            <li><strong>⚠️ Tailwind/CSS Modules:</strong> Classes preserved; edit them as text in the inspector</li>
             <li><strong>✅ Text content:</strong> Reliably round-trips to TSX</li>
           </ul>
         )}

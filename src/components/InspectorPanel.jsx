@@ -2,6 +2,7 @@ import { getWorkspaceFile } from '../data/workspaceFiles';
 
 export default function InspectorPanel({
   selectedNodeId,
+  selectionCount = 0,
   nodesMap,
   onUpdateNode,
   onOpenComponentFile
@@ -92,11 +93,27 @@ export default function InspectorPanel({
     onUpdateNode(selectedNodeId, { text: e.target.value });
   };
 
+  const hexFor = (value, fallback) => {
+    if (typeof value !== 'string') return fallback;
+    const v = value.trim();
+    if (/^#[0-9a-f]{6}$/i.test(v)) return v;
+    if (/^#[0-9a-f]{3}$/i.test(v)) return `#${v[1]}${v[1]}${v[2]}${v[2]}${v[3]}${v[3]}`;
+    return fallback;
+  };
   const style = node.style || {};
+  // padding / radius can be strings ('8px 16px', '50%') — sliders need a number.
+  const paddingNum = parseInt(style.padding, 10) || 0;
+  const radiusIsPercent = typeof style.borderRadius === 'string' && style.borderRadius.trim().endsWith('%');
+  const radiusNum = parseInt(style.borderRadius, 10) || 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', color: '#cbd5e1' }}>
-      
+      {selectionCount > 1 && (
+        <p className="inspector-multi-note" style={{ margin: '10px 12px 0' }}>
+          {selectionCount} layers selected — showing <strong>{node.name}</strong>. Style changes apply to all of them.
+        </p>
+      )}
+
       {/* 1. Header Title */}
       <div style={{
         padding: '12px 16px',
@@ -124,10 +141,11 @@ export default function InspectorPanel({
               <label style={{ fontSize: '0.6rem', color: '#64748b', display: 'block', marginBottom: 2 }}>Width</label>
               <input 
                 type="text" 
-                value={style.width !== undefined ? style.width : 'auto'}
+                value={style.width ?? ''}
+                placeholder="auto"
                 onChange={(e) => {
-                  const val = e.target.value;
-                  handleStyleChange('width', /^\d+$/.test(val) ? parseInt(val, 10) : val);
+                  const val = e.target.value.trim();
+                  handleStyleChange('width', /^\d+$/.test(val) ? parseInt(val, 10) : (val === '' ? undefined : val));
                 }}
                 style={{ width: '100%', background: '#2c2c2c', border: '1px solid #444', color: 'white', padding: '4px 8px', borderRadius: 4, fontSize: '0.75rem', outline: 'none' }}
               />
@@ -136,15 +154,29 @@ export default function InspectorPanel({
               <label style={{ fontSize: '0.6rem', color: '#64748b', display: 'block', marginBottom: 2 }}>Height</label>
               <input 
                 type="text" 
-                value={style.height !== undefined ? style.height : 'auto'}
+                value={style.height ?? ''}
+                placeholder="auto"
                 onChange={(e) => {
-                  const val = e.target.value;
-                  handleStyleChange('height', /^\d+$/.test(val) ? parseInt(val, 10) : val);
+                  const val = e.target.value.trim();
+                  handleStyleChange('height', /^\d+$/.test(val) ? parseInt(val, 10) : (val === '' ? undefined : val));
                 }}
                 style={{ width: '100%', background: '#2c2c2c', border: '1px solid #444', color: 'white', padding: '4px 8px', borderRadius: 4, fontSize: '0.75rem', outline: 'none' }}
               />
             </div>
           </div>
+        </div>
+
+        {/* className (Tailwind / CSS classes) — written to the code as-is */}
+        <div>
+          <div style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', color: '#64748b', marginBottom: 8, letterSpacing: '0.05em' }}>Classes</div>
+          <input
+            type="text"
+            value={node.className || ''}
+            placeholder="e.g. text-lg font-bold"
+            onChange={(e) => onUpdateNode(selectedNodeId, { className: e.target.value })}
+            spellCheck={false}
+            style={{ width: '100%', background: '#2c2c2c', border: '1px solid #444', color: 'white', padding: '4px 8px', borderRadius: 4, fontSize: '0.75rem', outline: 'none', fontFamily: 'var(--font-mono, monospace)' }}
+          />
         </div>
 
         {/* SECTION B: LAYOUT (Only show for non-leaf text/button tags if flex is enabled) */}
@@ -303,7 +335,7 @@ export default function InspectorPanel({
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                   <input 
                     type="color" 
-                    value={style.color && style.color.startsWith('#') ? style.color : '#000000'}
+                    value={hexFor(style.color, '#000000')}
                     onChange={(e) => handleStyleChange('color', e.target.value)}
                     style={{ width: 24, height: 20, border: 'none', background: 'transparent', cursor: 'pointer' }}
                   />
@@ -330,7 +362,7 @@ export default function InspectorPanel({
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                 <input 
                   type="color" 
-                  value={style.background && style.background.startsWith('#') ? style.background : '#ffffff'}
+                  value={hexFor(style.background, '#ffffff')}
                   onChange={(e) => handleStyleChange('background', e.target.value)}
                   style={{ width: 24, height: 20, border: 'none', background: 'transparent', cursor: 'pointer' }}
                 />
@@ -347,13 +379,13 @@ export default function InspectorPanel({
             <div className="slider-group">
               <div className="slider-label" style={{ fontSize: '0.65rem' }}>
                 <span>Padding spacing</span>
-                <span className="value">{style.padding || 0}px</span>
+                <span className="value">{typeof style.padding === 'string' ? style.padding : `${paddingNum}px`}</span>
               </div>
               <input 
                 type="range" 
                 min="0" 
                 max="64" 
-                value={style.padding || 0} 
+                value={Math.min(64, paddingNum)} 
                 onChange={(e) => handleStyleChange('padding', parseInt(e.target.value, 10))}
                 className="range-input padding-slider"
               />
@@ -363,13 +395,13 @@ export default function InspectorPanel({
             <div className="slider-group">
               <div className="slider-label" style={{ fontSize: '0.65rem' }}>
                 <span>Corner Radius</span>
-                <span className="value">{style.borderRadius || 0}px</span>
+                <span className="value">{radiusIsPercent ? style.borderRadius : `${radiusNum}px`}</span>
               </div>
               <input 
                 type="range" 
                 min="0" 
                 max="32" 
-                value={style.borderRadius || 0} 
+                value={radiusIsPercent ? 32 : Math.min(32, radiusNum)} 
                 onChange={(e) => handleStyleChange('borderRadius', parseInt(e.target.value, 10))}
                 className="range-input radius-slider"
               />
@@ -383,8 +415,15 @@ export default function InspectorPanel({
                   type="number" 
                   value={style.borderWidth || 0}
                   onChange={(e) => {
-                    handleStyleChange('borderWidth', parseInt(e.target.value, 10) || 0);
-                    handleStyleChange('borderStyle', 'solid');
+                    // One update: two back-to-back calls each spread the stale style,
+                    // so the second one reverted the new width.
+                    onUpdateNode(selectedNodeId, {
+                      style: {
+                        ...node.style,
+                        borderWidth: Math.max(0, parseInt(e.target.value, 10) || 0),
+                        borderStyle: style.borderStyle || 'solid'
+                      }
+                    });
                   }}
                   style={{ width: '100%', background: '#2c2c2c', border: '1px solid #444', color: 'white', padding: '4px 8px', borderRadius: 4, fontSize: '0.75rem', outline: 'none' }}
                 />
@@ -394,7 +433,7 @@ export default function InspectorPanel({
                 <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                   <input 
                     type="color" 
-                    value={style.borderColor && style.borderColor.startsWith('#') ? style.borderColor : '#cbd5e1'}
+                    value={hexFor(style.borderColor, '#cbd5e1')}
                     onChange={(e) => handleStyleChange('borderColor', e.target.value)}
                     style={{ width: 20, height: 20, border: 'none', background: 'transparent', cursor: 'pointer' }}
                   />

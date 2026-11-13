@@ -1,6 +1,15 @@
 import { useState } from 'react';
 import { importFromFigmaUrl, importFromFigmaJsonString, parseFigmaFileKey } from '../utils/figmaImportClient';
-import { loadFigmaToken, saveFigmaToken, maskToken } from '../utils/figmaStorage';
+import * as figmaStorage from '../utils/figmaStorage';
+
+const { loadFigmaToken, saveFigmaToken, maskToken } = figmaStorage;
+
+/** "Remember" starts ticked only when the token is already persisted on this device. */
+function tokenRemembered() {
+  return typeof figmaStorage.isFigmaTokenRemembered === 'function'
+    ? figmaStorage.isFigmaTokenRemembered()
+    : Boolean(loadFigmaToken());
+}
 
 const TARGETS = [
   { id: 'figma', label: 'New FigmaImport page', description: 'Dedicated import canvas' },
@@ -14,6 +23,18 @@ export default function FigmaImportModal({ isOpen, onClose, onImported, onNotify
   const [nodeUrl, setNodeUrl] = useState('');
   const [jsonPaste, setJsonPaste] = useState('');
   const [token, setToken] = useState(() => loadFigmaToken());
+  const [remember, setRemember] = useState(tokenRemembered);
+  const [wasOpen, setWasOpen] = useState(isOpen);
+
+  // On open, drop a token that was forgotten elsewhere ("Forget saved tokens")
+  // so the next import doesn't quietly save it again.
+  if (isOpen !== wasOpen) {
+    setWasOpen(isOpen);
+    if (isOpen && token && !loadFigmaToken()) {
+      setToken('');
+      setRemember(false);
+    }
+  }
   const [targetFile, setTargetFile] = useState('figma');
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState('');
@@ -24,6 +45,8 @@ export default function FigmaImportModal({ isOpen, onClose, onImported, onNotify
     setError('');
     setImporting(true);
     try {
+      // Unticked "Remember" keeps the token for this tab only (sessionStorage).
+      if (token.trim()) saveFigmaToken(token.trim(), { remember });
       let result;
 
       if (tab === 'url') {
@@ -40,8 +63,6 @@ export default function FigmaImportModal({ isOpen, onClose, onImported, onNotify
         if (!parseFigmaFileKey(trimmedFileUrl)) {
           throw new Error('Invalid Figma file URL format. Expected: https://www.figma.com/design/ABC123/My-File (or /file/ or /proto/). Copy the URL from your browser address bar.');
         }
-        
-        saveFigmaToken(trimmedToken);
         
         result = await importFromFigmaUrl({
           token: trimmedToken,
@@ -156,14 +177,22 @@ export default function FigmaImportModal({ isOpen, onClose, onImported, onNotify
                   onChange={(e) => setToken(e.target.value)}
                   placeholder="figd_…"
                 />
-                {token && <span className="token-hint">Saved locally · {maskToken(token)}</span>}
+                {token && (
+                  <span className="token-hint">
+                    {remember ? 'Remembered on this device' : 'This tab only'} · {maskToken(token)}
+                  </span>
+                )}
+              </label>
+              <label className="mk-checkbox export-private-check">
+                <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+                Remember on this device
               </label>
               <p className="export-modal-note">
                 Create a token at{' '}
                 <a href="https://www.figma.com/developers/api#access-tokens" target="_blank" rel="noreferrer">figma.com/developers</a>
-                {' '}with <code>file_content:read</code> scope. Token stays in your browser (localStorage). See{' '}
+                {' '}with <code>file_content:read</code>. Kept for this tab only unless you tick Remember; sent through BluePainter's server only to call Figma — never stored there.{' '}See{' '}
                 <a href="https://github.com/kevinhorek/bluepainter-studio/blob/main/FIGMA_TOKEN.md" target="_blank" rel="noreferrer">FIGMA_TOKEN.md</a>
-                {' '}for detailed setup instructions.
+                {' '}for setup.
               </p>
               <p className="export-modal-note">
                 <strong>Team deployment:</strong> Set <code>FIGMA_TOKEN</code> env var on the API host to skip client-side token entry.

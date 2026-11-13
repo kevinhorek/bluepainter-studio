@@ -7,7 +7,7 @@ export const CANVAS_TOOL_GROUPS = [
     tools: [
       { id: 'select', name: 'Move / Select', shortcut: 'V', mode: 'nav' },
       { id: 'hand', name: 'Hand tool', shortcut: 'H', mode: 'nav' },
-      { id: 'scale', name: 'Scale', shortcut: 'K', mode: 'nav' }
+      { id: 'scale', name: 'Zoom (click in · Alt-click out)', shortcut: 'K', mode: 'nav' }
     ]
   },
   {

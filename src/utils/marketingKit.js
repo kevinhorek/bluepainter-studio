@@ -2,13 +2,35 @@ import JSZip from 'jszip';
 import { generateTSX } from './syncEngine';
 import { WORKSPACE_FILES } from '../data/workspaceFiles';
 import { applyCopyTone } from './copyToneVariants';
+import {
+  normalizeComponentRoot,
+  exportFilename,
+  fixImportPaths,
+  scaffoldPackageJson,
+  TSCONFIG_JSON,
+  VITE_ENV_DTS,
+  VITE_CONFIG
+} from './projectExport';
 
-function exportFilename(label) {
-  return label.replace(/\.tsx$/, '.jsx');
+/** Only plain colour values may be interpolated into generated CSS/JS. */
+function safeCssColor(value, fallback) {
+  const v = String(value ?? '').trim();
+  return /^(#[0-9a-f]{3,8}|rgba?\([\d\s.,%]+\)|hsla?\([\d\s.,%deg]+\)|[a-z]{3,20})$/i.test(v) ? v : fallback;
 }
 
-function fixImportPaths(code) {
-  return code.replace(/from '\.\/([^']+)'/g, (_, name) => `from './${name}.jsx'`);
+function ogImageUrl(ctx) {
+  const base = /^https?:\/\//i.test(ctx.siteUrl || '') ? ctx.siteUrl.replace(/\/+$/, '') : '';
+  return base ? `${base}/social/og-image.png` : './social/og-image.png';
+}
+
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  // Revoking synchronously can cancel the download in Safari.
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
 function escapeHtml(str) {
@@ -65,8 +87,8 @@ export function extractMarketingContext(nodesByFile) {
     pricingCta,
     features: landingFeatures.length ? landingFeatures : (pricingFeatures.length ? pricingFeatures : ['Unlimited projects', 'Priority support', 'Custom domain']),
     siteUrl,
-    primaryColor,
-    heroBg,
+    primaryColor: safeCssColor(primaryColor, '#2563eb'),
+    heroBg: safeCssColor(heroBg, '#0f172a'),
     copyNodes: {
       metaTitle: marketing['mkt-seo-title']?.text,
       metaDescription: marketing['mkt-seo-desc']?.text,
@@ -175,7 +197,7 @@ ${copy.pressRelease}
 `;
 }
 
-function buildStandaloneLandingHtml(ctx, copy) {
+function buildStandaloneLandingHtml(ctx, copy, { includeOgImage = true } = {}) {
   const featureCards = ctx.features.map((f) => `
         <div class="feature">
           <div class="feature-icon">✓</div>
@@ -191,8 +213,7 @@ function buildStandaloneLandingHtml(ctx, copy) {
   <meta name="description" content="${escapeHtml(copy.metaDescription)}" />
   <meta property="og:title" content="${escapeHtml(copy.ogTitle)}" />
   <meta property="og:description" content="${escapeHtml(copy.ogDescription)}" />
-  <meta property="og:image" content="./social/og-image.png" />
-  <meta name="twitter:card" content="summary_large_image" />
+${includeOgImage ? `  <meta property="og:image" content="${escapeHtml(ogImageUrl(ctx))}" />\n` : ''}  <meta name="twitter:card" content="summary_large_image" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <style>
@@ -254,31 +275,36 @@ function buildStandaloneLandingHtml(ctx, copy) {
 </html>`;
 }
 
+/** JSX-safe text: canvas copy can contain { } < > which would break the build. */
+function jsxText(value) {
+  return `{${JSON.stringify(String(value ?? ''))}}`;
+}
+
 function buildReactLandingPage(ctx, copy) {
-  return `import { HeroSection } from './HeroSection.jsx';
-import { PricingCard } from './PricingCard.jsx';
+  return `import { HeroSection } from './HeroSection';
+import { PricingCard } from './PricingCard';
 
 export default function MarketingLanding() {
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: 'Inter, system-ui, sans-serif' }}>
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 48px', maxWidth: 1100, margin: '0 auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 800 }}>
-          <div style={{ width: 28, height: 28, borderRadius: 6, background: '${ctx.primaryColor}' }} />
-          ${ctx.brandName}
+          <div style={{ width: 28, height: 28, borderRadius: 6, background: ${JSON.stringify(ctx.primaryColor)} }} />
+          ${jsxText(ctx.brandName)}
         </div>
-        <button style={{ background: '${ctx.primaryColor}', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>
-          ${copy.ctaPrimary}
+        <button style={{ background: ${JSON.stringify(ctx.primaryColor)}, color: '#fff', border: 'none', padding: '10px 20px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>
+          ${jsxText(copy.ctaPrimary)}
         </button>
       </header>
 
-      <section style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '48px 24px 64px', gap: 48, background: '${ctx.heroBg}' }}>
+      <section style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '48px 24px 64px', gap: 48, background: ${JSON.stringify(ctx.heroBg)} }}>
         <div style={{ maxWidth: 520 }}>
           <HeroSection />
         </div>
       </section>
 
       <section style={{ display: 'flex', justifyContent: 'center', gap: 20, padding: '32px 48px', marginTop: -24 }}>
-        ${ctx.features.map((f) => `<div style={{ flex: 1, maxWidth: 280, background: '#fff', borderRadius: 12, padding: 24, border: '1px solid #e2e8f0' }}>${f}</div>`).join('\n        ')}
+        ${ctx.features.map((f) => `<div style={{ flex: 1, maxWidth: 280, background: '#fff', borderRadius: 12, padding: 24, border: '1px solid #e2e8f0' }}>${jsxText(f)}</div>`).join('\n        ')}
       </section>
 
       <section style={{ display: 'flex', justifyContent: 'center', padding: '48px 24px 80px' }}>
@@ -288,7 +314,7 @@ export default function MarketingLanding() {
       </section>
 
       <footer style={{ textAlign: 'center', padding: 32, color: '#64748b', fontSize: '0.85rem' }}>
-        © ${new Date().getFullYear()} ${ctx.brandName}
+        © ${new Date().getFullYear()} ${jsxText(ctx.brandName)}
       </footer>
     </div>
   );
@@ -318,12 +344,15 @@ npx vercel --prod
 
 /** Render a marketing image to PNG blob via canvas. Optionally composites app screenshot. */
 export function renderMarketingImage(ctx, copy, { width, height, variant = 'og', screenshotBlob = null }) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const draw = async () => {
       const canvas = document.createElement('canvas');
       canvas.width = width;
       canvas.height = height;
       const c = canvas.getContext('2d');
+      if (!c) throw new Error('Canvas is not available in this browser');
+      // Older Safari has no roundRect — square corners beat a crash.
+      if (!c.roundRect) c.roundRect = (x, y, w, h) => c.rect(x, y, w, h);
 
       const grad = c.createLinearGradient(0, 0, width, height);
       grad.addColorStop(0, ctx.heroBg);
@@ -393,9 +422,13 @@ export function renderMarketingImage(ctx, copy, { width, height, variant = 'og',
         c.fillText(copy.ctaPrimary.slice(0, 18), pad + 20, btnY + 28);
       }
 
-      canvas.toBlob((blob) => resolve(blob), 'image/png');
+      canvas.toBlob(
+        (blob) => (blob ? resolve(blob) : reject(new Error('Could not render image'))),
+        'image/png'
+      );
     };
-    draw();
+    // Without this, any error while drawing left the promise pending forever.
+    draw().catch(reject);
   });
 }
 
@@ -451,27 +484,58 @@ export const IMAGE_SPECS = [
 ];
 
 export async function downloadImage(blob, filename) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
+  triggerDownload(blob, filename);
 }
 
 export function buildMarketingStaticFileMap(nodesByFile, toneId = 'default') {
   const ctx = extractMarketingContext(nodesByFile);
   const copy = generateMarketingCopy(ctx, toneId);
-  const safeName = ctx.brandName.toLowerCase().replace(/\s+/g, '-').slice(0, 40) || 'marketing-landing';
+  const safeName = ctx.brandName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'marketing-landing';
 
   return {
     projectName: `${safeName}-landing`,
     files: {
-      'index.html': buildStandaloneLandingHtml(ctx, copy),
+      'index.html': buildStandaloneLandingHtml(ctx, copy, { includeOgImage: false }),
       'vercel.json': JSON.stringify({ rewrites: [{ source: '/(.*)', destination: '/index.html' }] }, null, 2),
       'README.md': `# ${ctx.brandName} landing\n\nStatic marketing page exported from BluePainter.\n`
     }
   };
+}
+
+/**
+ * The `landing-site/` folder of the marketing kit: a Vite + React + TypeScript
+ * project. Pure (no DOM, no zip) so the export tests can install and build it.
+ */
+export function buildLandingSiteFileMap(nodesByFile, { projectName = 'marketing-kit', toneId = 'default' } = {}) {
+  const ctx = extractMarketingContext(nodesByFile);
+  const copy = generateMarketingCopy(ctx, toneId);
+  const safeName = String(projectName).trim().replace(/[^a-z0-9-]/gi, '-').toLowerCase() || 'marketing-kit';
+  const files = {};
+
+  const marketingFile = WORKSPACE_FILES.marketing;
+  if (nodesByFile.marketing && marketingFile) {
+    files[`src/${exportFilename(marketingFile.label)}`] = fixImportPaths(generateTSX(marketingFile.rootId, nodesByFile.marketing));
+  }
+  ['hero', 'pricing'].forEach((fileId) => {
+    const file = WORKSPACE_FILES[fileId];
+    files[`src/${exportFilename(file.label)}`] = fixImportPaths(
+      generateTSX(file.rootId, normalizeComponentRoot(file.rootId, nodesByFile[fileId]))
+    );
+  });
+  files['src/MarketingLanding.tsx'] = buildReactLandingPage(ctx, copy);
+  files['src/App.tsx'] = `import MarketingLanding from './MarketingLanding';\nexport default function App() { return <MarketingLanding />; }\n`;
+  files['src/main.tsx'] = `import { createRoot } from 'react-dom/client';\nimport './index.css';\nimport App from './App';\ncreateRoot(document.getElementById('root')!).render(<App />);\n`;
+  files['src/vite-env.d.ts'] = VITE_ENV_DTS;
+  files['src/index.css'] = '* { box-sizing: border-box; margin: 0; } body { font-family: Inter, system-ui, sans-serif; }\n';
+
+  files['index.html'] = `<!doctype html><html><head><meta charset="UTF-8"/><title>${escapeHtml(copy.metaTitle)}</title></head><body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body></html>`;
+  files['package.json'] = scaffoldPackageJson(`${safeName}-landing`);
+  files['tsconfig.json'] = TSCONFIG_JSON;
+  files['vite.config.ts'] = VITE_CONFIG;
+  files['vercel.json'] = JSON.stringify({ rewrites: [{ source: '/(.*)', destination: '/index.html' }] }, null, 2);
+  files['DEPLOY.md'] = LANDING_DEPLOY_MD;
+
+  return { projectName: `${safeName}-landing`, files };
 }
 
 export async function downloadMarketingKitZip(nodesByFile, projectName = 'marketing-kit', options = {}) {
@@ -518,33 +582,10 @@ export async function downloadMarketingKitZip(nodesByFile, projectName = 'market
     landingSocial.file(spec.filename, await blob.arrayBuffer());
   }
 
-  const landingSrc = zip.folder('landing-site/src');
-  const marketingFile = WORKSPACE_FILES.marketing;
-  if (nodesByFile.marketing && marketingFile) {
-    landingSrc.file(exportFilename(marketingFile.label), fixImportPaths(generateTSX(marketingFile.rootId, nodesByFile.marketing)));
-  }
-  ['hero', 'pricing'].forEach((fileId) => {
-    const file = WORKSPACE_FILES[fileId];
-    const code = fixImportPaths(generateTSX(file.rootId, nodesByFile[fileId]));
-    landingSrc.file(exportFilename(file.label), code);
+  const landingSite = buildLandingSiteFileMap(nodesByFile, { projectName: safeName, toneId });
+  Object.entries(landingSite.files).forEach(([path, content]) => {
+    zip.file(`landing-site/${path}`, content);
   });
-  landingSrc.file('MarketingLanding.jsx', buildReactLandingPage(ctx, copy));
-  landingSrc.file('App.jsx', `import MarketingLanding from './MarketingLanding.jsx';\nexport default function App() { return <MarketingLanding />; }\n`);
-  landingSrc.file('main.jsx', `import { createRoot } from 'react-dom/client';\nimport App from './App.jsx';\ncreateRoot(document.getElementById('root')).render(<App />);\n`);
-  landingSrc.file('index.css', '* { box-sizing: border-box; margin: 0; } body { font-family: Inter, system-ui, sans-serif; }\n');
-
-  zip.file('landing-site/index.html', `<!doctype html><html><head><meta charset="UTF-8"/><title>${escapeHtml(copy.metaTitle)}</title></head><body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body></html>`);
-  zip.file('landing-site/package.json', JSON.stringify({
-    name: `${safeName}-landing`,
-    private: true,
-    type: 'module',
-    scripts: { dev: 'vite', build: 'vite build' },
-    dependencies: { react: '^19.0.0', 'react-dom': '^19.0.0' },
-    devDependencies: { '@vitejs/plugin-react': '^4.3.4', vite: '^6.0.0' }
-  }, null, 2));
-  zip.file('landing-site/vite.config.js', `import { defineConfig } from 'vite';\nimport react from '@vitejs/plugin-react';\nexport default defineConfig({ plugins: [react()] });\n`);
-  zip.file('landing-site/vercel.json', JSON.stringify({ rewrites: [{ source: '/(.*)', destination: '/index.html' }] }, null, 2));
-  zip.file('landing-site/DEPLOY.md', LANDING_DEPLOY_MD);
   zip.file('DEPLOY.md', LANDING_DEPLOY_MD);
   zip.file('README.md', `# ${ctx.brandName} Marketing Kit
 
@@ -556,7 +597,7 @@ Generated from your BluePainter canvas (MarketingPage, Hero, Pricing).
 - \`BLOG.md\` / \`PRESS.md\` — long-form templates
 - \`social/\` — OG, Twitter, LinkedIn images${screenshotBlob ? ' + app screenshot' : ''}
 - \`landing/\` — static HTML + vercel.json (deploy with \`cd landing && npx vercel\`)
-- \`landing-site/\` — full React project with your MarketingPage component
+- \`landing-site/\` — full React + TypeScript project with your MarketingPage component
 
 ## Quick deploy
 
@@ -569,12 +610,7 @@ Or push \`landing-site/\` to GitHub → import at vercel.com/new
 `);
 
   const blob = await zip.generateAsync({ type: 'blob' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${safeName}.zip`;
-  a.click();
-  URL.revokeObjectURL(url);
+  triggerDownload(blob, `${safeName}.zip`);
 
   return { projectName: safeName, brandName: ctx.brandName };
 }

@@ -16,19 +16,15 @@ export default function ProjectPicker({ onProjectSelected, onCancel }) {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    loadProjects();
+    let cancelled = false;
+    listProjects().then(({ data, error: loadError }) => {
+      if (cancelled) return;
+      if (loadError) setError(loadError.message);
+      else setProjects(data || []);
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
   }, []);
-
-  async function loadProjects() {
-    setLoading(true);
-    const { data, error: loadError } = await listProjects();
-    if (loadError) {
-      setError(loadError.message);
-    } else {
-      setProjects(data || []);
-    }
-    setLoading(false);
-  }
 
   async function handleCreateProject(e) {
     e.preventDefault();

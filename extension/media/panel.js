@@ -32,6 +32,8 @@
     tipDismiss: document.getElementById('bp-tip-dismiss')
   };
 
+  const TEXT_TYPES = ['text', 'button', 'list-item'];
+
   function camelToKebab(key) {
     return key.replace(/[A-Z]/g, (m) => '-' + m.toLowerCase());
   }
@@ -61,7 +63,7 @@
       el.alt = node.name || node.id;
     } else {
       el = document.createElement(node.tag || 'div');
-      if (node.type === 'text' || node.type === 'button') {
+      if (TEXT_TYPES.includes(node.type)) {
         el.textContent = node.text || '';
       }
     }
@@ -236,7 +238,7 @@
     const style = node.style || {};
     els.inspector.innerHTML = `
       <p><strong>${escapeHtml(node.name || node.id)}</strong> <span style="opacity:0.7">(${escapeHtml(node.type)})</span></p>
-      ${node.type === 'text' || node.type === 'button' ? `
+      ${TEXT_TYPES.includes(node.type) ? `
         <label for="bp-text">Text</label>
         <textarea id="bp-text">${escapeHtml(node.text || '')}</textarea>
       ` : ''}

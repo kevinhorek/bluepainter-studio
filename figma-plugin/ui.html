@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>BluePainter Studio Export</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    font: 12px/1.45 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: var(--figma-color-text, #1e1e1e);
+    background: var(--figma-color-bg, #ffffff);
+  }
+  h1 { margin: 0; font-size: 13px; font-weight: 600; }
+  p { margin: 0; }
+  .muted { color: var(--figma-color-text-secondary, #6b7280); }
+  .panel {
+    padding: 12px;
+    border: 1px solid var(--figma-color-border, #e5e7eb);
+    border-radius: 8px;
+  }
+  .panel.error {
+    border-color: var(--figma-color-border-danger, #f87171);
+    color: var(--figma-color-text-danger, #b91c1c);
+  }
+  .frame-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  dl { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; margin: 8px 0 0; }
+  dt { color: var(--figma-color-text-secondary, #6b7280); }
+  dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+  ul { margin: 0; padding-left: 16px; color: var(--figma-color-text-warning, #92400e); }
+  ul:empty { display: none; }
+  textarea {
+    flex: 1;
+    min-height: 60px;
+    width: 100%;
+    padding: 8px;
+    resize: none;
+    font: 10px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: var(--figma-color-text, #1e1e1e);
+    background: var(--figma-color-bg-secondary, #f5f5f5);
+    border: 1px solid var(--figma-color-border, #e5e7eb);
+    border-radius: 6px;
+  }
+  .actions { display: flex; gap: 8px; }
+  button {
+    flex: 1;
+    height: 32px;
+    padding: 0 12px;
+    font: inherit;
+    font-weight: 500;
+    border-radius: 6px;
+    border: 1px solid var(--figma-color-border-strong, #d1d5db);
+    color: var(--figma-color-text, #1e1e1e);
+    background: var(--figma-color-bg, #ffffff);
+    cursor: pointer;
+  }
+  button.primary {
+    border-color: transparent;
+    color: var(--figma-color-text-onbrand, #ffffff);
+    background: var(--figma-color-bg-brand, #0d99ff);
+  }
+  button:disabled { opacity: 0.45; cursor: default; }
+  button:focus-visible, textarea:focus-visible {
+    outline: 2px solid var(--figma-color-border-selected, #0d99ff);
+    outline-offset: 1px;
+  }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+  <div>
+    <h1>Export to BluePainter Studio</h1>
+    <p class="muted">Copy the selected frame as JSON, then paste it into Studio → Import from Figma → Paste JSON.</p>
+  </div>
+
+  <div id="error" class="panel error" role="alert" hidden></div>
+
+  <div id="summary" class="panel" hidden>
+    <div id="frame-name" class="frame-name"></div>
+    <dl>
+      <dt>Layers exported</dt><dd id="stat-nodes">0</dd>
+      <dt>Text layers</dt><dd id="stat-text">0</dd>
+      <dt>Auto-layout frames</dt><dd id="stat-auto">0</dd>
+      <dt>Image layers</dt><dd id="stat-images">0</dd>
+      <dt>Hidden layers skipped</dt><dd id="stat-hidden">0</dd>
+      <dt>JSON size</dt><dd id="stat-size">0 KB</dd>
+    </dl>
+  </div>
+
+  <ul id="warnings"></ul>
+
+  <textarea id="json" readonly spellcheck="false" aria-label="Exported JSON" hidden></textarea>
+
+  <div class="actions">
+    <button id="copy" class="primary" type="button" disabled>Copy JSON</button>
+    <button id="open" type="button">Open BluePainter Studio</button>
+  </div>
+
+<script>
+(function () {
+  var errorEl = document.getElementById('error');
+  var summaryEl = document.getElementById('summary');
+  var warningsEl = document.getElementById('warnings');
+  var jsonEl = document.getElementById('json');
+  var copyBtn = document.getElementById('copy');
+  var openBtn = document.getElementById('open');
+  var studioUrl = '';
+  var hostOpensLinks = true;
+  var copyResetTimer = null;
+
+  function send(message) {
+    parent.postMessage({ pluginMessage: message }, '*');
+  }
+
+  function setText(id, value) {
+    document.getElementById(id).textContent = String(value);
+  }
+
+  function formatSize(chars) {
+    if (chars < 1024) return chars + ' B';
+    if (chars < 1024 * 1024) return (chars / 1024).toFixed(1) + ' KB';
+    return (chars / (1024 * 1024)).toFixed(2) + ' MB';
+  }
+
+  function render(message) {
+    studioUrl = message.studioUrl || studioUrl;
+    warningsEl.textContent = '';
+    if (!message.ok) {
+      errorEl.textContent = message.error || 'Nothing to export.';
+      errorEl.hidden = false;
+      summaryEl.hidden = true;
+      jsonEl.hidden = true;
+      jsonEl.value = '';
+      copyBtn.disabled = true;
+      return;
+    }
+    var stats = message.stats || {};
+    errorEl.hidden = true;
+    summaryEl.hidden = false;
+    setText('frame-name', message.name || 'Untitled frame');
+    setText('stat-nodes', stats.nodes || 0);
+    setText('stat-text', stats.textLayers || 0);
+    setText('stat-auto', stats.autoLayoutFrames || 0);
+    setText('stat-images', stats.imageLayers || 0);
+    setText('stat-hidden', stats.hiddenSkipped || 0);
+    setText('stat-size', formatSize((message.json || '').length));
+    (message.warnings || []).forEach(function (warning) {
+      var item = document.createElement('li');
+      item.textContent = warning;
+      warningsEl.appendChild(item);
+    });
+    jsonEl.value = message.json || '';
+    jsonEl.hidden = false;
+    copyBtn.disabled = !message.json;
+  }
+
+  // Figma's plugin iframe usually blocks navigator.clipboard, so the selection
+  // based copy runs first and the async API is only the fallback.
+  function copyJson() {
+    var text = jsonEl.value;
+    if (!text) return Promise.resolve(false);
+    var copied = false;
+    try {
+      jsonEl.focus();
+      jsonEl.select();
+      copied = document.execCommand('copy');
+      window.getSelection().removeAllRanges();
+    } catch (err) {
+      copied = false;
+    }
+    if (copied) return Promise.resolve(true);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text).then(function () { return true; }, function () { return false; });
+    }
+    return Promise.resolve(false);
+  }
+
+  copyBtn.addEventListener('click', function () {
+    copyJson().then(function (ok) {
+      send({ type: ok ? 'copied' : 'copy-failed' });
+      copyBtn.textContent = ok ? 'Copied' : 'Copy failed';
+      clearTimeout(copyResetTimer);
+      copyResetTimer = setTimeout(function () { copyBtn.textContent = 'Copy JSON'; }, 1800);
+    });
+  });
+
+  openBtn.addEventListener('click', function () {
+    // The main thread opens the link (figma.openExternal); window.open is the
+    // fallback for API versions without it.
+    send({ type: 'open-studio' });
+    if (studioUrl && !hostOpensLinks) {
+      try { window.open(studioUrl, '_blank', 'noopener'); } catch (err) { /* host handles it */ }
+    }
+  });
+
+  window.onmessage = function (event) {
+    var message = event.data && event.data.pluginMessage;
+    if (!message || message.type !== 'selection') return;
+    hostOpensLinks = message.hostOpensLinks !== false;
+    render(message);
+  };
+
+  send({ type: 'ready' });
+})();
+</script>
+</body>
+</html>

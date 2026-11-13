@@ -1,16 +1,26 @@
 import { useState, Fragment } from 'react';
 import { getWorkspaceFile } from '../data/workspaceFiles';
+import { canDropIntoNode } from '../utils/nodeFactory';
+
+const LAYER_DRAG_TYPE = 'application/x-bluepainter-layers';
 
 export default function LayersPanel({
   rootNodeId,
   nodesMap,
   selectedNodeId,
+  selectedNodeIds = null,
   onSelectNode,
   onUpdateNode,
-  onDeleteNode
+  onReparentNodes = null,
+  onDeleteNode,
+  onMoveNode,
+  onDuplicateNode
 }) {
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
+  // Where a dragged layer would land: { id, zone: 'before' | 'after' | 'into' }
+  const [dropHint, setDropHint] = useState(null);
+  const selectedIds = selectedNodeIds || (selectedNodeId ? [selectedNodeId] : []);
 
   if (!rootNodeId || !nodesMap) {
     return (
@@ -26,6 +36,37 @@ export default function LayersPanel({
       onUpdateNode(id, { name: editName.trim() });
     }
     setEditingId(null);
+  };
+
+  const parentIdOf = (nodeId) => Object.values(nodesMap).find((n) => n?.children?.includes(nodeId))?.id || null;
+
+  // Top quarter = before, bottom quarter = after, middle = into (containers only).
+  const dropZoneFor = (e, node) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const ratio = (e.clientY - rect.top) / Math.max(1, rect.height);
+    const intoAllowed = canDropIntoNode(node);
+    if (node.id === rootNodeId) return intoAllowed ? 'into' : null;
+    if (intoAllowed && ratio > 0.25 && ratio < 0.75) return 'into';
+    return ratio < 0.5 ? 'before' : 'after';
+  };
+
+  const handleLayerDrop = (e, node) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const zone = dropZoneFor(e, node);
+    setDropHint(null);
+    let ids;
+    try {
+      ids = JSON.parse(e.dataTransfer.getData(LAYER_DRAG_TYPE) || '[]');
+    } catch {
+      return;
+    }
+    if (!zone || !Array.isArray(ids) || !ids.length || ids.includes(node.id)) return;
+    if (zone === 'into') onReparentNodes(ids, node.id, {});
+    else {
+      const parentId = parentIdOf(node.id);
+      if (parentId) onReparentNodes(ids, parentId, zone === 'before' ? { beforeId: node.id } : { afterId: node.id });
+    }
   };
 
   // Icon selector based on node type
@@ -87,17 +128,38 @@ export default function LayersPanel({
 
     const isInstance = node.type === 'component-instance';
     const displayName = isInstance ? `${node.name} → ${getWorkspaceFile(node.refFile)?.label || node.refFile}` : node.name;
-    const isSelected = selectedNodeId === nodeId;
+    const isSelected = selectedIds.includes(nodeId);
     const isEditing = editingId === nodeId;
+    const canDrag = Boolean(onReparentNodes) && nodeId !== rootNodeId && !isEditing;
+    const dropClass = dropHint?.id === nodeId ? `layer-row-drop-${dropHint.zone}` : '';
 
     return (
       <Fragment key={nodeId}>
         {/* Layer Row */}
         <div 
+          className={dropClass}
           onClick={(e) => {
             e.stopPropagation();
-            onSelectNode(nodeId);
+            onSelectNode(nodeId, { additive: e.shiftKey || e.metaKey || e.ctrlKey });
           }}
+          draggable={canDrag}
+          onDragStart={(e) => {
+            // Dragging a selected row moves the whole selection.
+            const ids = selectedIds.includes(nodeId) ? selectedIds.filter((id) => id !== rootNodeId) : [nodeId];
+            e.dataTransfer.setData(LAYER_DRAG_TYPE, JSON.stringify(ids));
+            e.dataTransfer.effectAllowed = 'move';
+          }}
+          onDragOver={(e) => {
+            if (!onReparentNodes || !e.dataTransfer.types.includes(LAYER_DRAG_TYPE)) return;
+            const zone = dropZoneFor(e, node);
+            if (!zone) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            if (dropHint?.id !== nodeId || dropHint.zone !== zone) setDropHint({ id: nodeId, zone });
+          }}
+          onDragLeave={() => { if (dropHint?.id === nodeId) setDropHint(null); }}
+          onDragEnd={() => setDropHint(null)}
+          onDrop={(e) => onReparentNodes && handleLayerDrop(e, node)}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -151,6 +213,21 @@ export default function LayersPanel({
               </span>
             )}
           </div>
+
+          {/* Reorder / duplicate (selected, non-root layers) */}
+          {nodeId !== rootNodeId && isSelected && (onMoveNode || onDuplicateNode) && (
+            <span style={{ display: 'inline-flex', gap: 2, marginRight: 4 }}>
+              {onMoveNode && (
+                <>
+                  <button type="button" className="layer-action-btn" title="Move up" aria-label="Move layer up" onClick={(e) => { e.stopPropagation(); onMoveNode(nodeId, -1); }}>↑</button>
+                  <button type="button" className="layer-action-btn" title="Move down" aria-label="Move layer down" onClick={(e) => { e.stopPropagation(); onMoveNode(nodeId, 1); }}>↓</button>
+                </>
+              )}
+              {onDuplicateNode && (
+                <button type="button" className="layer-action-btn" title="Duplicate" aria-label="Duplicate layer" onClick={(e) => { e.stopPropagation(); onDuplicateNode(nodeId); }}>⧉</button>
+              )}
+            </span>
+          )}
 
           {/* Delete Layer button (except root frame) */}
           {nodeId !== rootNodeId && (
@@ -217,7 +294,7 @@ export default function LayersPanel({
         color: '#64748b',
         lineHeight: 1.3
       }}>
-        💡 Double-click layer name to rename. Selected layer will highlight in Canvas.
+        Double-click a name to rename. Shift-click to select several. Drag a layer to reorder it or drop it into a frame. ⧉ duplicates, Delete removes, ⌘Z undoes.
       </div>
     </div>
   );
