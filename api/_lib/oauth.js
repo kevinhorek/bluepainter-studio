@@ -123,7 +123,7 @@ function isLocalHost(host) {
   return name === 'localhost' || name === '127.0.0.1' || name === '[::1]';
 }
 
-/** This deployment's own origin, e.g. https://bluepainter-studio.vercel.app */
+/** This deployment's own origin, e.g. https://www.bluepainter.com */
 function ownOrigin(req) {
   const host = ownHost(req);
   const forwarded = String(header(req, 'x-forwarded-proto') || '').split(',')[0].trim().toLowerCase();

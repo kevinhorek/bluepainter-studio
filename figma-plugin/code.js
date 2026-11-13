@@ -15,7 +15,7 @@
 // ── Constants ───────────────────────────────────────────────────────────────
 
 /** Hosted Studio opened by the "Open BluePainter Studio" button. */
-var STUDIO_URL = 'https://bluepainter-studio.vercel.app/#/app';
+var STUDIO_URL = 'https://www.bluepainter.com/#/app';
 
 var PAYLOAD_SOURCE = 'bluepainter-figma-plugin';
 var PAYLOAD_VERSION = 1;

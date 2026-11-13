@@ -2,7 +2,7 @@
 
 Interactive validation demo for a **visual canvas ↔ code workspace** with **Designer's Receipts** and page-level component composition.
 
-- **Live demo:** https://bluepainter-studio.vercel.app  
+- **Live demo:** https://www.bluepainter.com  
 - **Product spec:** [SPEC.md](./SPEC.md)  
 - **Interview guide:** [VALIDATION.md](./VALIDATION.md)  
 - **Figma import:** [FIGMA_IMPORT.md](./FIGMA_IMPORT.md)
@@ -91,7 +91,7 @@ The sync engine and receipt policy live in `packages/shared` and are used by bot
 
 ## Validation workflow
 
-1. Share **https://bluepainter-studio.vercel.app**
+1. Share **https://www.bluepainter.com**
 2. Use **··· → Interview guide** (or [VALIDATION.md](./VALIDATION.md))
 3. Collect feedback via **Share feedback**
 4. Facilitator (`?facilitator=1`): **Export** JSON after each session
@@ -115,7 +115,7 @@ The export/deploy dialog can offer **Sign in with GitHub** and **Sign in with Ve
 - **GitHub:** create an OAuth App (GitHub → Settings → Developer settings → OAuth Apps) with the authorization callback URL `https://<studio-host>/api/oauth/github/callback`, then set `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`. The app requests the `repo` scope.
 - **Vercel:** create an integration in the Vercel Integrations Console with the Redirect URL `https://<studio-host>/api/oauth/vercel/callback` and read/write access to deployments (and projects), then set `VERCEL_CLIENT_ID`, `VERCEL_CLIENT_SECRET` and `VERCEL_INTEGRATION_SLUG`.
 
-`<studio-host>` is the production host, e.g. `bluepainter-studio.vercel.app`. For `npx vercel dev`, register `http://localhost:3000/api/oauth/<provider>/callback` on a separate dev app. The token is handed to the Studio tab that opened the sign-in window and stored like a pasted one (this tab only unless "Remember on this device" is ticked); the server keeps nothing.
+`<studio-host>` is the production host, e.g. `www.bluepainter.com`. For `npx vercel dev`, register `http://localhost:3000/api/oauth/<provider>/callback` on a separate dev app. The token is handed to the Studio tab that opened the sign-in window and stored like a pasted one (this tab only unless "Remember on this device" is ticked); the server keeps nothing.
 
 ### Optional: Team Audit Log Backend
 

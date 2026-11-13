@@ -11,7 +11,7 @@ startCommand:
         default: https://bluepainter-launch.vercel.app
       BLUEPAINTER_WAITLIST_URL:
         type: string
-        default: https://bluepainter-studio.vercel.app/api/waitlist
+        default: https://www.bluepainter.com/api/waitlist
       FIGMA_TOKEN:
         type: string
         description: Optional Figma personal access token for bluepainter_figma_import

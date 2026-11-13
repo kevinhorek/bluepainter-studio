@@ -14,7 +14,7 @@
   "bugs": {
     "url": "https://github.com/kevinhorek/bluepainter-studio/issues"
   },
-  "homepage": "https://bluepainter-studio.vercel.app",
+  "homepage": "https://www.bluepainter.com",
   "qna": "https://github.com/kevinhorek/bluepainter-studio/discussions",
   "engines": {
     "vscode": "^1.85.0"
@@ -46,7 +46,7 @@
   "badges": [
     {
       "url": "https://img.shields.io/badge/demo-live-blue",
-      "href": "https://bluepainter-studio.vercel.app",
+      "href": "https://www.bluepainter.com",
       "description": "Live Demo"
     }
   ],
@@ -104,13 +104,13 @@
       "properties": {
         "bluepainter.demoUrl": {
           "type": "string",
-          "default": "https://bluepainter-studio.vercel.app/#/app",
+          "default": "https://www.bluepainter.com/#/app",
           "description": "URL for the BluePainter web validation demo."
         },
         "bluepainter.spacingGrid": {
           "type": "number",
           "default": 8,
-          "markdownDescription": "Designer Receipts spacing grid in pixels. Components should use padding/margin values that are multiples of this grid. For team-wide settings, create a `.bluepainter.json` file in your repo root. See [Configuration Guide](https://bluepainter-studio.vercel.app/#/docs) for details."
+          "markdownDescription": "Designer Receipts spacing grid in pixels. Components should use padding/margin values that are multiples of this grid. For team-wide settings, create a `.bluepainter.json` file in your repo root. See [Configuration Guide](https://www.bluepainter.com/#/docs) for details."
         },
         "bluepainter.radiusGrid": {
           "type": "number",

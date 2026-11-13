@@ -25,4 +25,4 @@ Generation tools invent UI. Receipts enforce the rules your team already agreed 
 ## Try it
 
 - Free [contrast checker](/tools/contrast-checker)
-- The full loop in the [Studio demo](https://bluepainter-studio.vercel.app/#/app)
+- The full loop in the [Studio demo](https://www.bluepainter.com/#/app)

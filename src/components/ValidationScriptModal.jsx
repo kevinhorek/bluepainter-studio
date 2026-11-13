@@ -2,7 +2,7 @@ const SECTIONS = [
   {
     title: 'Before (2 min)',
     items: [
-      'Share: bluepainter-studio.vercel.app',
+      'Share: www.bluepainter.com',
       'They open DashboardPage from the file menu — no guided tour unless stuck',
       'You: ?facilitator=1 for export + break/fix tools'
     ]

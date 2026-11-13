@@ -122,7 +122,7 @@ check('tools/list returns the seven tools with input schemas', async () => {
 check('bluepainter_open_demo', async () => {
   const { json, isError } = await callTool('bluepainter_open_demo');
   assert.ok(!isError);
-  assert.strictEqual(json.demo, 'https://bluepainter-studio.vercel.app');
+  assert.strictEqual(json.demo, 'https://www.bluepainter.com');
   assert.strictEqual(json.site, 'https://site.example.test', 'BLUEPAINTER_SITE_URL is honoured');
   assert.strictEqual(json.pricing, 'https://site.example.test/pricing');
 });

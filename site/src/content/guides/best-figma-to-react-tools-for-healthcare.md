@@ -22,7 +22,7 @@ Healthcare teams need accessible forms and unambiguous calls to action for patie
 
 ## When BluePainter fits
 
-Choose BluePainter when format-preserving round-trips and Designer's Receipts matter more than prompt-to-app generation. Try the [free demo](https://bluepainter-studio.vercel.app/#/app) or [request a pilot](/pilot).
+Choose BluePainter when format-preserving round-trips and Designer's Receipts matter more than prompt-to-app generation. Try the [free demo](https://www.bluepainter.com/#/app) or [request a pilot](/pilot).
 
 ## FAQ
 

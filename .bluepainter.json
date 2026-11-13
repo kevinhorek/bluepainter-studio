@@ -1,5 +1,5 @@
 {
-  "$schema": "https://bluepainter-studio.vercel.app/schemas/config.json",
+  "$schema": "https://www.bluepainter.com/schemas/config.json",
   "receiptPolicy": {
     "spacingGrid": 8,
     "radiusGrid": 4,

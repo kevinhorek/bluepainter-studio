@@ -6,7 +6,7 @@
       "cwd": ".",
       "env": {
         "BLUEPAINTER_SITE_URL": "https://bluepainter-launch.vercel.app",
-        "BLUEPAINTER_WAITLIST_URL": "https://bluepainter-studio.vercel.app/api/waitlist"
+        "BLUEPAINTER_WAITLIST_URL": "https://www.bluepainter.com/api/waitlist"
       }
     }
   }

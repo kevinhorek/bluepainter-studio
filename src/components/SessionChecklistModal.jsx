@@ -28,7 +28,7 @@ const SESSION_PHASES = [
     id: 'setup',
     title: 'Setup (2 min)',
     items: [
-      'Share bluepainter-studio.vercel.app',
+      'Share www.bluepainter.com',
       'Participant opens DashboardPage from file menu',
       'No guided tour unless they get stuck'
     ]

@@ -1,4 +1,4 @@
-export const DEMO_URL = 'https://bluepainter-studio.vercel.app';
+export const DEMO_URL = 'https://www.bluepainter.com';
 
 export async function copyDemoLink() {
   // Share the deployment the user is actually on (preview/staging/custom domain).

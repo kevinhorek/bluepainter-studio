@@ -94,7 +94,7 @@ See [AST_SCOPE.md](https://github.com/kevinhorek/bluepainter-studio/blob/main/AS
 
 ## Live Demo
 
-Try the web version at [bluepainter-studio.vercel.app](https://bluepainter-studio.vercel.app)
+Try the web version at [www.bluepainter.com](https://www.bluepainter.com)
 
 **Watch the demo video:** [bluepainter_demo.mp4](https://github.com/kevinhorek/bluepainter-studio/blob/main/bluepainter_demo.mp4)
 
@@ -114,4 +114,4 @@ Try the web version at [bluepainter-studio.vercel.app](https://bluepainter-studi
 
 ---
 
-**[View source on GitHub](https://github.com/kevinhorek/bluepainter-studio)** | **[Try the demo](https://bluepainter-studio.vercel.app)**
+**[View source on GitHub](https://github.com/kevinhorek/bluepainter-studio)** | **[Try the demo](https://www.bluepainter.com)**

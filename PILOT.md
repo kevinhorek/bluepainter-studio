@@ -211,7 +211,7 @@ See `CI.md` for GitLab CI, Bitbucket Pipelines, and other systems.
 
 For product validation feedback:
 
-1. Open https://bluepainter-studio.vercel.app/?facilitator=1
+1. Open https://www.bluepainter.com/?facilitator=1
 2. Navigate to a component (Hero or PricingCard)
 3. Make canvas edits (button text, color, padding)
 4. Click `···` → **Share feedback**

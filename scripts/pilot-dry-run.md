@@ -11,7 +11,7 @@
 
 ### Environment Check
 
-- [ ] Open facilitator mode: `https://bluepainter-studio.vercel.app/?facilitator=1#/app`
+- [ ] Open facilitator mode: `https://www.bluepainter.com/?facilitator=1#/app`
 - [ ] Verify **Facilitator** badge visible in header (amber background)
 - [ ] Confirm `···` menu shows facilitator tools (Break design, Fix all, Auto-present, Session scorecard)
 - [ ] Test session scorecard opens: `···` → **Session scorecard**
@@ -24,7 +24,7 @@
 - [ ] Confirm components have inline styles or simple CSS (not styled-components)
 - [ ] Request components with 5–15 elements (buttons, headings, cards work best)
 - [ ] Verify user has 30–45 minutes of focused time
-- [ ] Send them the Studio link (non-facilitator): `https://bluepainter-studio.vercel.app/#/app`
+- [ ] Send them the Studio link (non-facilitator): `https://www.bluepainter.com/#/app`
 
 ---
 
@@ -232,7 +232,7 @@ Thanks,
 
 ## Links
 
-- **Facilitator mode:** https://bluepainter-studio.vercel.app/?facilitator=1#/app
+- **Facilitator mode:** https://www.bluepainter.com/?facilitator=1#/app
 - **Full pilot guide:** `PILOT.md`
 - **Self-pilot guide:** `SELF_PILOT.md`
 - **Validation checklist:** `VALIDATION.md`

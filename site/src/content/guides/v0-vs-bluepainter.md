@@ -27,4 +27,4 @@ This page describes positioning, not a feature-by-feature benchmark — check v0
 
 ## Try before you decide
 
-Use the [free demo](https://bluepainter-studio.vercel.app/#/app), or request a [pilot](/pilot) if you want a facilitated session on your own components.
+Use the [free demo](https://www.bluepainter.com/#/app), or request a [pilot](/pilot) if you want a facilitated session on your own components.

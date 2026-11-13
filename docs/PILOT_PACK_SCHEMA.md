@@ -28,7 +28,7 @@ Both follow the same base schema with different focus areas.
   "surface": "web-studio",
   "context": {
     "facilitatorMode": true,
-    "sessionUrl": "https://bluepainter-studio.vercel.app/?facilitator=1#/app",
+    "sessionUrl": "https://www.bluepainter.com/?facilitator=1#/app",
     "userAgent": "Mozilla/5.0..."
   },
   
