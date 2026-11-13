@@ -50,7 +50,7 @@ export async function deployProjectToVercel({ nodesByFile, projectName, vercelTo
   return res.json();
 }
 
-export async function pushAndDeploy({ nodesByFile, projectName, githubToken, vercelToken, repoName, isPrivate = true }) {
+export async function pushAndDeploy({ nodesByFile, projectName, githubToken, vercelToken, vercelTeamId, repoName, isPrivate = true }) {
   const github = await pushProjectToGithub({
     nodesByFile,
     projectName,
@@ -63,7 +63,8 @@ export async function pushAndDeploy({ nodesByFile, projectName, githubToken, ver
     const vercel = await deployProjectToVercel({
       nodesByFile,
       projectName: repoName || projectName,
-      vercelToken
+      vercelToken,
+      teamId: vercelTeamId
     });
     return { github, vercel };
   } catch (err) {
@@ -91,7 +92,7 @@ export async function pushMarketingToGithub({ nodesByFile, githubToken, repoName
   return res.json();
 }
 
-export async function deployMarketingToVercel({ nodesByFile, vercelToken, projectName, toneId = 'default' }) {
+export async function deployMarketingToVercel({ nodesByFile, vercelToken, teamId, projectName, toneId = 'default' }) {
   const { projectName: safeName, files } = buildMarketingStaticFileMap(nodesByFile, toneId);
   const name = projectName || safeName;
 
@@ -102,6 +103,7 @@ export async function deployMarketingToVercel({ nodesByFile, vercelToken, projec
       token: vercelToken,
       projectName: name,
       files,
+      teamId: teamId || undefined,
       staticSite: true
     })
   });

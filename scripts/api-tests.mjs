@@ -15,11 +15,14 @@ import feedback from '../api/feedback.js';
 import githubPush from '../api/github-push.js';
 import figmaImport from '../api/figma-import.js';
 import vercelDeploy from '../api/vercel-deploy.js';
+import oauthConfigRoute from '../api/oauth/config.js';
+import oauthRoute from '../api/oauth/[provider]/[action].js';
 
 const STUDIO = 'https://bluepainter-studio.vercel.app';
 const ENV_KEYS = [
   'ALLOWED_ORIGINS', 'OPENAI_API_KEY', 'WAITLIST_WEBHOOK', 'RESEND_WEBHOOK', 'FEEDBACK_WEBHOOK',
-  'UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN', 'VERCEL_ENV'
+  'UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN', 'VERCEL_ENV',
+  'GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET', 'VERCEL_CLIENT_ID', 'VERCEL_CLIENT_SECRET', 'VERCEL_INTEGRATION_SLUG'
 ];
 
 const realFetch = globalThis.fetch;
@@ -61,9 +64,10 @@ function mockFetch(route) {
   };
 }
 
-function makeReq({ method = 'POST', origin, headers = {}, body, ip = '203.0.113.7' } = {}) {
+function makeReq({ method = 'POST', origin, headers = {}, body, query, ip = '203.0.113.7' } = {}) {
   return {
     method,
+    ...(query ? { query } : {}),
     headers: {
       host: 'bluepainter-studio.vercel.app',
       'x-forwarded-for': ip,
@@ -93,7 +97,8 @@ function makeRes() {
       res.ended = true;
       return res;
     },
-    end() {
+    end(data) {
+      if (data !== undefined) res.body = data;
       res.ended = true;
       return res;
     }
@@ -746,6 +751,270 @@ test('vercel-deploy: validation 400s and success contract', async () => {
   assert.equal(calls[0].url, 'https://api.vercel.com/v13/deployments?teamId=team%201');
   assert.equal(calls[0].headers.Authorization, 'Bearer vc_test');
   assert.equal(calls[0].body.projectSettings.framework, null);
+});
+
+/* ---------- oauth ---------- */
+
+const OAUTH_CALLBACK = 'https://bluepainter-studio.vercel.app/api/oauth/github/callback';
+
+function setOAuthEnv() {
+  process.env.GITHUB_CLIENT_ID = 'gh_client';
+  process.env.GITHUB_CLIENT_SECRET = 'gh_secret';
+  process.env.VERCEL_CLIENT_ID = 'oac_client';
+  process.env.VERCEL_CLIENT_SECRET = 'vc_secret';
+  process.env.VERCEL_INTEGRATION_SLUG = 'bluepainter';
+}
+
+const oauthGet = (provider, action, { query = {}, headers = {} } = {}) =>
+  call(oauthRoute, { method: 'GET', query: { provider, action, ...query }, headers });
+
+/** Runs `start` and returns what the browser would carry to the callback. */
+async function startOAuth(provider, origin = 'http://localhost:5173') {
+  const res = await oauthGet(provider, 'start', { query: { origin } });
+  assert.equal(res.statusCode, 302);
+  const location = new URL(res.headers.location);
+  return { res, location, state: location.searchParams.get('state'), cookie: res.headers['set-cookie'].split(';')[0] };
+}
+
+/** The object the callback page hands to postMessage: { origin, message }. */
+function postedPayload(html) {
+  const match = /var d=(\{.*?\});var sent/s.exec(html);
+  assert.ok(match, 'callback page carries a postMessage payload');
+  return JSON.parse(match[1]);
+}
+
+test('oauth config: reflects env and never returns secrets', async () => {
+  let res = await call(oauthConfigRoute, { method: 'GET', origin: STUDIO });
+  assert.equal(res.statusCode, 200);
+  assert.deepStrictEqual(res.body, { github: false, vercel: false });
+  assert.equal(res.headers['cache-control'], 'no-store');
+  assert.equal(res.headers['access-control-allow-origin'], STUDIO);
+
+  process.env.GITHUB_CLIENT_ID = 'gh_client';
+  assert.equal((await call(oauthConfigRoute, { method: 'GET' })).body.github, false, 'id without secret is not configured');
+
+  setOAuthEnv();
+  res = await call(oauthConfigRoute, { method: 'GET' });
+  assert.deepStrictEqual(res.body, { github: true, vercel: true });
+  assert.ok(!JSON.stringify(res.body).includes('secret'));
+
+  delete process.env.VERCEL_INTEGRATION_SLUG;
+  assert.deepStrictEqual((await call(oauthConfigRoute, { method: 'GET' })).body, { github: true, vercel: false });
+  assert.equal((await call(oauthConfigRoute, { method: 'POST' })).statusCode, 405);
+});
+
+test('oauth start: 501 without env, 404 for unknown routes, GET only', async () => {
+  for (const provider of ['github', 'vercel']) {
+    const res = await oauthGet(provider, 'start');
+    assert.equal(res.statusCode, 501);
+    assert.equal(res.body.code, 'OAUTH_NOT_CONFIGURED');
+    assert.equal(res.headers.location, undefined);
+    assert.equal((await oauthGet(provider, 'callback', { query: { code: 'c', state: 's' } })).statusCode, 501);
+  }
+  setOAuthEnv();
+  assert.equal((await oauthGet('gitlab', 'start')).statusCode, 404);
+  assert.equal((await oauthGet('__proto__', 'start')).statusCode, 404);
+  assert.equal((await oauthGet('github', 'token')).statusCode, 404);
+  assert.equal((await call(oauthRoute, { method: 'POST', query: { provider: 'github', action: 'start' } })).statusCode, 405);
+  assert.equal(calls.length, 0);
+});
+
+test('oauth start: GitHub 302 carries client_id, redirect_uri, scope and state; state cookie is HttpOnly', async () => {
+  setOAuthEnv();
+  const { res, location, state, cookie } = await startOAuth('github');
+  assert.equal(location.origin + location.pathname, 'https://github.com/login/oauth/authorize');
+  assert.equal(location.searchParams.get('client_id'), 'gh_client');
+  assert.equal(location.searchParams.get('redirect_uri'), OAUTH_CALLBACK);
+  assert.equal(location.searchParams.get('scope'), 'repo');
+  assert.ok(state && state.length > 40);
+  assert.ok(!res.headers.location.includes('gh_secret'));
+  assert.equal(res.headers['cache-control'], 'no-store');
+
+  const setCookie = res.headers['set-cookie'];
+  assert.ok(cookie.startsWith('bp_oauth_github=') && cookie.length > 'bp_oauth_github='.length + 20);
+  for (const attr of ['HttpOnly', 'Secure', 'SameSite=Lax', 'Max-Age=600', 'Path=/api/oauth']) {
+    assert.ok(setCookie.includes(attr), `cookie has ${attr}`);
+  }
+
+  const other = await startOAuth('github');
+  assert.notEqual(other.state, state, 'state is random per request');
+  assert.equal(calls.length, 0, 'start never calls the provider');
+});
+
+test('oauth start: Vercel 302 goes to the integration install URL with state', async () => {
+  setOAuthEnv();
+  const { location, state, cookie } = await startOAuth('vercel', STUDIO);
+  assert.equal(location.origin + location.pathname, 'https://vercel.com/integrations/bluepainter/new');
+  assert.ok(state);
+  assert.ok(cookie.startsWith('bp_oauth_vercel='));
+});
+
+test('oauth start: only allow-listed opener origins; the preview wildcard does not qualify', async () => {
+  setOAuthEnv();
+  for (const origin of ['https://evil.example', 'https://bluepainter-evil.vercel.app', 'javascript:alert(1)']) {
+    const res = await oauthGet('github', 'start', { query: { origin } });
+    assert.equal(res.statusCode, 403, origin);
+    assert.equal(res.headers.location, undefined);
+    assert.equal(res.headers['set-cookie'], undefined);
+  }
+  // A preview deployment may sign in on itself (own host), and ALLOWED_ORIGINS adds custom domains.
+  const own = await call(oauthRoute, {
+    method: 'GET',
+    query: { provider: 'github', action: 'start', origin: 'https://bluepainter-git-x.vercel.app' },
+    headers: { host: 'bluepainter-git-x.vercel.app' }
+  });
+  assert.equal(own.statusCode, 302);
+  assert.equal(new URL(own.headers.location).searchParams.get('redirect_uri'), 'https://bluepainter-git-x.vercel.app/api/oauth/github/callback');
+  process.env.ALLOWED_ORIGINS = 'https://bluepainter.dev';
+  assert.equal((await oauthGet('github', 'start', { query: { origin: 'https://bluepainter.dev' } })).statusCode, 302);
+  // No origin given: falls back to the deployment itself.
+  assert.equal((await oauthGet('github', 'start')).statusCode, 302);
+});
+
+test('oauth callback: missing, forged, mismatched or expired state is rejected without calling the provider', async () => {
+  setOAuthEnv();
+  const { state, cookie } = await startOAuth('github');
+  const other = await startOAuth('github');
+  const [payload, sig] = state.split('.');
+  const forgedPayload = Buffer.from(JSON.stringify({
+    ...JSON.parse(Buffer.from(payload, 'base64url').toString()), o: 'https://evil.example'
+  })).toString('base64url');
+
+  const attempts = [
+    { query: { code: 'c' }, headers: { cookie } },                                   // no state
+    { query: { code: 'c', state }, headers: {} },                                    // no cookie
+    { query: { code: 'c', state }, headers: { cookie: other.cookie } },              // another browser's cookie
+    { query: { code: 'c', state: `${forgedPayload}.${sig}` }, headers: { cookie } }, // tampered origin
+    { query: { code: 'c', state: `${payload}.AAAA` }, headers: { cookie } },         // bad signature
+    { query: { code: 'c', state: 'garbage' }, headers: { cookie } }
+  ];
+  for (const attempt of attempts) {
+    const res = await oauthGet('github', 'callback', attempt);
+    assert.equal(res.statusCode, 400);
+    assert.ok(!res.body.includes('<script'), 'no script without a verified origin');
+    assert.ok(!res.body.includes('postMessage'));
+  }
+
+  // A GitHub state is not valid for the Vercel callback.
+  const cross = await oauthGet('vercel', 'callback', { query: { code: 'c', state }, headers: { cookie: cookie.replace('github', 'vercel') } });
+  assert.equal(cross.statusCode, 400);
+
+  // Expired.
+  const realNow = Date.now;
+  Date.now = () => realNow() + 11 * 60 * 1000;
+  try {
+    assert.equal((await oauthGet('github', 'callback', { query: { code: 'c', state }, headers: { cookie } })).statusCode, 400);
+  } finally {
+    Date.now = realNow;
+  }
+  assert.equal(calls.length, 0, 'provider never called');
+});
+
+test('oauth callback: GitHub success posts the token to the bound origin only', async () => {
+  setOAuthEnv();
+  const { state, cookie } = await startOAuth('github', 'http://localhost:5173');
+  mockFetch(() => [200, { access_token: 'gho_abc123', token_type: 'bearer', scope: 'repo' }]);
+
+  const res = await oauthGet('github', 'callback', { query: { code: 'the-code', state }, headers: { cookie } });
+  assert.equal(res.statusCode, 200);
+  assert.ok(res.headers['content-type'].startsWith('text/html'));
+  assert.equal(res.headers['cache-control'], 'no-store');
+  assert.ok(res.headers['content-security-policy'].includes("default-src 'none'"));
+  assert.ok(res.headers['set-cookie'].includes('Max-Age=0'), 'state cookie is cleared');
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, 'https://github.com/login/oauth/access_token');
+  assert.equal(calls[0].method, 'POST');
+  assert.deepStrictEqual(calls[0].body, {
+    client_id: 'gh_client', client_secret: 'gh_secret', code: 'the-code', redirect_uri: OAUTH_CALLBACK
+  });
+
+  const html = res.body;
+  assert.deepStrictEqual(postedPayload(html), {
+    origin: 'http://localhost:5173',
+    message: { source: 'bluepainter-oauth', provider: 'github', token: 'gho_abc123' }
+  });
+  assert.ok(html.includes('window.opener.postMessage(d.message,d.origin)'));
+  assert.ok(!html.includes("'*'") && !html.includes('"*"'), 'never a wildcard target origin');
+  assert.ok(!html.includes('gh_secret'));
+});
+
+test('oauth callback: Vercel exchange is form-encoded and posts { token, teamId }', async () => {
+  setOAuthEnv();
+  const { state, cookie } = await startOAuth('vercel', STUDIO);
+  mockFetch(() => [200, { token_type: 'Bearer', access_token: 'vc_tok', installation_id: 'icfg_1', user_id: 'u1', team_id: 'team_9' }]);
+
+  const res = await oauthGet('vercel', 'callback', {
+    query: { code: 'vcode', state, teamId: 'team_spoofed', configurationId: 'icfg_1', next: 'https://vercel.com/x' },
+    headers: { cookie }
+  });
+  assert.equal(res.statusCode, 200);
+  assert.equal(calls[0].url, 'https://api.vercel.com/v2/oauth/access_token');
+  assert.equal(calls[0].headers['Content-Type'], 'application/x-www-form-urlencoded');
+  assert.ok(calls[0].body instanceof URLSearchParams);
+  assert.deepStrictEqual(Object.fromEntries(calls[0].body), {
+    client_id: 'oac_client',
+    client_secret: 'vc_secret',
+    code: 'vcode',
+    redirect_uri: 'https://bluepainter-studio.vercel.app/api/oauth/vercel/callback'
+  });
+  assert.deepStrictEqual(postedPayload(res.body), {
+    origin: STUDIO,
+    message: { source: 'bluepainter-oauth', provider: 'vercel', token: 'vc_tok', teamId: 'team_9' }
+  });
+
+  // Personal account: team_id is null.
+  const second = await startOAuth('vercel', STUDIO);
+  mockFetch(() => [200, { access_token: 'vc_tok2', team_id: null }]);
+  const personal = await oauthGet('vercel', 'callback', { query: { code: 'v2', state: second.state }, headers: { cookie: second.cookie } });
+  assert.equal(postedPayload(personal.body).message.teamId, null);
+});
+
+test('oauth callback: a token or error containing </script> cannot break out of the script', async () => {
+  setOAuthEnv();
+  const nasty = '</script><script>alert(1)</script><!-- &';
+
+  let flow = await startOAuth('github');
+  mockFetch(() => [200, { access_token: nasty }]);
+  let res = await oauthGet('github', 'callback', { query: { code: 'c', state: flow.state }, headers: { cookie: flow.cookie } });
+  assert.equal(res.body.match(/<script/g).length, 1, 'exactly one script element');
+  assert.equal(res.body.match(/<\/script>/g).length, 1);
+  assert.ok(!res.body.includes('alert(1)</script>'));
+  assert.ok(!res.body.includes('<!--') && !res.body.includes(' '));
+  assert.equal(postedPayload(res.body).message.token, nasty, 'value survives intact as data');
+
+  flow = await startOAuth('github');
+  res = await oauthGet('github', 'callback', {
+    query: { error: 'access_denied', error_description: nasty, state: flow.state }, headers: { cookie: flow.cookie }
+  });
+  assert.equal(res.body.match(/<script/g).length, 1);
+  assert.equal(res.body.match(/<\/script>/g).length, 1);
+  assert.equal(postedPayload(res.body).message.error, nasty);
+  assert.equal(calls.length, 1, 'a provider-side denial does not trigger an exchange');
+});
+
+test('oauth callback: upstream errors are posted as { error } with no token', async () => {
+  setOAuthEnv();
+  const run = async (provider, route) => {
+    const flow = await startOAuth(provider);
+    mockFetch(route);
+    const res = await oauthGet(provider, 'callback', { query: { code: 'c', state: flow.state }, headers: { cookie: flow.cookie } });
+    assert.equal(res.statusCode, 200);
+    const posted = postedPayload(res.body);
+    assert.equal(posted.origin, 'http://localhost:5173');
+    assert.equal(posted.message.token, undefined);
+    assert.equal(posted.message.provider, provider);
+    return posted.message.error;
+  };
+
+  // GitHub answers 200 with an error body for a bad code.
+  assert.equal(
+    await run('github', () => [200, { error: 'bad_verification_code', error_description: 'The code passed is incorrect or expired.' }]),
+    'GitHub sign-in failed: The code passed is incorrect or expired.'
+  );
+  assert.equal(await run('github', () => [200, {}]), 'GitHub sign-in failed: GitHub responded 200');
+  assert.equal(await run('vercel', () => [400, { error: { code: 'bad_request', message: 'Invalid code' } }]), 'Vercel sign-in failed: Invalid code');
+  assert.equal(await run('vercel', () => { throw new Error('network down'); }), 'Vercel sign-in failed: network down');
 });
 
 /* ---------- runner ---------- */

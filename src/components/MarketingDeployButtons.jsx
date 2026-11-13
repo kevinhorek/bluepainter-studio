@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { pushMarketingToGithub, deployMarketingToVercel } from '../utils/remoteDeploy';
 import * as creds from '../utils/deployCredentials';
+import OAuthSignInButton from './OAuthSignInButton';
 
 const { loadGithubToken, saveGithubToken, loadVercelToken, saveVercelToken, maskToken } = creds;
 
@@ -13,6 +14,8 @@ function tokensRemembered() {
 export default function MarketingDeployButtons({ nodesByFile, toneId, onNotify }) {
   const [githubToken, setGithubToken] = useState(() => loadGithubToken());
   const [vercelToken, setVercelToken] = useState(() => loadVercelToken());
+  // Team an OAuth-issued Vercel token is tied to; empty for a pasted personal token.
+  const [vercelTeamId, setVercelTeamId] = useState(() => creds.loadVercelTeamId());
   const [repoName, setRepoName] = useState('');
   const [busy, setBusy] = useState('');
   const [showTokens, setShowTokens] = useState(false);
@@ -23,7 +26,24 @@ export default function MarketingDeployButtons({ nodesByFile, toneId, onNotify }
   // Unticked "Remember" keeps them for this tab only (sessionStorage).
   const persist = () => {
     if (githubToken.trim()) saveGithubToken(githubToken.trim(), { remember });
-    if (vercelToken.trim()) saveVercelToken(vercelToken.trim(), { remember });
+    if (vercelToken.trim()) {
+      saveVercelToken(vercelToken.trim(), { remember });
+      creds.saveVercelTeamId(vercelTeamId, { remember });
+    }
+  };
+
+  // "Sign in with …" fills the same field a pasted token would, and is saved the same way.
+  const handleOAuthToken = (provider) => ({ token, teamId }) => {
+    if (provider === 'github') {
+      setGithubToken(token);
+      saveGithubToken(token, { remember });
+    } else {
+      setVercelToken(token);
+      setVercelTeamId(teamId || '');
+      saveVercelToken(token, { remember });
+      creds.saveVercelTeamId(teamId || '', { remember });
+    }
+    onNotify?.(`Signed in with ${provider === 'github' ? 'GitHub' : 'Vercel'}`);
   };
 
   // window.open() after an await is popup-blocked, so the result is shown as a link instead.
@@ -68,6 +88,7 @@ export default function MarketingDeployButtons({ nodesByFile, toneId, onNotify }
       const result = await deployMarketingToVercel({
         nodesByFile,
         vercelToken: vercelToken.trim(),
+        teamId: vercelTeamId,
         projectName: repoName.trim() || undefined,
         toneId
       });
@@ -102,7 +123,9 @@ export default function MarketingDeployButtons({ nodesByFile, toneId, onNotify }
       {showTokens && (
         <div className="marketing-deploy-tokens">
           <input type="password" placeholder="GitHub token (ghp_…)" value={githubToken} onChange={(e) => setGithubToken(e.target.value)} />
-          <input type="password" placeholder="Vercel token" value={vercelToken} onChange={(e) => setVercelToken(e.target.value)} />
+          <OAuthSignInButton provider="github" disabled={!!busy} onToken={handleOAuthToken('github')} onError={onNotify} />
+          <input type="password" placeholder="Vercel token" value={vercelToken} onChange={(e) => { setVercelToken(e.target.value); setVercelTeamId(''); }} />
+          <OAuthSignInButton provider="vercel" disabled={!!busy} onToken={handleOAuthToken('vercel')} onError={onNotify} />
           <label className="mk-checkbox">
             <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
             Remember on this device

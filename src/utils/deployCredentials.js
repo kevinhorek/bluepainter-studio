@@ -1,9 +1,10 @@
 const GITHUB_TOKEN_KEY = 'bluepainter-github-token';
 const VERCEL_TOKEN_KEY = 'bluepainter-vercel-token';
+const VERCEL_TEAM_KEY = 'bluepainter-vercel-team';
 const FIGMA_TOKEN_KEY = 'bluepainter-figma-token';
 const OPENAI_KEY_KEY = 'bluepainter-openai-key';
 
-const ALL_CREDENTIAL_KEYS = [GITHUB_TOKEN_KEY, VERCEL_TOKEN_KEY, FIGMA_TOKEN_KEY, OPENAI_KEY_KEY];
+const ALL_CREDENTIAL_KEYS = [GITHUB_TOKEN_KEY, VERCEL_TOKEN_KEY, VERCEL_TEAM_KEY, FIGMA_TOKEN_KEY, OPENAI_KEY_KEY];
 
 function getStorage(kind) {
   try {
@@ -69,6 +70,18 @@ export function saveVercelToken(token, options) {
 
 export function isVercelTokenRemembered() {
   return isCredentialRemembered(VERCEL_TOKEN_KEY);
+}
+
+/**
+ * Team the saved Vercel token belongs to. Set by "Sign in with Vercel" (an integration token is
+ * tied to the team it was installed on); empty for a pasted personal token.
+ */
+export function loadVercelTeamId() {
+  return loadCredential(VERCEL_TEAM_KEY);
+}
+
+export function saveVercelTeamId(teamId, options) {
+  saveCredential(VERCEL_TEAM_KEY, teamId, options);
 }
 
 /** Removes every stored token/key (GitHub, Vercel, Figma, OpenAI) from both storages. */

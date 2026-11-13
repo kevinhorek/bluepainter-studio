@@ -34,8 +34,11 @@ function header(req, name) {
  * the defaults + ALLOWED_ORIGINS, any http://localhost:* / http://127.0.0.1:*,
  * this project's Vercel URLs (https://bluepainter*.vercel.app), and — when `req` is given —
  * the deployment's own host (same-origin POSTs also carry an Origin header, e.g. on a custom domain).
+ *
+ * `previewWildcard: false` drops the bluepainter*.vercel.app pattern (anyone can register such a
+ * name on Vercel). The OAuth routes use it: they hand a provider token to the origin.
  */
-export function isAllowedOrigin(origin, req) {
+export function isAllowedOrigin(origin, req, { previewWildcard = true } = {}) {
   const normalized = normalizeOrigin(origin);
   if (!normalized) return false;
   if (configuredOrigins().has(normalized)) return true;
@@ -49,7 +52,7 @@ export function isAllowedOrigin(origin, req) {
   const host = url.hostname;
 
   if (url.protocol === 'http:' && (host === 'localhost' || host === '127.0.0.1')) return true;
-  if (url.protocol === 'https:' && host.endsWith('.vercel.app') && host.startsWith('bluepainter')) return true;
+  if (previewWildcard && url.protocol === 'https:' && host.endsWith('.vercel.app') && host.startsWith('bluepainter')) return true;
 
   const ownHost = String(header(req, 'x-forwarded-host') || header(req, 'host') || '').toLowerCase();
   if (ownHost && url.host === ownHost) return true;

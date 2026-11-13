@@ -6,6 +6,7 @@ import {
   pushAndDeploy
 } from '../utils/remoteDeploy';
 import * as creds from '../utils/deployCredentials';
+import OAuthSignInButton from './OAuthSignInButton';
 
 const { loadGithubToken, saveGithubToken, loadVercelToken, saveVercelToken, maskToken } = creds;
 
@@ -80,6 +81,8 @@ export default function ExportDeployModal({ isOpen, onClose, nodesByFile, onExpo
   const [repoName, setRepoName] = useState('');
   const [githubToken, setGithubToken] = useState(() => loadGithubToken());
   const [vercelToken, setVercelToken] = useState(() => loadVercelToken());
+  // Team an OAuth-issued Vercel token is tied to; empty for a pasted personal token.
+  const [vercelTeamId, setVercelTeamId] = useState(() => creds.loadVercelTeamId());
   const [remember, setRemember] = useState(tokensRemembered);
   const [isPrivate, setIsPrivate] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -102,7 +105,24 @@ export default function ExportDeployModal({ isOpen, onClose, nodesByFile, onExpo
   // Unticked "Remember" keeps them for this tab only (sessionStorage).
   const persistTokens = () => {
     if (githubToken.trim()) saveGithubToken(githubToken.trim(), { remember });
-    if (vercelToken.trim()) saveVercelToken(vercelToken.trim(), { remember });
+    if (vercelToken.trim()) {
+      saveVercelToken(vercelToken.trim(), { remember });
+      creds.saveVercelTeamId(vercelTeamId, { remember });
+    }
+  };
+
+  // "Sign in with …" fills the same field a pasted token would, and is saved the same way.
+  const handleOAuthToken = (provider) => ({ token, teamId }) => {
+    setError('');
+    if (provider === 'github') {
+      setGithubToken(token);
+      saveGithubToken(token, { remember });
+    } else {
+      setVercelToken(token);
+      setVercelTeamId(teamId || '');
+      saveVercelToken(token, { remember });
+      creds.saveVercelTeamId(teamId || '', { remember });
+    }
   };
 
   const forgetTokens = () => {
@@ -114,6 +134,7 @@ export default function ExportDeployModal({ isOpen, onClose, nodesByFile, onExpo
     }
     setGithubToken('');
     setVercelToken('');
+    setVercelTeamId('');
     setRemember(false);
     setError('');
   };
@@ -171,7 +192,8 @@ export default function ExportDeployModal({ isOpen, onClose, nodesByFile, onExpo
       const vercel = await deployProjectToVercel({
         nodesByFile,
         projectName: effectiveRepo,
-        vercelToken: vercelToken.trim()
+        vercelToken: vercelToken.trim(),
+        teamId: vercelTeamId
       });
       setResult({ vercel });
       onExported?.(vercel, 'vercel');
@@ -196,6 +218,7 @@ export default function ExportDeployModal({ isOpen, onClose, nodesByFile, onExpo
         projectName,
         githubToken: githubToken.trim(),
         vercelToken: vercelToken.trim(),
+        vercelTeamId,
         repoName: effectiveRepo,
         isPrivate
       });
@@ -289,6 +312,7 @@ export default function ExportDeployModal({ isOpen, onClose, nodesByFile, onExpo
                     />
                     {githubToken && <span className="token-hint">{tokenHint(githubToken)}</span>}
                   </label>
+                  <OAuthSignInButton provider="github" disabled={busy} onToken={handleOAuthToken('github')} onError={setError} />
                   <label className="mk-checkbox export-private-check">
                     <input type="checkbox" checked={isPrivate} onChange={(e) => setIsPrivate(e.target.checked)} />
                     Private repository
@@ -308,11 +332,12 @@ export default function ExportDeployModal({ isOpen, onClose, nodesByFile, onExpo
                     <input
                       type="password"
                       value={vercelToken}
-                      onChange={(e) => setVercelToken(e.target.value)}
+                      onChange={(e) => { setVercelToken(e.target.value); setVercelTeamId(''); }}
                       placeholder="vercel_…"
                     />
                     {vercelToken && <span className="token-hint">{tokenHint(vercelToken)}</span>}
                   </label>
+                  <OAuthSignInButton provider="vercel" disabled={busy} onToken={handleOAuthToken('vercel')} onError={setError} />
                   <p className="export-modal-note">
                     Create at{' '}
                     <a href="https://vercel.com/account/settings/tokens" target="_blank" rel="noreferrer">vercel.com/account/settings/tokens</a>
