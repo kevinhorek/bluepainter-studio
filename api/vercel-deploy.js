@@ -10,8 +10,8 @@ export default async function handler(req, res) {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     const { token, projectName, files, teamId, staticSite = false } = body || {};
 
-    if (!token?.trim()) return res.status(400).json({ error: 'Vercel token is required' });
-    if (!projectName?.trim()) return res.status(400).json({ error: 'Project name is required' });
+    if (typeof token !== 'string' || !token.trim()) return res.status(400).json({ error: 'Vercel token is required' });
+    if (typeof projectName !== 'string' || !projectName.trim()) return res.status(400).json({ error: 'Project name is required' });
     if (!files || typeof files !== 'object' || !Object.keys(files).length) {
       return res.status(400).json({ error: 'No files to deploy' });
     }

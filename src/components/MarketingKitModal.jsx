@@ -118,13 +118,15 @@ export default function MarketingKitModal({
       revokePreviewMap(previewUrlsRef.current);
       previewUrlsRef.current = previews;
       setImagePreviews(previews);
+    }).catch((e) => {
+      if (!cancelled) onCopyToast?.(e?.message || 'Could not render preview images');
     });
     return () => {
       cancelled = true;
       revokePreviewMap(previewUrlsRef.current);
       previewUrlsRef.current = {};
     };
-  }, [isOpen, tab, buildImagePreviews]);
+  }, [isOpen, tab, buildImagePreviews, onCopyToast]);
 
   const handleFieldChange = (field, text) => {
     onUpdateField(field.fileId, field.nodeId, { text });
@@ -148,20 +150,26 @@ export default function MarketingKitModal({
         { toneId, screenshotBlob: screenshotForExport }
       );
       onExported?.(result);
+    } catch (e) {
+      onCopyToast?.(e?.message || 'Could not build the marketing kit');
     } finally {
       setDownloading(false);
     }
   };
 
   const handleDownloadImage = async (spec) => {
-    const blob = await renderMarketingImage(ctx, copy, {
-      width: spec.width,
-      height: spec.height,
-      variant: spec.id,
-      screenshotBlob: screenshotForExport
-    });
-    await downloadImage(blob, spec.filename);
-    onCopyToast?.(`${spec.label} downloaded`);
+    try {
+      const blob = await renderMarketingImage(ctx, copy, {
+        width: spec.width,
+        height: spec.height,
+        variant: spec.id,
+        screenshotBlob: screenshotForExport
+      });
+      await downloadImage(blob, spec.filename);
+      onCopyToast?.(`${spec.label} downloaded`);
+    } catch (e) {
+      onCopyToast?.(e?.message || 'Could not render image');
+    }
   };
 
   if (!isOpen) return null;

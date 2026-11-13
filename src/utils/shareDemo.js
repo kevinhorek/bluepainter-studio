@@ -1,7 +1,11 @@
 export const DEMO_URL = 'https://bluepainter-studio.vercel.app';
 
 export async function copyDemoLink() {
-  const url = `${DEMO_URL}/#/app`;
+  // Share the deployment the user is actually on (preview/staging/custom domain).
+  const origin = typeof window !== 'undefined' && /^https?:/.test(window.location.origin) && !/localhost|127\.0\.0\.1/.test(window.location.hostname)
+    ? window.location.origin
+    : DEMO_URL;
+  const url = `${origin}/#/app`;
   try {
     await navigator.clipboard.writeText(url);
     return true;

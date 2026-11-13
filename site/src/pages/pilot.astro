@@ -49,12 +49,21 @@ import { DEMO_APP, WAITLIST_URL } from '../lib/constants';
       const status = form.querySelector('.form-status');
       const fd = new FormData(form);
       const endpoint = form.getAttribute('data-waitlist-url') || '/api/waitlist';
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(Object.fromEntries(fd))
-      });
-      const data = await res.json();
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
+      let data;
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(Object.fromEntries(fd))
+        });
+        data = await res.json();
+      } catch {
+        data = { ok: false, error: 'Network error — please try again.' };
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
+      }
       status.hidden = false;
       status.textContent = data.ok
         ? 'Request received. We will email you when a seat opens.'

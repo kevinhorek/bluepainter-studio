@@ -1,23 +1,74 @@
 // syncEngine.js - Canvas ↔ TSX sync (AST-first with regex fallback)
 import { getComponentName, getWorkspaceFile, getImportPath, collectComponentRefs } from '../data/workspaceFiles';
-import { parseTSXWithAST, patchTSXWithAST } from './astSyncEngine';
+import { parseTSXWithAST, patchTSXWithAST, jsxTextNeedsExpression } from './astSyncEngine';
+
+function formatStyleValue(v) {
+  if (typeof v === 'number') return v;
+  const str = String(v);
+  // Values like fontFamily: "'Inter', sans-serif" contain single quotes.
+  return str.includes("'") || str.includes('\\') || str.includes('\n')
+    ? JSON.stringify(str)
+    : `'${str}'`;
+}
 
 function formatStyleAttr(styleObj) {
   const styleEntries = Object.entries(styleObj || {})
-    .filter(([, v]) => v !== undefined && v !== '')
+    .filter(([, v]) => v !== undefined && v !== null && v !== '')
     .map(([k, v]) => {
-      const formattedVal = typeof v === 'number' ? v : `'${v}'`;
-      return `${k}: ${formattedVal}`;
+      const key = /^[A-Za-z_$][\w$]*$/.test(k) ? k : JSON.stringify(k);
+      return `${key}: ${formatStyleValue(v)}`;
     })
     .join(', ');
   return styleEntries ? ` style={{ ${styleEntries} }}` : '';
 }
 
+function formatJsxText(text) {
+  const value = String(text ?? '').replace(/\s+/g, ' ').trim();
+  // Braces, angle brackets and ampersands would break (or change) the JSX.
+  return jsxTextNeedsExpression(value) ? `{${JSON.stringify(value)}}` : value;
+}
+
+function escapeAttr(value) {
+  return String(value ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+}
+
+/**
+ * The element ids the node tree renders, in document order.
+ * Returns null when the tree contains nodes the AST patcher can't keep in sync
+ * (comment pins render as id-less JSX comments), forcing a full regenerate.
+ */
+function expectedIdOrder(rootNodeId, nodesMap) {
+  const ids = [];
+  const seen = new Set();
+  let patchable = true;
+  function walk(nodeId) {
+    const node = nodesMap[nodeId];
+    if (!node || seen.has(nodeId)) return;
+    seen.add(nodeId);
+    if (node.type === 'comment') {
+      patchable = false;
+      return;
+    }
+    ids.push(node.id);
+    if (node.type === 'component-instance') return;
+    const leaf = ['text', 'button', 'list-item', 'image', 'line', 'shape', 'vector'].includes(node.type);
+    if (!leaf) (node.children || []).forEach(walk);
+  }
+  walk(rootNodeId);
+  return patchable ? ids : null;
+}
+
 // 1. GENERATE TSX CODE FROM NODE TREE STATE
 export function generateTSX(rootNodeId, nodesMap, existingCode = null) {
-  if (existingCode?.trim()) {
-    const patched = patchTSXWithAST(existingCode, nodesMap);
-    if (patched) return patched;
+  if (existingCode?.trim() && rootNodeId && nodesMap) {
+    // Only patch when the code has exactly the tree's structure. If a layer was
+    // added, removed or reordered — or the code belongs to another file — the
+    // patcher can't express that, so regenerate from the tree.
+    const expected = expectedIdOrder(rootNodeId, nodesMap);
+    if (expected) {
+      const patched = patchTSXWithAST(existingCode, nodesMap, expected);
+      if (patched) return patched;
+    }
   }
   return generateTSXFromTemplate(rootNodeId, nodesMap);
 }
@@ -40,13 +91,13 @@ function generateTSXFromTemplate(rootNodeId, nodesMap) {
     }
 
     if (node.type === 'text' || node.type === 'button' || node.type === 'list-item') {
-      const textVal = node.text || '';
+      const textVal = formatJsxText(node.text);
       return `${indent}<${tag}${idAttr}${styleAttr}${classAttr}>${textVal}</${tag}>`;
     }
 
     if (node.type === 'image') {
       const imgSrc = node.src || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200';
-      return `${indent}<img${idAttr} src="${imgSrc}"${styleAttr}${classAttr} />`;
+      return `${indent}<img${idAttr} src="${escapeAttr(imgSrc)}" alt=""${styleAttr}${classAttr} />`;
     }
 
     if (node.type === 'line') {
@@ -67,7 +118,7 @@ function generateTSXFromTemplate(rootNodeId, nodesMap) {
     }
 
     if (node.type === 'comment') {
-      return `${indent}{/* Comment: ${(node.text || '').replace(/\*/g, '')} */}`;
+      return `${indent}{/* Comment: ${(node.text || '').replace(/\*\//g, '* /').replace(/\s+/g, ' ')} */}`;
     }
 
     const childrenJSX = (node.children || [])

@@ -12,8 +12,8 @@ export default async function handler(req, res) {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     const { token, repoName, files, message, owner, isPrivate = true } = body || {};
 
-    if (!token?.trim()) return res.status(400).json({ error: 'GitHub token is required' });
-    if (!repoName?.trim()) return res.status(400).json({ error: 'Repository name is required' });
+    if (typeof token !== 'string' || !token.trim()) return res.status(400).json({ error: 'GitHub token is required' });
+    if (typeof repoName !== 'string' || !repoName.trim()) return res.status(400).json({ error: 'Repository name is required' });
     if (!files || typeof files !== 'object' || !Object.keys(files).length) {
       return res.status(400).json({ error: 'No files to push' });
     }

@@ -65,12 +65,19 @@ const jsonLd = {
     document.getElementById('unlock').onclick = async function () {
       const email = document.getElementById('email').value;
       const status = document.querySelector('#gate .form-status');
-      const res = await fetch(WAITLIST_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email, source: 'receipt-grader' })
-      });
-      const data = await res.json();
+      let data;
+      try {
+        const res = await fetch(WAITLIST_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email, source: 'receipt-grader' })
+        });
+        data = await res.json();
+      } catch {
+        status.hidden = false;
+        status.textContent = 'Network error — try again.';
+        return;
+      }
       status.hidden = false;
       status.textContent = data.ok ? 'Unlocked — see fixes below.' : (data.error || 'Failed');
       if (data.ok && last) {

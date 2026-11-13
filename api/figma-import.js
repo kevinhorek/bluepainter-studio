@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     const { token, fileUrl, fileKey, nodeId, nodeUrl } = body || {};
 
-    if (!token?.trim()) {
+    if (typeof token !== 'string' || !token.trim()) {
       return res.status(400).json({ error: 'Figma personal access token is required' });
     }
 

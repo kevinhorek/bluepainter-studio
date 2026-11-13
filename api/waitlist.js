@@ -27,6 +27,10 @@ export default async function handler(req, res) {
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
     const email = String(body.email || '').trim().toLowerCase();
+    if (email.length > 254) {
+      res.status(400).json({ ok: false, error: 'Valid email required' });
+      return;
+    }
     if (!isEmail(email)) {
       res.status(400).json({ ok: false, error: 'Valid email required' });
       return;
@@ -47,11 +51,25 @@ export default async function handler(req, res) {
 
     const webhook = process.env.WAITLIST_WEBHOOK || process.env.RESEND_WEBHOOK;
     if (webhook) {
-      await fetch(webhook, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(entry)
-      }).catch(() => {});
+      // Don't tell the visitor "received" if the only durable store rejected it.
+      let delivered = false;
+      try {
+        const hookRes = await fetch(webhook, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(entry)
+        });
+        delivered = hookRes.ok;
+      } catch {
+        delivered = false;
+      }
+      if (!delivered) {
+        res.status(502).json({ ok: false, error: 'Could not save your request — please try again' });
+        return;
+      }
+    } else {
+      // In-memory only: entries are lost on cold start. Set WAITLIST_WEBHOOK in production.
+      console.warn('[waitlist] WAITLIST_WEBHOOK is not set — signup stored in memory only:', entry.email);
     }
 
     res.status(200).json({ ok: true, id: store.length });

@@ -49,18 +49,25 @@ const jsonLd = {
       last = BluePainterTools.analyzeTsxIds(document.getElementById('code').value);
       document.getElementById('result').innerHTML =
         '<div class="score-big">' + last.count + '</div><p>syncable id(s)</p><code>' +
-        last.ids.join(', ') + '</code>';
+        last.ids.map(function (id) { return String(id).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }).join(', ') + '</code>';
       document.getElementById('gate').hidden = false;
     };
     document.getElementById('unlock').onclick = async function () {
       const email = document.getElementById('email').value;
       const status = document.querySelector('#gate .form-status');
-      const res = await fetch(WAITLIST_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email, source: 'tsx-id-analyzer' })
-      });
-      const data = await res.json();
+      let data;
+      try {
+        const res = await fetch(WAITLIST_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email, source: 'tsx-id-analyzer' })
+        });
+        data = await res.json();
+      } catch {
+        status.hidden = false;
+        status.textContent = 'Network error — try again.';
+        return;
+      }
       status.hidden = false;
       status.textContent = data.ok ? 'Unlocked.' : (data.error || 'Failed');
       if (data.ok) {

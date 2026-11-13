@@ -3,7 +3,8 @@ const STORAGE_KEY = 'bluepainter-demo-feedback';
 export function getStoredFeedback() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }
@@ -11,7 +12,13 @@ export function getStoredFeedback() {
 
 export function saveFeedback(entry) {
   const existing = getStoredFeedback();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify([...existing, entry]));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([...existing, entry]));
+    return true;
+  } catch {
+    // storage blocked or full (private mode) — caller can still show a thank-you
+    return false;
+  }
 }
 
 export function getFeedbackSummary() {
@@ -51,9 +58,13 @@ export function downloadFeedbackJSON() {
   anchor.href = url;
   anchor.download = `bluepainter-feedback-${new Date().toISOString().slice(0, 10)}.json`;
   anchor.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 2000); // sync revoke can cancel the download in Safari
 }
 
 export function clearStoredFeedback() {
-  localStorage.removeItem(STORAGE_KEY);
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // storage unavailable
+  }
 }

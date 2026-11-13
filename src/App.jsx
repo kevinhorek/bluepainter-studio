@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { generateTSX, parseTSX } from './utils/syncEngine';
 import { applyBrokenDesignScenario, applyFixedDesignScenario, getFreshHeroNodes, getFreshPricingNodes, getFreshDashboardNodes } from './utils/demoScenarios';
 import { getFreshMarketingNodes } from './data/marketingPage';
@@ -39,6 +39,14 @@ import { applyAIUpdates, getFirstUpdateTarget } from './utils/aiApply';
 const VALID_PHASES = ['landing', 'phase1', 'phase2', 'phase3', 'phase4'];
 const TOUR_SEEN_KEY = 'bluepainter-tour-seen';
 const facilitator = isFacilitatorMode();
+
+// localStorage throws in some private-browsing / embedded contexts.
+function safeStorageGet(key) {
+  try { return localStorage.getItem(key); } catch { return null; }
+}
+function safeStorageSet(key, value) {
+  try { localStorage.setItem(key, value); } catch { /* storage unavailable */ }
+}
 
 function parseHash() {
   const hash = window.location.hash.replace(/^#\/?/, '');
@@ -94,7 +102,9 @@ export default function App() {
     marketing: getFreshMarketingNodes(),
     figma: getEmptyFigmaImportNodes()
   }));
-  const [code, setCode] = useState('');
+  // What the user last typed in the code editor, per file, with the node map it
+  // parsed to. Canvas edits are patched onto this so formatting/comments survive.
+  const [codeBaseByFile, setCodeBaseByFile] = useState({});
 
   const [tourActive, setTourActive] = useState(initialRoute.startTour);
   const [tourStep, setTourStep] = useState(0);
@@ -110,8 +120,8 @@ export default function App() {
   const [learningSummary, setLearningSummary] = useState(() => getLearningSummary());
   const presenterCancelRef = useRef(null);
   const toolBeforeSpaceRef = useRef('select');
-  const skipCodegenRef = useRef(false);
-  const codeRef = useRef('');
+  const toastTimerRef = useRef(null);
+  const lastLearningRef = useRef({ key: '', at: 0 });
 
   const refreshLearningSummary = () => setLearningSummary(getLearningSummary());
 
@@ -121,6 +131,16 @@ export default function App() {
   };
   const activeNodesMap = nodesByFile[activeFile];
   const activeRootId = fileConfig.rootId;
+
+  // The code panel is derived from the active file's nodes. Keeping it per file
+  // means switching files can never show — or patch — another file's code.
+  const activeCodeBase = codeBaseByFile[activeFile];
+  const code = useMemo(() => {
+    if (!activeRootId || !activeNodesMap) return '';
+    // The editor's own text is authoritative until the canvas changes the nodes.
+    if (activeCodeBase && activeCodeBase.nodes === activeNodesMap) return activeCodeBase.code;
+    return generateTSX(activeRootId, activeNodesMap, activeCodeBase?.code);
+  }, [activeRootId, activeNodesMap, activeCodeBase]);
   const setActiveNodesMap = useCallback((updater) => {
     setNodesByFile((prev) => ({
       ...prev,
@@ -135,7 +155,28 @@ export default function App() {
 
   const notify = useCallback((message) => {
     setToast(message);
-    setTimeout(() => setToast(null), 3500);
+    // Restart the timer so an older toast's timeout can't dismiss a newer one early.
+    clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToast(null), 3500);
+  }, []);
+
+  useEffect(() => () => clearTimeout(toastTimerRef.current), []);
+
+  /**
+   * Log a sync event at most once per burst. Dragging, resizing and typing fire
+   * dozens of updates a second; logging each one rewrote localStorage every frame.
+   */
+  const logLearningOnce = useCallback((type, key, payload) => {
+    const now = Date.now();
+    const last = lastLearningRef.current;
+    const burstKey = `${type}:${key}`;
+    if (last.key === burstKey && now - last.at < 1500) {
+      last.at = now;
+      return;
+    }
+    lastLearningRef.current = { key: burstKey, at: now };
+    logLearningEvent(type, payload);
+    setLearningSummary(getLearningSummary());
   }, []);
 
   const handleUpdateNodeByFile = useCallback((fileId, nodeId, updatedFields) => {
@@ -257,13 +298,18 @@ export default function App() {
     const isTypingTarget = (el) => {
       if (!el) return false;
       const tag = el.tagName;
-      return tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
     };
+    // Space/Enter must keep activating focused buttons and links.
+    const isActivatable = (el) => Boolean(el?.closest?.('button, a, summary, [role="button"]'));
+    const isModalOpen = () => Boolean(document.querySelector('.feedback-modal-overlay, .export-modal-overlay, .demo-script-overlay, .welcome-overlay'));
 
     const onKeyDown = (e) => {
-      if (isTypingTarget(e.target)) return;
-      if (e.key === ' ' && !e.repeat) {
-        e.preventDefault();
+      if (isTypingTarget(e.target) || isModalOpen()) return;
+      if (e.key === ' ') {
+        if (isActivatable(e.target)) return;
+        e.preventDefault(); // also stops the page scrolling while space is held
+        if (e.repeat || activeCanvasTool === 'hand') return;
         toolBeforeSpaceRef.current = activeCanvasTool;
         setActiveCanvasTool('hand');
         return;
@@ -345,25 +391,10 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
-  // Regenerate TSX when canvas changes — patch existing code via AST to preserve formatting.
-  useEffect(() => {
-    if (skipCodegenRef.current) {
-      skipCodegenRef.current = false;
-      return;
-    }
-    if (activeRootId && activeNodesMap) {
-      setCode(generateTSX(activeRootId, activeNodesMap, codeRef.current));
-    }
-  }, [activeFile, activeRootId, activeNodesMap]);
-
-  useEffect(() => {
-    codeRef.current = code;
-  }, [code]);
-
   useEffect(() => {
     if (!facilitator) return;
     const timer = setTimeout(() => {
-      if (!feedbackPromptShown && !localStorage.getItem('bluepainter-feedback-given')) {
+      if (!feedbackPromptShown && !safeStorageGet('bluepainter-feedback-given')) {
         setFeedbackOpen(true);
         setFeedbackPromptShown(true);
       }
@@ -372,11 +403,10 @@ export default function App() {
   }, [phase, feedbackPromptShown]);
 
   const handleCodeChange = (newCode) => {
-    skipCodegenRef.current = true;
-    setCode(newCode);
-    setActiveNodesMap(parseTSX(newCode, activeNodesMap));
-    logLearningEvent('round_trip_code', { source: 'editor' });
-    refreshLearningSummary();
+    const parsedNodes = parseTSX(newCode, activeNodesMap);
+    setCodeBaseByFile((prev) => ({ ...prev, [activeFile]: { code: newCode, nodes: parsedNodes } }));
+    setActiveNodesMap(parsedNodes);
+    logLearningOnce('round_trip_code', 'editor', { source: 'editor' });
   };
 
   const handleUpdateNode = (nodeId, updatedFields) => {
@@ -392,25 +422,42 @@ export default function App() {
         }
       };
     });
-    logLearningEvent('round_trip_canvas', { nodeId, source: 'canvas' });
-    refreshLearningSummary();
+    logLearningOnce('round_trip_canvas', nodeId, { nodeId, source: 'canvas' });
   };
 
   const handleDeleteNode = (nodeId) => {
     if (nodeId === activeRootId) return;
     setActiveNodesMap(prev => {
-      const updated = { ...prev };
-      Object.keys(updated).forEach(id => {
-        const parent = updated[id];
-        if (parent.children?.includes(nodeId)) {
-          parent.children = parent.children.filter(cid => cid !== nodeId);
-        }
+      if (!prev[nodeId]) return prev;
+      // Remove the node and everything under it, without mutating previous state.
+      const doomed = new Set();
+      const collect = (id) => {
+        if (doomed.has(id) || !prev[id]) return;
+        doomed.add(id);
+        (prev[id].children || []).forEach(collect);
+      };
+      collect(nodeId);
+
+      const updated = {};
+      Object.keys(prev).forEach(id => {
+        if (doomed.has(id)) return;
+        const node = prev[id];
+        updated[id] = node.children?.some(cid => doomed.has(cid))
+          ? { ...node, children: node.children.filter(cid => !doomed.has(cid)) }
+          : node;
       });
-      delete updated[nodeId];
       return updated;
     });
     setSelectedNodeId(activeRootId);
   };
+
+  const makeNodeId = useCallback((prefix) => {
+    let id;
+    do {
+      id = `${prefix}-${Math.random().toString(36).slice(2, 6)}`;
+    } while (activeNodesMap?.[id]);
+    return id;
+  }, [activeNodesMap]);
 
   const handleAddNode = (type, leftOffset = 20, topOffset = 20, parentId = activeRootId) => {
     if (!isPlacableTool(type)) return;
@@ -422,15 +469,19 @@ export default function App() {
       return;
     }
 
-    const newId = `${type}-${Date.now().toString().slice(-4)}`;
+    const newId = makeNodeId(type);
     const newNode = createNodeFromTool(type, newId, leftOffset, topOffset);
     if (!newNode) return;
 
-    setActiveNodesMap(prev => ({
-      ...prev,
-      [parentId]: { ...parent, children: [...(parent.children || []), newId] },
-      [newId]: newNode
-    }));
+    setActiveNodesMap(prev => {
+      const latestParent = prev[parentId];
+      if (!latestParent) return prev;
+      return {
+        ...prev,
+        [parentId]: { ...latestParent, children: [...(latestParent.children || []), newId] },
+        [newId]: newNode
+      };
+    });
     setSelectedNodeId(newId);
   };
 
@@ -455,7 +506,7 @@ export default function App() {
       return;
     }
 
-    const newId = `${refFile}-instance-${Date.now().toString().slice(-4)}`;
+    const newId = makeNodeId(`${refFile}-instance`);
     const defaultStyle = refFile === 'hero'
       ? { flex: 1, minWidth: 420 }
       : { flexShrink: 0 };
@@ -477,7 +528,7 @@ export default function App() {
     setSelectedNodeId(newId);
     logLearningEvent('component_instance_added', { refFile, page: activeFile });
     refreshLearningSummary();
-  }, [activeFile, activeNodesMap, activeRootId, fileConfig.isPage, setActiveNodesMap, notify]);
+  }, [activeFile, activeNodesMap, activeRootId, fileConfig.isPage, setActiveNodesMap, notify, makeNodeId]);
 
   const handleBreakDesign = () => {
     handleSetActiveFile('pricing');
@@ -502,6 +553,7 @@ export default function App() {
       marketing: getFreshMarketingNodes(),
       figma: getEmptyFigmaImportNodes()
     });
+    setCodeBaseByFile({});
     setFileViewports({});
     handleSetActiveFile('dashboard');
     setSelectedNodeId('dashboard-page');
@@ -529,21 +581,21 @@ export default function App() {
   const handleTourComplete = () => {
     setTourActive(false);
     setTourStep(0);
-    localStorage.setItem(TOUR_SEEN_KEY, 'true');
+    safeStorageSet(TOUR_SEEN_KEY, 'true');
     window.location.hash = phaseToHash(phase, false);
-    setSelectedNodeId('cta-button');
+    if (activeNodesMap?.['cta-button']) setSelectedNodeId('cta-button');
   };
 
   const handleTourSkip = () => {
     setTourActive(false);
     setTourStep(0);
-    localStorage.setItem(TOUR_SEEN_KEY, 'true');
+    safeStorageSet(TOUR_SEEN_KEY, 'true');
     window.location.hash = phaseToHash(phase, false);
   };
 
   const handleFeedbackClose = () => {
     setFeedbackOpen(false);
-    localStorage.setItem('bluepainter-feedback-given', 'true');
+    safeStorageSet('bluepainter-feedback-given', 'true');
     setFeedbackCount(getFeedbackSummary().total);
   };
 
@@ -706,12 +758,20 @@ export default function App() {
       <FeedbackModal isOpen={feedbackOpen} onClose={handleFeedbackClose} />
       <ValidationScriptModal isOpen={validationScriptOpen} onClose={() => setValidationScriptOpen(false)} />
       <ValidationScorecardModal isOpen={scorecardOpen} onClose={() => setScorecardOpen(false)} />
-      <ExportDeployModal
-        isOpen={exportDeployOpen}
-        onClose={() => setExportDeployOpen(false)}
-        nodesByFile={nodesByFile}
-        onExported={() => setToast('Project downloaded — see DEPLOY.md in the zip')}
-      />
+      {/* Mounted only while open so it always reads the latest saved tokens. */}
+      {exportDeployOpen && (
+        <ExportDeployModal
+          isOpen
+          onClose={() => setExportDeployOpen(false)}
+          nodesByFile={nodesByFile}
+          onExported={(_, kind) => notify({
+            download: 'Project downloaded — see DEPLOY.md in the zip',
+            github: 'Pushed to GitHub',
+            vercel: 'Deployment started on Vercel',
+            both: 'Pushed to GitHub and deploying to Vercel'
+          }[kind] || 'Export complete')}
+        />
+      )}
       <MarketingKitModal
         isOpen={marketingKitOpen}
         onClose={() => { setMarketingKitOpen(false); setMarketingActiveFieldId(null); }}

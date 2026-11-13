@@ -25,6 +25,7 @@ export default function AIGeneratePanel({
   if (isOpen && (!syncedOpenType.open || syncedOpenType.type !== initialType)) {
     setSyncedOpenType({ open: true, type: initialType });
     setType(initialType);
+    setPreview(null); // a preview built for another type would apply against the wrong allow-list
   } else if (!isOpen && syncedOpenType.open) {
     setSyncedOpenType({ open: false, type: syncedOpenType.type });
   }
@@ -130,18 +131,18 @@ export default function AIGeneratePanel({
             <div className="ai-preview">
               <div className="ai-preview-header">
                 <span>{preview.source === 'openai' ? '✨ AI result' : 'Demo mode result'}</span>
-                <span className="ai-preview-count">{preview.updates.length} updates</span>
+                <span className="ai-preview-count">{preview.updates?.length ?? 0} updates</span>
               </div>
               <p className="ai-preview-message">{preview.message}</p>
               <ul className="ai-preview-list">
-                {preview.updates.slice(0, 8).map((u) => (
+                {(preview.updates || []).slice(0, 8).map((u) => (
                   <li key={`${u.fileId}-${u.nodeId}`}>
                     <code>{u.fileId}/{u.nodeId}</code>
                     <span>{u.text?.slice(0, 60)}{(u.text?.length || 0) > 60 ? '…' : ''}</span>
                   </li>
                 ))}
-                {preview.updates.length > 8 && (
-                  <li className="ai-preview-more">+{preview.updates.length - 8} more</li>
+                {(preview.updates?.length ?? 0) > 8 && (
+                  <li className="ai-preview-more">+{(preview.updates?.length ?? 0) - 8} more</li>
                 )}
               </ul>
               <button type="button" className="export-download-btn" onClick={handleApply}>

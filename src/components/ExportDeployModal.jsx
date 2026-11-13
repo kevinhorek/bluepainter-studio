@@ -24,7 +24,18 @@ function DeployResult({ result, onClose }) {
   return (
     <div className="export-modal-body">
       <div className="export-success-icon">✓</div>
-      <h3>Deployed successfully</h3>
+      <h3>
+        {result.vercelError
+          ? 'Pushed to GitHub — Vercel deploy failed'
+          : result.vercel
+            ? 'Deployed successfully'
+            : result.github
+              ? 'Pushed to GitHub'
+              : 'Project downloaded'}
+      </h3>
+      {result.vercelError && (
+        <p className="export-modal-lead" role="alert">Vercel: {result.vercelError}</p>
+      )}
       {result.github && (
         <p className="export-modal-lead">
           GitHub:{' '}
@@ -74,9 +85,11 @@ export default function ExportDeployModal({ isOpen, onClose, nodesByFile, onExpo
     onClose();
   };
 
+  // Save only tokens that are filled in: an empty field here must not wipe a
+  // token saved from the Marketing kit's deploy buttons (and vice versa).
   const persistTokens = () => {
-    saveGithubToken(githubToken.trim());
-    saveVercelToken(vercelToken.trim());
+    if (githubToken.trim()) saveGithubToken(githubToken.trim());
+    if (vercelToken.trim()) saveVercelToken(vercelToken.trim());
   };
 
   const handleDownload = async () => {
@@ -85,7 +98,7 @@ export default function ExportDeployModal({ isOpen, onClose, nodesByFile, onExpo
     try {
       const dl = await downloadProjectExport(nodesByFile, projectName);
       setResult({ download: dl });
-      onExported?.(dl);
+      onExported?.(dl, 'download');
     } catch (e) {
       setError(e.message);
     } finally {
@@ -110,7 +123,7 @@ export default function ExportDeployModal({ isOpen, onClose, nodesByFile, onExpo
         isPrivate
       });
       setResult({ github });
-      onExported?.(github);
+      onExported?.(github, 'github');
     } catch (e) {
       setError(e.message);
     } finally {
@@ -133,7 +146,7 @@ export default function ExportDeployModal({ isOpen, onClose, nodesByFile, onExpo
         vercelToken: vercelToken.trim()
       });
       setResult({ vercel });
-      onExported?.(vercel);
+      onExported?.(vercel, 'vercel');
     } catch (e) {
       setError(e.message);
     } finally {
@@ -159,7 +172,7 @@ export default function ExportDeployModal({ isOpen, onClose, nodesByFile, onExpo
         isPrivate
       });
       setResult(out);
-      onExported?.(out);
+      onExported?.(out, 'both');
     } catch (e) {
       setError(e.message);
     } finally {
@@ -255,7 +268,7 @@ export default function ExportDeployModal({ isOpen, onClose, nodesByFile, onExpo
                   <p className="export-modal-note">
                     Create a token at{' '}
                     <a href="https://github.com/settings/tokens" target="_blank" rel="noreferrer">github.com/settings/tokens</a>
-                    {' '}with <code>repo</code> scope. Stored in your browser only.
+                    {' '}with <code>repo</code> scope. Saved in this browser and sent through BluePainter's server only to call GitHub — never stored there.
                   </p>
                 </>
               )}

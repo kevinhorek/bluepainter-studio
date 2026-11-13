@@ -59,13 +59,17 @@ export async function pushAndDeploy({ nodesByFile, projectName, githubToken, ver
     isPrivate
   });
 
-  const vercel = await deployProjectToVercel({
-    nodesByFile,
-    projectName: repoName || projectName,
-    vercelToken
-  });
-
-  return { github, vercel };
+  try {
+    const vercel = await deployProjectToVercel({
+      nodesByFile,
+      projectName: repoName || projectName,
+      vercelToken
+    });
+    return { github, vercel };
+  } catch (err) {
+    // The push already happened — don't lose the repo link because the deploy failed.
+    return { github, vercel: null, vercelError: err.message || 'Vercel deploy failed' };
+  }
 }
 
 export async function pushMarketingToGithub({ nodesByFile, githubToken, repoName, toneId = 'default', isPrivate = true }) {

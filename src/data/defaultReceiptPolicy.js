@@ -18,5 +18,9 @@ export function loadReceiptPolicy() {
 }
 
 export function saveReceiptPolicy(policy) {
-  localStorage.setItem('bluepainter-receipt-policy', JSON.stringify(policy));
+  try {
+    localStorage.setItem('bluepainter-receipt-policy', JSON.stringify(policy));
+  } catch {
+    // storage blocked (private mode) — policy still applies for this session
+  }
 }

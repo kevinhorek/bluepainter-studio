@@ -37,7 +37,13 @@ export default function CanvasView({
 
   // Handle inline contentEditable changes
   const handleInlineTextBlur = (nodeId, event) => {
-    const textVal = event.target.innerText;
+    // The selection outline + name label live inside the editable element, so
+    // read the text from a copy with that chrome removed (otherwise the layer
+    // name gets appended to the text on every blur).
+    const clone = event.currentTarget.cloneNode(true);
+    clone.querySelectorAll('[data-canvas-chrome]').forEach((el) => el.remove());
+    const textVal = (clone.innerText ?? clone.textContent ?? '').replace(/\s+/g, ' ').trim();
+    if (textVal === (nodesMap[nodeId]?.text ?? '')) return;
     onUpdateNode(nodeId, { text: textVal });
   };
 
@@ -50,8 +56,9 @@ export default function CanvasView({
     if (!node) return;
 
     const el = document.getElementById(nodeId);
-    const currentWidth = typeof node.style.width === 'number' ? node.style.width : el.offsetWidth;
-    const currentHeight = typeof node.style.height === 'number' ? node.style.height : el.offsetHeight;
+    const style = node.style || {};
+    const currentWidth = typeof style.width === 'number' ? style.width : (el?.offsetWidth ?? 40);
+    const currentHeight = typeof style.height === 'number' ? style.height : (el?.offsetHeight ?? 20);
 
     setIsResizing(true);
     setResizeStart({
@@ -77,7 +84,7 @@ export default function CanvasView({
     if (!node) return;
 
     // Check if the node is absolutely positioned (top-level elements)
-    if (node.style.position === 'absolute') {
+    if (node.style?.position === 'absolute') {
       const currentLeft = typeof node.style.left === 'number' ? node.style.left : 0;
       const currentTop = typeof node.style.top === 'number' ? node.style.top : 0;
 
@@ -309,6 +316,7 @@ export default function CanvasView({
 
       const selectionBorderMarkup = isSelected && (
         <div
+          data-canvas-chrome=""
           style={{
             position: 'absolute',
             inset: -1.5,
@@ -413,8 +421,11 @@ export default function CanvasView({
 
     // Selection border markup
     const selectionBorderMarkup = isSelected && (
-      <div 
+      <span 
+        data-canvas-chrome=""
+        contentEditable={false}
         style={{
+          display: 'block',
           position: 'absolute',
           top: -1.5,
           left: -1.5,
@@ -427,8 +438,9 @@ export default function CanvasView({
         }}
       >
         {/* Corner resize handle square */}
-        <div 
+        <span 
           style={{
+            display: 'block',
             position: 'absolute',
             bottom: -4,
             right: -4,
@@ -460,7 +472,7 @@ export default function CanvasView({
         >
           {node.name}
         </span>
-      </div>
+      </span>
     );
 
     // Wrapper for image, line, shape, comment, vector
@@ -530,7 +542,9 @@ export default function CanvasView({
 
     return (
       <Tag
-        key={nodeId}
+        // Remount editable leaves when their text changes: the browser rewrites the
+        // DOM inside contentEditable, so React can't safely patch the old text node.
+        key={isEditable ? `${nodeId}:${node.text ?? ''}` : nodeId}
         id={nodeId}
         onClick={clickHandler}
         onDoubleClick={(e) => {
@@ -539,9 +553,17 @@ export default function CanvasView({
           }
         }}
         onMouseDown={(e) => handleDragMoveMouseDown(e, nodeId)}
-        contentEditable={isEditable}
+        contentEditable={isEditable && sourceMap === nodesMap}
         suppressContentEditableWarning={isEditable}
-        onBlur={(e) => isEditable && handleInlineTextBlur(nodeId, e)}
+        onBlur={(e) => isEditable && sourceMap === nodesMap && handleInlineTextBlur(nodeId, e)}
+        onKeyDown={(e) => {
+          if (!isEditable) return;
+          // Enter commits instead of inserting <div>/<br> into a single-line label.
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            e.currentTarget.blur();
+          }
+        }}
         style={baseStyle}
         className={node.className || ''}
         {...dragOverProps}
@@ -582,8 +604,10 @@ export default function CanvasView({
       onMouseDown={handlePanStart}
       style={{
         display: 'flex',
-        alignItems: isPageView ? 'flex-start' : 'center',
-        justifyContent: isPageView ? 'flex-start' : 'center',
+        // Start-aligned + auto margins on the board: centres when there's room, but
+        // never overflows off the top/left edge where it can't be scrolled to.
+        alignItems: 'flex-start',
+        justifyContent: 'flex-start',
         padding: isPageView ? 24 : 40,
         height: '100%',
         cursor: getCursorStyle()
@@ -599,6 +623,7 @@ export default function CanvasView({
         minWidth: isPageView ? pageViewport.width : 800,
         minHeight: isPageView ? pageViewport.height : 600,
         flexShrink: 0,
+        margin: isPageView ? 0 : 'auto',
         transform: `translate(${panOffset.x}px, ${panOffset.y}px)`
       }}>
         {renderASTNode(rootNodeId)}

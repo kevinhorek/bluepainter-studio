@@ -15,9 +15,10 @@ export default function MarketingDeployButtons({ nodesByFile, toneId, onNotify }
   const [busy, setBusy] = useState('');
   const [showTokens, setShowTokens] = useState(false);
 
+  // Only save filled-in tokens so an empty field can't wipe one saved elsewhere.
   const persist = () => {
-    saveGithubToken(githubToken.trim());
-    saveVercelToken(vercelToken.trim());
+    if (githubToken.trim()) saveGithubToken(githubToken.trim());
+    if (vercelToken.trim()) saveVercelToken(vercelToken.trim());
   };
 
   const handleGithub = async () => {

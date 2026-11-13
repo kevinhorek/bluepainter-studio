@@ -94,6 +94,21 @@
           "default": 5,
           "description": "Maximum feature list items before clutter receipt fires."
         },
+        "bluepainter.weakCtaWords": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "submit",
+            "click here",
+            "send",
+            "button",
+            "ok",
+            "enter"
+          ],
+          "description": "Lowercase CTA labels the copy receipt flags as weak."
+        },
         "bluepainter.suggestedCta": {
           "type": "string",
           "default": "Start free trial",
@@ -118,6 +133,7 @@
     "views": {
       "bluepainter": [
         {
+          "type": "webview",
           "id": "bluepainter.panel",
           "name": "BluePainter"
         }
@@ -125,8 +141,8 @@
     }
   },
   "scripts": {
-    "package": "vsce package --no-dependencies",
-    "publish:marketplace": "vsce publish --no-dependencies"
+    "package": "vsce package",
+    "publish:marketplace": "vsce publish"
   },
   "devDependencies": {
     "@vscode/vsce": "^3.9.2"

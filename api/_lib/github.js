@@ -7,11 +7,24 @@ export async function pushFilesToGithub(token, owner, repo, files, message = 'Up
     'Content-Type': 'application/json'
   };
 
+  // Use the repo's real default branch (existing repos may use master/trunk).
+  let branch = 'main';
+  const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers });
+  if (repoRes.ok) {
+    const repoData = await repoRes.json();
+    if (repoData.default_branch) branch = repoData.default_branch;
+  }
+
+  // A just-created repo's initial commit can take a moment to appear.
   let parentSha = null;
-  const refRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/ref/heads/main`, { headers });
-  if (refRes.ok) {
-    const refData = await refRes.json();
-    parentSha = refData.object.sha;
+  for (let attempt = 0; attempt < 4 && !parentSha; attempt += 1) {
+    const refRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/ref/heads/${branch}`, { headers });
+    if (refRes.ok) {
+      const refData = await refRes.json();
+      parentSha = refData.object.sha;
+    } else if (attempt < 3) {
+      await new Promise((resolve) => setTimeout(resolve, 600));
+    }
   }
 
   const treeItems = [];
@@ -58,28 +71,28 @@ export async function pushFilesToGithub(token, owner, repo, files, message = 'Up
   if (!commitRes.ok) throw new Error(commit.message || 'Failed to create commit');
 
   if (parentSha) {
-    const updateRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs/heads/main`, {
+    const updateRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${branch}`, {
       method: 'PATCH',
       headers,
       body: JSON.stringify({ sha: commit.sha, force: false })
     });
     if (!updateRes.ok) {
       const err = await updateRes.json();
-      throw new Error(err.message || 'Failed to update main branch');
+      throw new Error(err.message || `Failed to update ${branch} branch`);
     }
   } else {
     const createRefRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ ref: 'refs/heads/main', sha: commit.sha })
+      body: JSON.stringify({ ref: `refs/heads/${branch}`, sha: commit.sha })
     });
     if (!createRefRes.ok) {
       const err = await createRefRes.json();
-      throw new Error(err.message || 'Failed to create main branch');
+      throw new Error(err.message || `Failed to create ${branch} branch`);
     }
   }
 
-  return { commitSha: commit.sha, branch: 'main' };
+  return { commitSha: commit.sha, branch };
 }
 
 export async function ensureGithubRepo(token, name, { private: isPrivate = true, owner } = {}) {
@@ -102,12 +115,20 @@ export async function ensureGithubRepo(token, name, { private: isPrivate = true,
     {
       method: 'POST',
       headers,
-      body: JSON.stringify({ name, private: isPrivate, auto_init: false })
+      // auto_init: GitHub's Git Data API (blobs/trees) rejects completely empty repos.
+      body: JSON.stringify({ name, private: isPrivate, auto_init: true })
     }
   );
 
-  if (createRes.status !== 422 && !createRes.ok) {
-    const err = await createRes.json();
+  if (createRes.status === 422) {
+    // 422 means "name already exists" OR "invalid name" — only continue if the repo is really there.
+    const existingRes = await fetch(`https://api.github.com/repos/${repoOwner}/${name}`, { headers });
+    if (!existingRes.ok) {
+      const err = await createRes.json().catch(() => ({}));
+      throw new Error(err.errors?.[0]?.message || err.message || `Could not create repository "${name}"`);
+    }
+  } else if (!createRes.ok) {
+    const err = await createRes.json().catch(() => ({}));
     throw new Error(err.message || 'Failed to create repository');
   }
 

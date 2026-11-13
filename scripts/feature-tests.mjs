@@ -208,6 +208,131 @@ test('figmaFileToNodes', () => {
   assert.ok(Object.keys(result.nodes || result).length > 0);
 });
 
+test('file switch: code from another file is never reused', () => {
+  const dash = getFreshDashboardNodes();
+  const pricing = getFreshPricingNodes();
+  const dashCode = generateTSX('dashboard-page', dash);
+  const out = generateTSX('pricing-card-frame', pricing, dashCode);
+  assert.ok(out.includes('export function PricingCard'), 'should regenerate for the new file');
+  assert.ok(!out.includes('dashboard-page'));
+});
+
+test('structural canvas edits reach the code (add + delete)', () => {
+  const nodes = getFreshPricingNodes();
+  const code = generateTSX('pricing-card-frame', nodes);
+  const added = {
+    ...nodes,
+    'pricing-card-frame': {
+      ...nodes['pricing-card-frame'],
+      children: [...nodes['pricing-card-frame'].children, 'text-new']
+    },
+    'text-new': createNodeFromTool('text', 'text-new', 10, 10)
+  };
+  const withAdded = generateTSX('pricing-card-frame', added, code);
+  assert.ok(withAdded.includes('id="text-new"'), 'added node missing from code');
+
+  const removed = { ...nodes };
+  removed['features-list'] = { ...nodes['features-list'], children: nodes['features-list'].children.slice(1) };
+  const withRemoved = generateTSX('pricing-card-frame', removed, code);
+  assert.ok(!withRemoved.includes(`id="${nodes['features-list'].children[0]}"`), 'deleted node still in code');
+});
+
+test('patch preserves author formatting, comments and dynamic style props', () => {
+  const nodes = {
+    root: { id: 'root', type: 'frame', tag: 'div', style: { padding: 12 }, children: ['title'] },
+    title: { id: 'title', type: 'text', tag: 'h2', style: { fontSize: 20 }, text: 'Hello' }
+  };
+  const code = [
+    'export function Card({ theme, ...rest }) {',
+    '  // keep me',
+    '  return (',
+    "    <div id='root' style={{ padding: 12, color: theme.primary, ...rest }}>",
+    "      <h2 id='title' style={{ fontSize: 20 }}>Hello</h2>",
+    '    </div>',
+    '  );',
+    '}'
+  ].join('\n');
+  assert.strictEqual(generateTSX('root', nodes, code), code, 'no-op patch must not change the file');
+
+  const edited = { ...nodes, root: { ...nodes.root, style: { padding: 16 } } };
+  const out = generateTSX('root', edited, code);
+  assert.ok(out.includes('padding: 16'));
+  assert.ok(out.includes('color: theme.primary'), 'dynamic prop dropped');
+  assert.ok(out.includes('...rest'), 'spread dropped');
+  assert.ok(out.includes('// keep me'));
+  assert.ok(out.includes("<h2 id='title' style={{ fontSize: 20 }}>Hello</h2>"), 'untouched element reformatted');
+});
+
+test('dynamic / nested text is not wiped by a patch', () => {
+  const nodes = {
+    root: { id: 'root', type: 'frame', tag: 'div', style: {}, children: ['btn', 'h'] },
+    btn: { id: 'btn', type: 'button', tag: 'button', style: {}, text: '' },
+    h: { id: 'h', type: 'text', tag: 'h2', style: {}, text: '' }
+  };
+  const code = 'export function A({ label }) {\n  return (\n    <div id="root">\n      <button id="btn">{label}</button>\n      <h2 id="h">Hi <b>there</b></h2>\n    </div>\n  );\n}';
+  const out = generateTSX('root', nodes, code);
+  assert.ok(out.includes('{label}'));
+  assert.ok(out.includes('<b>there</b>'));
+});
+
+test('text with JSX-special characters round-trips', () => {
+  const nodes = getFreshPricingNodes();
+  const text = 'Save {50%} if a < b & c > d';
+  nodes['cta-button'] = { ...nodes['cta-button'], text };
+  const fresh = generateTSX('pricing-card-frame', nodes);
+  assert.strictEqual(parseTSX(fresh, getFreshPricingNodes())['cta-button'].text, text);
+  const base = generateTSX('pricing-card-frame', getFreshPricingNodes());
+  const patched = generateTSX('pricing-card-frame', nodes, base);
+  assert.strictEqual(parseTSX(patched, getFreshPricingNodes())['cta-button'].text, text);
+});
+
+test('code edits: image src, negative offsets, removed style keys', () => {
+  const nodes = {
+    root: { id: 'root', type: 'frame', tag: 'div', style: { padding: 8, background: '#fff' }, children: ['pic'] },
+    pic: { id: 'pic', type: 'image', tag: 'img', style: { left: 4 }, src: 'a.png' }
+  };
+  const code = 'export function A() {\n  return (\n    <div id="root" style={{ padding: 8 }}>\n      <img id="pic" src="b.png" style={{ left: -12 }} />\n    </div>\n  );\n}';
+  const parsed = parseTSX(code, nodes);
+  assert.strictEqual(parsed.pic.src, 'b.png');
+  assert.strictEqual(parsed.pic.style.left, -12);
+  assert.strictEqual(parsed.root.style.background, undefined, 'style key deleted in code should clear');
+  const moved = { ...parsed, pic: { ...parsed.pic, style: { left: -30 } } };
+  assert.ok(generateTSX('root', moved, code).includes('left: -30'));
+});
+
+test('export: component roots are in-flow, Figma page included once imported', () => {
+  const nodesByFile = {
+    pricing: getFreshPricingNodes(),
+    hero: getFreshHeroNodes(),
+    dashboard: getFreshDashboardNodes(),
+    marketing: getFreshMarketingNodes(),
+    figma: getEmptyFigmaImportNodes()
+  };
+  const { files } = buildProjectFileMap(nodesByFile, 'demo');
+  const pricingRoot = files['src/PricingCard.jsx'].split('\n').find((l) => l.includes('id="pricing-card-frame"'));
+  assert.ok(pricingRoot.includes("position: 'relative'") && !pricingRoot.includes('left:'), pricingRoot);
+  assert.ok(!files['src/FigmaImport.jsx'], 'placeholder Figma page should not be exported');
+
+  const imported = figmaFileToNodes({ document: { children: [{ type: 'CANVAS', children: [{ type: 'FRAME', name: 'F', absoluteBoundingBox: { x: 0, y: 0, width: 100, height: 100 }, children: [{ type: 'FRAME', children: [{ type: 'TEXT', characters: 'hi' }, { type: 'TEXT', characters: 'gone', visible: false }] }] }] }] } });
+  assert.ok(Object.values(imported.nodes).every(Boolean), 'id-less Figma nodes must not collide');
+  assert.ok(!JSON.stringify(imported.nodes).includes('gone'), 'hidden layer imported');
+  const withFigma = buildProjectFileMap({ ...nodesByFile, figma: imported.nodes }, 'demo');
+  assert.ok(withFigma.files['src/FigmaImport.jsx']);
+});
+
+test('text edit keeps multi-line formatting', () => {
+  const nodes = {
+    root: { id: 'root', type: 'frame', tag: 'div', style: {}, children: ['btn'] },
+    btn: { id: 'btn', type: 'button', tag: 'button', style: {}, text: 'Go now' }
+  };
+  const code = 'export function A() {\n  return (\n    <div id="root">\n      <button id="btn">\n        Submit\n      </button>\n    </div>\n  );\n}';
+  const out = generateTSX('root', nodes, code);
+  // recast may re-indent the changed text, but it must stay on its own line
+  assert.ok(/<button id="btn">\n\s+Go now\n\s+<\/button>/.test(out), out);
+  assert.ok(out.includes('<div id="root">\n      <button id="btn">'), 'untouched lines reformatted');
+  assert.strictEqual(parseTSX(out, nodes).btn.text, 'Go now');
+});
+
 const failed = results.filter((r) => !r.ok);
 console.log('\n=== SUMMARY ===');
 console.log(`${results.length - failed.length}/${results.length} passed`);

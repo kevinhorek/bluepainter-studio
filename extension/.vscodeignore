@@ -1,4 +1,7 @@
 .vscode/**
-node_modules/**
 **/*.map
 .gitignore
+test-fixtures/**
+MARKETPLACE.md
+package-lock.json
+*.vsix

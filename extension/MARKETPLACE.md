@@ -15,7 +15,7 @@
 
 ```bash
 npx vsce login bluepainter
-npx vsce publish --no-dependencies
+npx vsce publish
 ```
 
 Or upload `bluepainter-0.2.0.vsix` in the publisher portal.

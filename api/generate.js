@@ -53,12 +53,20 @@ export default async function handler(req, res) {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     const { type = 'custom', prompt = '', context = {} } = body || {};
 
-    if (!prompt.trim()) {
+    if (typeof prompt !== 'string' || !prompt.trim()) {
       return res.status(400).json({ error: 'Prompt is required' });
     }
+    // Bound what a single request can cost — this endpoint may run on the server's key.
+    if (prompt.length > 4000) {
+      return res.status(400).json({ error: 'Prompt is too long (max 4000 characters)' });
+    }
+    if (!context || typeof context !== 'object' || JSON.stringify(context).length > 20000) {
+      return res.status(413).json({ error: 'Context is too large' });
+    }
 
-    const userKey = req.headers['x-openai-key'];
-    const apiKey = process.env.OPENAI_API_KEY || userKey;
+    // Prefer the caller's own key so "bring your own key" never bills the server key.
+    const userKey = typeof req.headers['x-openai-key'] === 'string' ? req.headers['x-openai-key'].trim() : '';
+    const apiKey = userKey || process.env.OPENAI_API_KEY;
 
     if (!apiKey) {
       return res.status(503).json({ error: 'AI not configured', code: 'NO_KEY' });
@@ -77,19 +85,31 @@ export default async function handler(req, res) {
           { role: 'system', content: buildSystemPrompt(type) },
           { role: 'user', content: buildUserPrompt(type, prompt, context) }
         ],
-        temperature: 0.75
+        temperature: 0.75,
+        max_tokens: 1500
       })
     });
 
     if (!openaiRes.ok) {
       const details = await openaiRes.text();
-      return res.status(502).json({ error: 'OpenAI request failed', details });
+      console.error('[generate] OpenAI error', openaiRes.status, details.slice(0, 500));
+      const error = openaiRes.status === 401
+        ? 'OpenAI rejected the API key'
+        : openaiRes.status === 429
+          ? 'OpenAI rate limit or quota reached — try again shortly'
+          : 'OpenAI request failed';
+      return res.status(502).json({ error });
     }
 
     const data = await openaiRes.json();
-    const content = JSON.parse(data.choices[0].message.content);
+    let content;
+    try {
+      content = JSON.parse(data?.choices?.[0]?.message?.content ?? '');
+    } catch {
+      return res.status(502).json({ error: 'AI returned an unreadable response — try again' });
+    }
 
-    if (!Array.isArray(content.updates)) {
+    if (!Array.isArray(content?.updates)) {
       return res.status(502).json({ error: 'Invalid AI response shape' });
     }
 

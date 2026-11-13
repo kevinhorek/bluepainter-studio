@@ -40,6 +40,14 @@ const year = new Date().getFullYear();
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImage} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#060913" />
+    <script is:inline>document.documentElement.classList.add('js');</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Geist:wght@400..700&family=Geist+Mono:wght@400..600&display=swap"
+    />
     <link rel="stylesheet" href="/styles/global.css" />
     {jsonLd && (
       <script type="application/ld+json" set:html={JSON.stringify(Array.isArray(jsonLd) ? jsonLd : jsonLd)} />
@@ -48,8 +56,8 @@ const year = new Date().getFullYear();
   <body>
     <header class="site-header">
       <div class="site-header-inner">
-        <a class="logo" href="/">{BRAND.name}</a>
-        <nav class="nav">
+        <a class="logo" href="/"><span class="logo-mark" aria-hidden="true"></span>{BRAND.name}</a>
+        <nav class="nav" id="site-nav" aria-label="Primary">
           <a href="/pricing">Pricing</a>
           <a href="/tools">Tools</a>
           <a href="/guides">Guides</a>
@@ -59,6 +67,7 @@ const year = new Date().getFullYear();
         <div class="header-actions">
           <a class="btn btn-ghost" href="/pilot">Request pilot</a>
           <a class="btn btn-primary" href={DEMO_APP}>Open demo</a>
+          <button class="nav-toggle" type="button" aria-label="Menu" aria-controls="site-nav" aria-expanded="false">☰</button>
         </div>
       </div>
     </header>
@@ -69,7 +78,7 @@ const year = new Date().getFullYear();
       <div class="site-footer-inner">
         <div>
           <strong>{BRAND.name}</strong>
-          <p class="muted">Validation prototype · Free demo · Request a pilot</p>
+          <p class="muted">Design, code, ship — one surface.<br />Free live demo · Pilots open for design–dev pairs.</p>
         </div>
         <form class="newsletter-form" action={WAITLIST_URL} method="POST" data-newsletter data-waitlist-url={WAITLIST_URL}>
           <label for="nl-email">Newsletter</label>
@@ -91,11 +100,41 @@ const year = new Date().getFullYear();
       <p class="copyright">© {year} {BRAND.name}</p>
     </footer>
     <script>
+      // Mobile nav
+      const navToggle = document.querySelector('.nav-toggle');
+      const siteNav = document.getElementById('site-nav');
+      navToggle?.addEventListener('click', () => {
+        const open = siteNav.classList.toggle('is-open');
+        navToggle.setAttribute('aria-expanded', String(open));
+      });
+      const here = location.pathname.replace(/\/$/, '') || '/';
+      siteNav?.querySelectorAll('a').forEach((a) => {
+        if (here === a.getAttribute('href') || here.startsWith(a.getAttribute('href') + '/')) a.setAttribute('aria-current', 'page');
+      });
+
+      // Scroll reveal
+      const revealEls = document.querySelectorAll('[data-reveal]');
+      if ('IntersectionObserver' in window) {
+        const io = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            const delay = Number(entry.target.getAttribute('data-reveal')) || 0;
+            setTimeout(() => entry.target.classList.add('is-in'), delay);
+            io.unobserve(entry.target);
+          });
+        }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+        revealEls.forEach((el) => io.observe(el));
+      } else {
+        revealEls.forEach((el) => el.classList.add('is-in'));
+      }
+
       document.querySelectorAll('[data-newsletter]').forEach((form) => {
         form.addEventListener('submit', async (e) => {
           e.preventDefault();
           const status = form.querySelector('.form-status');
           const fd = new FormData(form);
+          const submitBtn = form.querySelector('button[type="submit"]');
+          if (submitBtn) submitBtn.disabled = true;
           try {
             const endpoint = form.getAttribute('data-waitlist-url') || '/api/waitlist';
             const res = await fetch(endpoint, {
@@ -110,6 +149,8 @@ const year = new Date().getFullYear();
           } catch {
             status.hidden = false;
             status.textContent = 'Network error — try again.';
+          } finally {
+            if (submitBtn) submitBtn.disabled = false;
           }
         });
       });

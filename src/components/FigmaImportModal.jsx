@@ -117,7 +117,7 @@ export default function FigmaImportModal({ isOpen, onClose, onImported, onNotify
               <p className="export-modal-note">
                 Create a token at{' '}
                 <a href="https://www.figma.com/developers/api#access-tokens" target="_blank" rel="noreferrer">figma.com/developers</a>
-                {' '}with <code>file_content:read</code>. Token stays in your browser.
+                {' '}with <code>file_content:read</code>. Saved in this browser and sent through BluePainter's server only to call Figma — never stored there.
               </p>
             </>
           )}

@@ -109,10 +109,51 @@ npm run dev
 Open http://localhost:5173
 `;
 
+/**
+ * The canvas shows a component's root at a free position on its artboard
+ * (position:absolute; left/top). When the component is *used* — on a page or in
+ * an exported app — the canvas renders it in flow, so the export must too,
+ * otherwise every instance pins itself to the page corner and overlaps.
+ */
+export function normalizeComponentRoot(rootId, nodes) {
+  const root = nodes?.[rootId];
+  if (!root) return nodes;
+  const style = { ...(root.style || {}) };
+  delete style.left;
+  delete style.top;
+  style.position = 'relative';
+  return { ...nodes, [rootId]: { ...root, style } };
+}
+
+function exportNodesFor(fileId, nodesByFile) {
+  const file = WORKSPACE_FILES[fileId];
+  return file.isPage ? nodesByFile[fileId] : normalizeComponentRoot(file.rootId, nodesByFile[fileId]);
+}
+
+/** Files that go into the export: the app files, plus the Figma import once it has content. */
+export function getExportFileIds(nodesByFile) {
+  const ids = [...APP_EXPORT_FILE_IDS];
+  const figma = nodesByFile?.figma;
+  const figmaRoot = figma?.[WORKSPACE_FILES.figma.rootId];
+  const isPlaceholder = !figmaRoot || figma['figma-placeholder-title'] || !(figmaRoot.children || []).length;
+  if (!isPlaceholder) ids.push('figma');
+  return ids;
+}
+
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  // Revoking synchronously can cancel the download in Safari.
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
 export function getExportPreview(nodesByFile) {
-  return APP_EXPORT_FILE_IDS.map((fileId) => {
+  return getExportFileIds(nodesByFile).map((fileId) => {
     const file = WORKSPACE_FILES[fileId];
-    const code = fixImportPaths(generateTSX(file.rootId, nodesByFile[fileId]));
+    const code = fixImportPaths(generateTSX(file.rootId, exportNodesFor(fileId, nodesByFile)));
     return { path: `src/${exportFilename(file.label)}`, lines: code.split('\n').length };
   });
 }
@@ -121,9 +162,9 @@ export function buildProjectFileMap(nodesByFile, projectName = 'my-bluepainter-a
   const safeName = projectName.trim().replace(/[^a-z0-9-]/gi, '-').toLowerCase() || 'my-bluepainter-app';
   const files = {};
 
-  APP_EXPORT_FILE_IDS.forEach((fileId) => {
+  getExportFileIds(nodesByFile).forEach((fileId) => {
     const file = WORKSPACE_FILES[fileId];
-    const code = fixImportPaths(generateTSX(file.rootId, nodesByFile[fileId]));
+    const code = fixImportPaths(generateTSX(file.rootId, exportNodesFor(fileId, nodesByFile)));
     files[`src/${exportFilename(file.label)}`] = code;
   });
 
@@ -161,12 +202,7 @@ export async function downloadProjectExport(nodesByFile, projectName = 'my-bluep
   });
 
   const blob = await zip.generateAsync({ type: 'blob' });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = `${safeName}.zip`;
-  anchor.click();
-  URL.revokeObjectURL(url);
+  triggerDownload(blob, `${safeName}.zip`);
 
   return { projectName: safeName, fileCount: Object.keys(files).length };
 }

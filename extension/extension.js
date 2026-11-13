@@ -3,7 +3,8 @@ const path = require('path');
 const { parse } = require('@babel/parser');
 const traverseModule = require('@babel/traverse');
 const { bootstrapFromFile, mergeNodeUpdate } = require('./lib/bootstrap');
-const { parseTSX, generateTSX } = require('./lib/syncEngine');
+const { generateTSX } = require('./lib/syncEngine');
+const { getJsxId } = require('./lib/astSyncEngine');
 const { evaluateReceipts, applyReceiptFix } = require('./lib/receiptPolicy');
 const { loadReceiptPolicyFromConfig } = require('./lib/defaultReceiptPolicy');
 const { SessionStore } = require('./lib/sessionStore');
@@ -17,10 +18,8 @@ function countSyncableIds(source) {
     const ast = parse(source, { sourceType: 'module', plugins: ['jsx', 'typescript'] });
     traverse(ast, {
       JSXOpeningElement(path) {
-        const idAttr = path.node.attributes.find(
-          (a) => a.name?.name === 'id' && a.value?.type === 'StringLiteral'
-        );
-        if (idAttr) ids.push(idAttr.value.value);
+        const id = getJsxId(path.node);
+        if (id) ids.push(id);
       }
     });
   } catch {
@@ -35,6 +34,7 @@ function getWebviewHtml(webview, extensionUri, mode = 'sidebar') {
   const csp = [
     "default-src 'none'",
     `style-src ${webview.cspSource} 'unsafe-inline'`,
+    `img-src ${webview.cspSource} https: data:`,
     `script-src ${webview.cspSource}`
   ].join('; ');
 
@@ -100,6 +100,25 @@ class BluePainterController {
     this.sidebarView = null;
     this.editorPanel = null;
     this.syncTimer = null;
+    // Last supported text editor. Focusing a webview makes activeTextEditor
+    // undefined, so the canvas keeps working against this one.
+    this.lastEditor = null;
+  }
+
+  rememberEditor(editor) {
+    if (editor && this.isSupportedDocument(editor.document)) this.lastEditor = editor;
+  }
+
+  /** The active text editor, or the last supported one while a webview has focus. */
+  currentEditor() {
+    const active = vscode.window.activeTextEditor;
+    if (active) {
+      this.rememberEditor(active);
+      return active;
+    }
+    const last = this.lastEditor;
+    if (last && !last.document.isClosed && this.isSupportedDocument(last.document)) return last;
+    return undefined;
   }
 
   getConfig() {
@@ -134,14 +153,22 @@ class BluePainterController {
 
     const code = editor.document.getText();
     const fileName = editor.document.fileName;
-    const saved = this.sessionStore.get(ctx.uri);
+    const hasState = Object.keys(ctx.state.nodesMap || {}).length > 0;
+    // options.fresh: ignore saved state and rebuild from the code.
+    const saved = options.fresh ? null : (hasState ? ctx.state : this.sessionStore.get(ctx.uri));
     const boot = bootstrapFromFile(code, fileName, saved);
+
+    ctx.parseError = Boolean(boot.parseError);
+    if (boot.parseError && hasState) {
+      // The file doesn't parse right now; keep the current canvas state.
+      return ctx;
+    }
 
     ctx.state.rootNodeId = boot.rootNodeId;
     ctx.state.nodesMap = boot.nodesMap;
     ctx.state.source = boot.source;
 
-    if (!ctx.state.selectedNodeId && boot.rootNodeId) {
+    if (!ctx.state.selectedNodeId || !boot.nodesMap[ctx.state.selectedNodeId]) {
       ctx.state.selectedNodeId = boot.rootNodeId;
     }
 
@@ -186,7 +213,7 @@ class BluePainterController {
     this.editorPanel?.webview.postMessage(msg);
   }
 
-  refreshViews(editor = vscode.window.activeTextEditor) {
+  refreshViews(editor = this.currentEditor()) {
     const ctx = this.getEditorState(editor);
     if (!ctx) {
       this.postToWebviews({
@@ -211,7 +238,7 @@ class BluePainterController {
     this.postToWebviews(this.buildPayload(ctx));
   }
 
-  async writeBack(editor = vscode.window.activeTextEditor, options = {}) {
+  async writeBack(editor = this.currentEditor(), options = {}) {
     const ctx = this.getEditorState(editor);
     if (!ctx || !Object.keys(ctx.state.nodesMap || {}).length) {
       vscode.window.showWarningMessage('BluePainter: nothing to write — open a syncable TSX file first.');
@@ -230,15 +257,20 @@ class BluePainterController {
       return true;
     }
 
-    this.skipParse = true;
-    const fullRange = new vscode.Range(
-      ctx.editor.document.positionAt(0),
-      ctx.editor.document.positionAt(existing.length)
-    );
+    // WorkspaceEdit (not TextEditor.edit) so this works while the canvas
+    // webview has focus and the text editor is not the active one.
+    const document = ctx.editor.document;
+    const fullRange = new vscode.Range(document.positionAt(0), document.positionAt(existing.length));
+    const edit = new vscode.WorkspaceEdit();
+    edit.replace(document.uri, fullRange, nextCode);
 
-    const ok = await ctx.editor.edit((editBuilder) => {
-      editBuilder.replace(fullRange, nextCode);
-    });
+    this.skipParse = true;
+    let ok;
+    try {
+      ok = await vscode.workspace.applyEdit(edit);
+    } catch {
+      ok = false;
+    }
 
     if (!ok) {
       this.skipParse = false;
@@ -279,37 +311,41 @@ class BluePainterController {
     this.writeBack(editor, { quiet: true });
   }
 
-  syncFromFile(editor = vscode.window.activeTextEditor) {
-    const ctx = this.loadDocument(editor, { persist: true });
+  syncFromFile(editor = this.currentEditor(), options = {}) {
+    // Rebuild from the code so ids added/removed in the file are picked up.
+    const ctx = this.loadDocument(editor, { persist: true, fresh: true });
     if (!ctx) {
-      vscode.window.showWarningMessage('BluePainter: open a TSX/JSX file first.');
+      if (!options.quiet) vscode.window.showWarningMessage('BluePainter: open a TSX/JSX file first.');
       return;
     }
-    vscode.window.showInformationMessage(
-      `BluePainter: synced ${Object.keys(ctx.state.nodesMap).length} node(s) from file.`
-    );
+    if (!options.quiet) {
+      if (ctx.parseError) {
+        vscode.window.showWarningMessage('BluePainter: could not parse this file — fix the syntax error and sync again.');
+      } else {
+        vscode.window.showInformationMessage(
+          `BluePainter: synced ${Object.keys(ctx.state.nodesMap).length} node(s) from file.`
+        );
+      }
+    }
     this.refreshViews(editor);
   }
 
   handleDocumentChange(document) {
     if (this.skipParse) return;
-    const editor = vscode.window.activeTextEditor;
+    const editor = this.currentEditor();
     if (!editor || editor.document.uri.toString() !== document.uri.toString()) return;
     if (!this.isSupportedDocument(document)) return;
 
     clearTimeout(this.syncTimer);
     this.syncTimer = setTimeout(() => {
-      const ctx = this.getEditorState(editor);
-      if (!ctx) return;
-      const parsed = parseTSX(document.getText(), ctx.state.nodesMap);
-      ctx.state.nodesMap = parsed;
-      this.persist(ctx.uri, ctx.state);
+      // Re-reads values from the code; rebuilds the node tree if ids were added/removed.
+      if (!this.loadDocument(editor)) return;
       this.refreshViews(editor);
     }, 350);
   }
 
   async openEditorPanel() {
-    const editor = vscode.window.activeTextEditor;
+    const editor = this.currentEditor();
     if (!editor || !this.isSupportedDocument(editor.document)) {
       vscode.window.showWarningMessage('BluePainter: open a TSX/JSX file first.');
       return;
@@ -326,7 +362,7 @@ class BluePainterController {
     this.editorPanel = vscode.window.createWebviewPanel(
       'bluepainterCanvas',
       'BluePainter Canvas',
-      vscode.ViewColumn.Beside,
+      { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
       { enableScripts: true, retainContextWhenHidden: true }
     );
 
@@ -345,7 +381,12 @@ class BluePainterController {
   }
 
   handleWebviewMessage(msg) {
-    const editor = vscode.window.activeTextEditor;
+    // A focused webview means there is no activeTextEditor; fall back to the last one.
+    const candidate = vscode.window.activeTextEditor ?? this.lastEditor;
+    const editor =
+      candidate && !candidate.document.isClosed && this.isSupportedDocument(candidate.document)
+        ? candidate
+        : undefined;
 
     switch (msg.type) {
       case 'ready':
@@ -394,7 +435,7 @@ class BluePainterController {
         webviewView.onDidDispose(() => {
           this.sidebarView = null;
         });
-        this.refreshViews(vscode.window.activeTextEditor);
+        this.refreshViews();
       }
     };
 
@@ -430,7 +471,10 @@ function activate(context) {
 
   context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor((editor) => {
-      if (editor && controller.isSupportedDocument(editor.document)) {
+      // undefined just means focus moved to a webview/panel — keep showing the last file.
+      if (!editor) return;
+      controller.rememberEditor(editor);
+      if (controller.isSupportedDocument(editor.document)) {
         controller.loadDocument(editor);
       }
       controller.refreshViews(editor);
@@ -446,14 +490,16 @@ function activate(context) {
   context.subscriptions.push(
     vscode.workspace.onDidSaveTextDocument((doc) => {
       if (!controller.isSupportedDocument(doc)) return;
-      const editor = vscode.window.activeTextEditor;
+      const editor = controller.currentEditor();
       if (editor?.document.uri.toString() === doc.uri.toString()) {
-        controller.syncFromFile(editor);
+        // Runs on every save: no toast.
+        controller.syncFromFile(editor, { quiet: true });
       }
     })
   );
 
   if (vscode.window.activeTextEditor) {
+    controller.rememberEditor(vscode.window.activeTextEditor);
     controller.loadDocument(vscode.window.activeTextEditor);
     controller.refreshViews(vscode.window.activeTextEditor);
   }

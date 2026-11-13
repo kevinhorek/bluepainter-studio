@@ -44,7 +44,7 @@ export function downloadValidationExport() {
   anchor.href = url;
   anchor.download = `bluepainter-validation-${new Date().toISOString().slice(0, 10)}.json`;
   anchor.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 2000); // sync revoke can cancel the download in Safari
 }
 
 export { downloadValidationExport as downloadFeedbackJSON };
