@@ -34,28 +34,24 @@ function escapeAttr(value) {
 
 /**
  * The element ids the node tree renders, in document order.
- * Returns null when the tree contains nodes the AST patcher can't keep in sync
- * (comment pins render as id-less JSX comments), forcing a full regenerate.
+ * Comment pins have no element in the code, so they are left out — they must
+ * never force the author's file to be regenerated.
  */
 function expectedIdOrder(rootNodeId, nodesMap) {
   const ids = [];
   const seen = new Set();
-  let patchable = true;
   function walk(nodeId) {
     const node = nodesMap[nodeId];
     if (!node || seen.has(nodeId)) return;
     seen.add(nodeId);
-    if (node.type === 'comment') {
-      patchable = false;
-      return;
-    }
+    if (node.type === 'comment') return;
     ids.push(node.id);
     if (node.type === 'component-instance') return;
     const leaf = ['text', 'button', 'list-item', 'link', 'input', 'textarea', 'image', 'line', 'shape', 'vector'].includes(node.type);
     if (!leaf) (node.children || []).forEach(walk);
   }
   walk(rootNodeId);
-  return patchable ? ids : null;
+  return ids;
 }
 
 // 1. GENERATE TSX CODE FROM NODE TREE STATE

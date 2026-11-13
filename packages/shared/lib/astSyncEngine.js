@@ -383,6 +383,7 @@ export function parseTSXWithAST(code, nodesMap, options = {}) {
 
   try {
     const ast = recast.parse(code, { parser: babelParser });
+    const rootScoped = structural && Boolean(rootId) && hasJsxId(ast, rootId);
     const seen = new Set();
     const childrenOf = new Map(); // parent id → ordered child ids as written in code
 
@@ -390,6 +391,7 @@ export function parseTSXWithAST(code, nodesMap, options = {}) {
       JSXElement(path) {
         const opening = path.node.openingElement;
         const id = getJsxId(opening);
+        if (rootScoped && !isWithinRoot(path, rootId)) return; // another component in the same file
         noteIssues(opening, id, issues);
         if (!id || seen.has(id)) return;
 
@@ -406,7 +408,7 @@ export function parseTSXWithAST(code, nodesMap, options = {}) {
         const tag = jsxTagName(opening);
 
         // nearest ancestor element that carries an id
-        const parentPath = path.findParent((p) => p.isJSXElement() && getJsxId(p.node.openingElement));
+        const parentPath = id === rootId ? null : path.findParent((p) => p.isJSXElement() && getJsxId(p.node.openingElement));
         const parentId = parentPath ? getJsxId(parentPath.node.openingElement) : null;
         if (parentId) {
           if (!childrenOf.has(parentId)) childrenOf.set(parentId, []);
@@ -494,18 +496,66 @@ export function parseTSXWithAST(code, nodesMap, options = {}) {
   }
 }
 
-function collectJsxIds(ast) {
+/** Is this element the layer `rootId`, or inside it? */
+function isWithinRoot(path, rootId) {
+  if (getJsxId(path.node.openingElement) === rootId) return true;
+  return Boolean(path.findParent((p) => p.isJSXElement() && getJsxId(p.node.openingElement) === rootId));
+}
+
+function hasJsxId(ast, wantedId) {
+  let found = false;
+  traverse(ast, {
+    JSXElement(path) {
+      if (getJsxId(path.node.openingElement) !== wantedId) return;
+      found = true;
+      path.stop();
+    }
+  });
+  return found;
+}
+
+/**
+ * Layer ids in document order, their paths, and each one's nearest layer ancestor.
+ * With `rootId` (when that element exists) only its subtree counts, so helper
+ * components elsewhere in the file are never treated as part of this one.
+ */
+function collectJsxIds(ast, rootId = null) {
   const ids = [];
   const paths = new Map();
+  const parents = new Map();
+  const scoped = Boolean(rootId) && hasJsxId(ast, rootId);
   traverse(ast, {
     JSXElement(path) {
       const id = getJsxId(path.node.openingElement);
       if (!id) return;
+      if (scoped && !isWithinRoot(path, rootId)) return;
       ids.push(id);
-      if (!paths.has(id)) paths.set(id, path);
+      if (paths.has(id)) return;
+      paths.set(id, path);
+      if (scoped && id === rootId) return;
+      const parentPath = path.findParent((p) => p.isJSXElement() && getJsxId(p.node.openingElement));
+      if (parentPath) parents.set(id, getJsxId(parentPath.node.openingElement));
     }
   });
-  return { ids, paths };
+  return { ids, paths, parents };
+}
+
+/** Which layer each layer sits in, according to the canvas tree. */
+function expectedParents(nodesMap, expectedIds) {
+  const expected = new Set(expectedIds);
+  const parentOf = new Map();
+  expectedIds.forEach((id) => {
+    const node = nodesMap[id];
+    if (!node || NON_CONTAINER_TYPES.has(node.type)) return;
+    (node.children || []).forEach((cid) => {
+      if (expected.has(cid) && !parentOf.has(cid)) parentOf.set(cid, id);
+    });
+  });
+  return parentOf;
+}
+
+function sameParents(codeParents, wantedParents, ids) {
+  return ids.every((id) => (codeParents.get(id) || null) === (wantedParents.get(id) || null));
 }
 
 function sameOrder(a, b) {
@@ -550,31 +600,39 @@ function removeJsxChild(path) {
  */
 function applyStructure(ast, nodesMap, expectedIds, renderNode) {
   const expected = new Set(expectedIds);
-  const parentOf = new Map();
-  Object.values(nodesMap).forEach((node) => {
-    if (!node || NON_CONTAINER_TYPES.has(node.type)) return;
-    (node.children || []).forEach((cid) => { if (!parentOf.has(cid)) parentOf.set(cid, node.id); });
-  });
+  const rootId = expectedIds[0];
+  const parentOf = expectedParents(nodesMap, expectedIds);
 
   // 1. removals (outermost only — descendants go with their ancestor)
-  let { ids, paths } = collectJsxIds(ast);
-  const doomed = ids.filter((id) => !expected.has(id));
+  const before = collectJsxIds(ast, rootId);
+  const doomed = before.ids.filter((id) => !expected.has(id));
   doomed.forEach((id) => {
-    const path = paths.get(id);
+    const path = before.paths.get(id);
     const ancestor = path.findParent((p) => p.isJSXElement() && doomed.includes(getJsxId(p.node.openingElement)));
     if (!ancestor) removeJsxChild(path);
   });
 
-  // 2. insertions, in document order so earlier siblings exist first
-  ({ ids, paths } = collectJsxIds(ast));
+  // 2. insertions and moves, in document order so earlier siblings exist first.
+  // A layer that exists under the wrong parent is lifted out — with everything
+  // inside it, as written — and placed in its new parent.
+  let { ids, paths, parents } = collectJsxIds(ast, rootId);
   let present = new Set(ids);
   for (const id of expectedIds) {
-    if (present.has(id)) continue;
     const parentId = parentOf.get(id);
+    const misplaced = present.has(id) && id !== rootId && (parents.get(id) || null) !== (parentId || null);
+    if (present.has(id) && !misplaced) continue;
     if (!parentId || !present.has(parentId)) continue; // arrives inside its parent's snippet, or can't be placed
+    let element;
+    if (misplaced) {
+      const movingPath = paths.get(id);
+      element = movingPath.node;
+      if (!removeJsxChild(movingPath)) return false;
+      ({ paths } = collectJsxIds(ast, rootId));
+    }
     const parentPath = paths.get(parentId);
+    if (!parentPath) return false;
     const indent = `${elementIndent(parentPath)}  `;
-    const element = parseJsxSnippet(renderNode(id, indent));
+    if (!element) element = parseJsxSnippet(renderNode(id, indent));
     if (!element) return false;
 
     openElement(parentPath.node);
@@ -602,7 +660,7 @@ function applyStructure(ast, nodesMap, expectedIds, renderNode) {
     } else {
       list.push(t.jsxText(`\n${indent}`), element, t.jsxText(closeIndent));
     }
-    ({ ids, paths } = collectJsxIds(ast));
+    ({ ids, paths, parents } = collectJsxIds(ast, rootId));
     present = new Set(ids);
   }
 
@@ -708,15 +766,19 @@ export function patchTSXWithAST(code, nodesMap, expectedIds = null, options = {}
     const ast = recast.parse(code, { parser: babelParser });
 
     if (expectedIds) {
-      let { ids } = collectJsxIds(ast);
-      if (!sameOrder(ids, expectedIds)) {
+      const rootId = expectedIds[0];
+      const wantedParents = expectedParents(nodesMap, expectedIds);
+      let { ids, parents } = collectJsxIds(ast, rootId);
+      // Same ids in the same order is not enough: a layer moved into the frame
+      // just before it keeps its place in document order but changes parent.
+      if (!sameOrder(ids, expectedIds) || !sameParents(parents, wantedParents, expectedIds)) {
         // Only restructure code that is recognisably this component.
         const overlap = ids.filter((id) => expectedIds.includes(id)).length;
-        const sameRoot = ids[0] === expectedIds[0];
+        const sameRoot = ids[0] === rootId;
         if (!renderNode || !sameRoot || overlap === 0) return null;
         if (!applyStructure(ast, nodesMap, expectedIds, renderNode)) return null;
-        ({ ids } = collectJsxIds(ast));
-        if (!sameOrder(ids, expectedIds)) return null;
+        ({ ids, parents } = collectJsxIds(ast, rootId));
+        if (!sameOrder(ids, expectedIds) || !sameParents(parents, wantedParents, expectedIds)) return null;
       }
     }
 
@@ -806,7 +868,57 @@ export function prepareTSXForCanvas(code) {
     const { ids } = collectJsxIds(added ? recast.parse(out, { parser: babelParser }) : ast);
     if (!ids.length) return null;
 
-    let componentName = null;
+    // Which top-level declaration is the component? The default export, else the
+    // first named export, else the last one with JSX (helpers come first).
+    let defaultName = null;
+    const exportedNames = [];
+    const declName = (decl) => {
+      if ((t.isFunctionDeclaration(decl) || t.isClassDeclaration(decl)) && decl.id) return decl.id.name;
+      if (t.isVariableDeclaration(decl) && t.isIdentifier(decl.declarations[0]?.id)) return decl.declarations[0].id.name;
+      return null;
+    };
+    ast.program.body.forEach((stmt) => {
+      if (t.isExportDefaultDeclaration(stmt)) {
+        defaultName = t.isIdentifier(stmt.declaration) ? stmt.declaration.name : (declName(stmt.declaration) || '*default*');
+      } else if (t.isExportNamedDeclaration(stmt)) {
+        if (stmt.declaration) {
+          const name = declName(stmt.declaration);
+          if (name) exportedNames.push(name);
+        }
+        (stmt.specifiers || []).forEach((spec) => {
+          if (!t.isExportSpecifier(spec) || !t.isIdentifier(spec.local)) return;
+          if (t.isIdentifier(spec.exported, { name: 'default' })) defaultName = spec.local.name;
+          else exportedNames.push(spec.local.name);
+        });
+      }
+    });
+    const firstIdByOwner = new Map(); // top-level declaration name → first layer id in it
+    traverse(ast, {
+      JSXElement(path) {
+        const id = getJsxId(path.node.openingElement);
+        if (!id) return;
+        const top = path.findParent((p) => p.parentPath?.isProgram());
+        if (!top) return;
+        let owner = top.node;
+        if (t.isExportDefaultDeclaration(owner)) {
+          const name = declName(owner.declaration);
+          if (!firstIdByOwner.has('*default*')) firstIdByOwner.set('*default*', id);
+          if (name && !firstIdByOwner.has(name)) firstIdByOwner.set(name, id);
+          return;
+        }
+        if (t.isExportNamedDeclaration(owner) && owner.declaration) owner = owner.declaration;
+        const name = declName(owner);
+        if (name && !firstIdByOwner.has(name)) firstIdByOwner.set(name, id);
+      }
+    });
+    const owners = [...firstIdByOwner.keys()];
+    const chosenOwner = (defaultName && firstIdByOwner.has(defaultName) && defaultName)
+      || exportedNames.find((name) => firstIdByOwner.has(name))
+      || owners[owners.length - 1]
+      || null;
+    const chosenRootId = (chosenOwner && firstIdByOwner.get(chosenOwner)) || ids[0];
+
+    let componentName = chosenOwner && chosenOwner !== '*default*' ? chosenOwner : null;
     traverse(ast, {
       ExportNamedDeclaration(path) {
         const decl = path.node.declaration;
@@ -822,7 +934,7 @@ export function prepareTSXForCanvas(code) {
       }
     });
 
-    return { code: out, rootId: ids[0], componentName, added };
+    return { code: out, rootId: chosenRootId, componentName, added };
   } catch (err) {
     console.warn('[astSync] prepare failed:', err.message);
     return null;

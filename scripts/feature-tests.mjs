@@ -576,6 +576,55 @@ test('open a real TSX file: ids added, logic preserved, edits patch in place', (
 });
 
 const failed = results.filter((r) => !r.ok);
+test('reparent: a layer moved into the frame before it is moved in the code too', () => {
+  // Document order of ids is identical before and after — only the parent changes.
+  const code = 'import x from "x";\n\nexport function A() {\n  // keep me\n  return (\n    <div id="root">\n      <section id="box" style={{ padding: 8 }}>\n        <p id="one">One</p>\n      </section>\n      <button id="go" onClick={() => x()}>Go</button>\n    </div>\n  );\n}';
+  const nodes = {
+    root: { id: 'root', type: 'frame', tag: 'div', style: {}, children: ['box'] },
+    box: { id: 'box', type: 'frame', tag: 'section', style: { padding: 8 }, children: ['one', 'go'] },
+    one: { id: 'one', type: 'text', tag: 'p', style: {}, text: 'One' },
+    go: { id: 'go', type: 'button', tag: 'button', style: {}, text: 'Go' }
+  };
+  const out = generateTSX('root', nodes, code);
+  assert.ok(/<section id="box"[^>]*>[\s\S]*<button id="go" onClick=\{\(\) => x\(\)\}>Go<\/button>\s*<\/section>/.test(out), out);
+  assert.ok(out.includes('import x from "x";') && out.includes('// keep me'), 'author code kept (patched, not regenerated)');
+  const back = parseTSX(out, nodes, 'root');
+  assert.deepStrictEqual(back.box.children, ['one', 'go']);
+  assert.deepStrictEqual(back.root.children, ['box']);
+  // and back out again, to the front of the root
+  const outAgain = generateTSX('root', { ...nodes, root: { ...nodes.root, children: ['go', 'box'] }, box: { ...nodes.box, children: ['one'] } }, out);
+  assert.deepStrictEqual(parseTSX(outAgain, nodes, 'root').root.children, ['go', 'box']);
+  assert.ok(outAgain.includes('onClick={() => x()}') && outAgain.includes('// keep me'));
+});
+
+test('open a file with helper components: the exported component is the root and helpers survive edits', () => {
+  const src = 'function Badge() {\n  return <span className="badge">New</span>;\n}\n\nconst Row = () => <li>row</li>;\n\nexport default function Card() {\n  return (\n    <div>\n      <Badge />\n      <h2>Title</h2>\n    </div>\n  );\n}\n';
+  const opened = importTSXFile(src, 'Card.tsx');
+  assert.strictEqual(opened.componentName, 'Card');
+  assert.strictEqual(opened.nodes[opened.rootId].tag, 'div', 'root is the exported component, not the first helper');
+  assert.ok(Object.values(opened.nodes).some((n) => n.text === 'Title'));
+  assert.ok(!Object.values(opened.nodes).some((n) => n.text === 'New' || n.text === 'row'), 'helper JSX is not part of the layer tree');
+  const title = Object.values(opened.nodes).find((n) => n.text === 'Title');
+  const out = generateTSX(opened.rootId, { ...opened.nodes, [title.id]: { ...title, text: 'Hello' } }, opened.code);
+  assert.ok(out.includes('Hello') && /function Badge\(\)[\s\S]*New<\/span>/.test(out) && out.includes('const Row = () =>'), out);
+  // a structural edit must not delete the helpers either
+  const without = { ...opened.nodes, [opened.rootId]: { ...opened.nodes[opened.rootId], children: [] } };
+  delete without[title.id];
+  const out2 = generateTSX(opened.rootId, without, opened.code);
+  assert.ok(!out2.includes('Title') && out2.includes('>New</span>') && out2.includes('row</li>'), out2);
+});
+
+test('a comment pin never regenerates the author\'s file', () => {
+  const code = 'import { useState } from "react";\n\nexport function A() {\n  const [n] = useState(0);\n  return (\n    <div id="root" data-n={n}>\n      <p id="one">One</p>\n    </div>\n  );\n}';
+  const nodes = {
+    root: { id: 'root', type: 'frame', tag: 'div', style: {}, children: ['one', 'pin'] },
+    one: { id: 'one', type: 'text', tag: 'p', style: {}, text: 'Two' },
+    pin: { id: 'pin', type: 'comment', tag: 'div', style: {}, text: 'check this' }
+  };
+  const out = generateTSX('root', nodes, code);
+  assert.strictEqual(out, code.replace('One', 'Two'));
+});
+
 console.log('\n=== SUMMARY ===');
 console.log(`${results.length - failed.length}/${results.length} passed`);
 if (failed.length) {
