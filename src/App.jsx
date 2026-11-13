@@ -46,6 +46,7 @@ import { createNodeFromTool, canDropIntoNode } from './utils/nodeFactory';
 import { getToolByShortcut, isPlacableTool } from './data/canvasTools';
 import { applyAIUpdates, getFirstUpdateTarget } from './utils/aiApply';
 import { createBackup, AUTO_SAVE_INTERVAL_MS } from './utils/autoSaveBackup';
+import { isDesktop, openTsxFile, saveTsxFile, saveTsxFileAs } from './utils/desktopBridge';
 import AuthModal from './lib/auth/AuthModal';
 import ProjectPicker from './components/ProjectPicker';
 import { useAuth } from './lib/auth/AuthContext';
@@ -185,6 +186,9 @@ export default function App() {
   const lastLearningRef = useRef({ key: '', at: 0 });
   const deleteNodeRef = useRef(null);
   const nudgeRef = useRef(null);
+  const saveFileRef = useRef(null);
+  // Desktop app only: where the opened file lives on disk, so Save writes back to it.
+  const [userFilePath, setUserFilePath] = useState(null);
   const backupStateRef = useRef(null);
 
   const refreshLearningSummary = () => setLearningSummary(getLearningSummary());
@@ -393,11 +397,31 @@ export default function App() {
 
   const handleRealFileLoaded = useCallback(({ fileName, code: fileCode, nodes, rootId, componentName, addedIds }) => {
     showUserFile({ fileName, code: fileCode, nodes, rootId, componentName });
+    setUserFilePath(null);
     const nodeCount = Object.keys(nodes).length;
     learningLoop.log('real_file_loaded', { fileName, nodeCount });
     notify(addedIds
       ? `Loaded "${fileName}" — ${nodeCount} layers (added ${addedIds} id attribute${addedIds === 1 ? '' : 's'} so they are editable)`
       : `Loaded "${fileName}" — ${nodeCount} layers`);
+  }, [learningLoop, notify, showUserFile]);
+
+  // Desktop app: native open dialog. Web: the drag-and-drop loader.
+  const handleOpenRealFile = useCallback(async () => {
+    if (!isDesktop()) {
+      setRealFileLoaderOpen(true);
+      return;
+    }
+    const picked = await openTsxFile();
+    if (!picked) return;
+    try {
+      const imported = importTSXFile(picked.content, picked.name);
+      showUserFile({ fileName: picked.name, ...imported });
+      setUserFilePath(picked.path);
+      learningLoop.log('real_file_loaded', { fileName: picked.name, nodeCount: Object.keys(imported.nodes).length, desktop: true });
+      notify(`Opened ${picked.name} — Save (⌘S) writes back to the file`);
+    } catch (err) {
+      notify(err.message || 'Could not open that file');
+    }
   }, [learningLoop, notify, showUserFile]);
 
   const handleRestoreBackup = useCallback((backup) => {
@@ -414,6 +438,7 @@ export default function App() {
       return;
     }
     showUserFile({ fileName: backup.fileName, ...restored });
+    setUserFilePath(null);
     learningLoop.log('backup_restored', { fileName: backup.fileName, backupId: backup.id });
     notify(`Restored "${backup.fileName}" from backup`);
   }, [learningLoop, notify, showUserFile]);
@@ -472,6 +497,12 @@ export default function App() {
     const isModalOpen = () => Boolean(document.querySelector('.feedback-modal-overlay, .export-modal-overlay, .demo-script-overlay, .welcome-overlay'));
 
     const onKeyDown = (e) => {
+      // ⌘S saves to disk in the desktop app (even while typing in the code editor).
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === 's' && isDesktop()) {
+        e.preventDefault();
+        saveFileRef.current?.();
+        return;
+      }
       if (isTypingTarget(e.target) || isModalOpen()) return;
       if (e.key === ' ') {
         if (isActivatable(e.target)) return;
@@ -912,6 +943,10 @@ export default function App() {
     });
   };
 
+  useEffect(() => {
+    saveFileRef.current = handleDownloadActiveFile;
+  });
+
   // Reorder a layer among its siblings (dir: -1 = up/earlier, 1 = down/later).
   const handleMoveNode = (nodeId, dir) => {
     setActiveNodesMap((prev) => {
@@ -1074,8 +1109,24 @@ export default function App() {
   const handleUndo = useCallback(() => dispatchHistory({ type: 'undo' }), []);
   const handleRedo = useCallback(() => dispatchHistory({ type: 'redo' }), []);
 
-  // Save the active file's current code back to disk as a download.
-  const handleDownloadActiveFile = () => {
+  // Save the active file's current code: straight to disk in the desktop app,
+  // as a download in the browser.
+  const handleDownloadActiveFile = async () => {
+    if (isDesktop()) {
+      const name = fileConfig.label || 'Component.tsx';
+      if (activeFile === USER_FILE_ID && userFilePath) {
+        const result = await saveTsxFile(userFilePath, code);
+        notify(result.ok ? `Saved ${name}` : `Could not save ${name}: ${result.error}`);
+        if (result.ok) learningLoop.log('real_file_saved', { fileName: name, linesOfCode: code.split('\n').length });
+      } else {
+        const saved = await saveTsxFileAs(name, code);
+        if (saved) {
+          if (activeFile === USER_FILE_ID) setUserFilePath(saved.path);
+          notify(`Saved ${saved.name}`);
+        }
+      }
+      return;
+    }
     const blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -1378,7 +1429,7 @@ export default function App() {
         onBatchExport={handleBatchExportComponents}
         onOpenMarketingKit={handleOpenMarketingKit}
         onOpenFigmaImport={() => setFigmaImportOpen(true)}
-        onOpenRealFile={() => setRealFileLoaderOpen(true)}
+        onOpenRealFile={handleOpenRealFile}
         onRestoreBackup={() => setRestoreBackupOpen(true)}
         onDownloadRealFile={handleDownloadActiveFile}
         onOpenAI={() => handleOpenAI('full-marketing')}

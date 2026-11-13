@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist', 'site/dist', 'site/.astro', '**/node_modules/**']),
+  globalIgnores(['dist', 'extension/dist', 'site/dist', 'site/.astro', '**/node_modules/**']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [
@@ -31,6 +31,23 @@ export default defineConfig([
     ],
     languageOptions: {
       globals: { ...globals.node },
+    },
+  },
+  {
+    // Figma plugin main thread: a classic script in Figma's sandbox, written in
+    // conservative syntax (so `catch (err)` keeps its binding).
+    files: ['figma-plugin/**/*.js'],
+    languageOptions: {
+      sourceType: 'script',
+      globals: {
+        ...globals.browser,
+        figma: 'readonly',
+        __html__: 'readonly',
+        module: 'readonly',
+      },
+    },
+    rules: {
+      'no-unused-vars': ['error', { caughtErrors: 'none' }],
     },
   },
   {

@@ -4,9 +4,9 @@
 
 BluePainter uses **AST-preserving bidirectional sync** to enable canvas ↔ code round-trips while preserving formatting, comments, and team structure (SPEC §2).
 
-Two surfaces share nearly identical sync engines:
-- **Studio** (`src/utils/astSyncEngine.js`) — browser-based canvas editor (ES modules)
-- **Extension** (`extension/lib/astSyncEngine.js`) — VS Code extension (CommonJS)
+Both surfaces use one sync engine, `packages/shared/lib/astSyncEngine.js` (`@bluepainter/shared`):
+- **Studio** imports it as an ES module through `src/utils/syncEngine.js`
+- **Extension** `require()`s it from `extension/lib/syncEngine.js`, `bootstrap.js` and `babelPatch.js`
 
 Both use **Recast + Babel** to parse/patch JSX while preserving original formatting.
 
@@ -57,8 +57,9 @@ The test:
 
 | Surface | Path | Module System | Dependencies |
 |---------|------|---------------|--------------|
-| **Studio** | `src/utils/astSyncEngine.js` | ES modules | Vite, React 19 |
-| **Extension** | `extension/lib/astSyncEngine.js` | CommonJS | VS Code API, Node.js |
+| **Shared engine** | `packages/shared/lib/astSyncEngine.js` | ES module (also loaded with `require`) | Recast, Babel |
+| **Studio wrapper** | `src/utils/syncEngine.js` | ES modules | Vite, React 19 |
+| **Extension wrapper** | `extension/lib/syncEngine.js` | CommonJS | VS Code API, Node.js |
 
 **Fallbacks:**
 - Studio: `parseTSXWithRegex` for simple cases where AST fails
@@ -68,7 +69,7 @@ The test:
 
 When adding new sync capabilities (e.g., className, data attributes):
 
-1. **Implement in both engines** (`src/utils/astSyncEngine.js` AND `extension/lib/astSyncEngine.js`)
+1. **Implement it once** in `packages/shared/lib/astSyncEngine.js`
 2. **Add test fixture** with new feature in `extension/test-fixtures/`
 3. **Update test** in `scripts/test-ast-sync.mjs`
 4. **Run `npm run test:ast`** — must pass before merge
@@ -83,13 +84,6 @@ Per SPEC §5:
 
 See `AST_SCOPE.md` for full technical scope.
 
-## Future: Single Source of Truth
+## Single source of truth
 
-Current state: Two implementations with identical logic (validated by tests).
-
-v2 options:
-1. Extract to `shared/astSyncEngine.mjs` (dual ESM/CJS export)
-2. Compile extension from Studio source (build step)
-3. Keep dual implementation with automated sync via test gate (current approach)
-
-**Decision:** Stick with validated dual implementation until drift becomes a maintenance burden. Tests catch divergence before merge.
+There is one implementation, in `packages/shared`. Text edits are applied as source splices before the AST pass, so they never reformat a file; style and attribute edits go through Recast; structural edits (insert, remove, reorder, move into another parent) patch only the affected parents.
