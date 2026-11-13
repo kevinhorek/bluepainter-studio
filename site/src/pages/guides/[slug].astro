@@ -1,6 +1,7 @@
 ---
 import { getCollection, render } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import { guideGroup } from '../../lib/guides';
 
 export async function getStaticPaths() {
   const guides = await getCollection('guides');
@@ -25,8 +26,8 @@ const jsonLd = {
 
 <BaseLayout title={`${guide.data.title} — BluePainter`} description={guide.data.description} jsonLd={jsonLd}>
   <section class="section prose">
-    <p class="eyebrow">{guide.data.pattern}</p>
+    <p class="eyebrow">{guideGroup(guide.data.pattern).eyebrow}</p>
     <Content />
-    <p style="margin-top:48px"><a href="/guides">← All guides</a> · <a href="/pilot">Request pilot</a></p>
+    <p class="stack-lg"><a href="/guides">← All guides</a> · <a href="/pilot">Request a pilot</a></p>
   </section>
 </BaseLayout>

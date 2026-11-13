@@ -1,0 +1,103 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { BRAND, CONTACT_EMAIL, DEMO_URL } from '../lib/constants';
+
+const updated = '12 November 2026';
+---
+
+<!--
+  TEMPLATE — NEEDS LEGAL REVIEW BEFORE LAUNCH.
+  This page is a plain-language description of what the code does today. It has not been
+  reviewed by a lawyer and is not tailored to any jurisdiction (GDPR, UK GDPR, CCPA, …).
+  Before launch: name the legal entity, add a real contact address (CONTACT_EMAIL in
+  src/lib/constants.ts), name the email provider behind WAITLIST_WEBHOOK, and confirm
+  retention periods.
+-->
+<BaseLayout
+  title="Privacy — BluePainter"
+  description="What the BluePainter site and Studio demo collect, where it goes, and what stays in your browser."
+>
+  <section class="section prose">
+    <p class="eyebrow">Privacy</p>
+    <h1>Privacy</h1>
+    <p class="muted">Last updated {updated}</p>
+    <p>
+      {BRAND.name} is a validation prototype. We collect as little as we can. This page describes what this
+      website and the Studio demo at <a href={DEMO_URL}>{DEMO_URL.replace(/^https?:\/\//, '')}</a> actually do.
+    </p>
+
+    <h2>What the forms collect</h2>
+    <p>The newsletter form, the pilot request form and the “email me the report” fields on the free tools collect:</p>
+    <ul>
+      <li><strong>Email address</strong> — required.</li>
+      <li><strong>Name, company or team, role and a message</strong> — optional, pilot form only.</li>
+      <li><strong>Which form you used</strong> (for example “newsletter” or “pilot”).</li>
+    </ul>
+    <p>
+      We use this only to contact you about the newsletter or a pilot. We do not sell it or share it for
+      advertising.
+    </p>
+
+    <h2>Where it goes</h2>
+    <p>
+      Submissions are sent to a small serverless function that runs with this site on Vercel. That function
+      forwards the entry to the email tool we use to manage the waitlist. Ask us at any time and we will
+      delete your entry.
+    </p>
+
+    <h2>The free tools</h2>
+    <p>
+      The contrast checker, receipt grader and TSX id analyzer run entirely in your browser. The colours,
+      values and code you paste are not sent to us. Only the email address is sent, and only if you choose
+      to submit it.
+    </p>
+
+    <h2>Shared scorecards</h2>
+    <p>
+      A scorecard link from the Studio carries its numbers in the part of the URL after the <code>#</code>.
+      Browsers do not send that part to servers, so we do not receive or store it. Anyone you give the link
+      to can see those numbers.
+    </p>
+
+    <h2>The Studio demo</h2>
+    <ul>
+      <li>
+        <strong>Browser storage.</strong> The Studio keeps your workspace, receipt policy settings,
+        feedback notes and session history in your browser's <code>localStorage</code>. It stays on your
+        device until you clear it or export it yourself.
+      </li>
+      <li>
+        <strong>Tokens you enter.</strong> If you enter a GitHub, Vercel, Figma or OpenAI token in the
+        Studio, it is sent to the Studio's own serverless functions only so they can call GitHub, Vercel,
+        Figma or OpenAI on your behalf for the action you asked for. The token is kept in your browser —
+        for the current tab only, or in <code>localStorage</code> if you tick “Remember”. Use tokens with
+        the narrowest scope that works, and revoke them when you are done.
+      </li>
+      <li>
+        <strong>Content you send to those services.</strong> When you push, deploy, import or generate copy,
+        the relevant code or text is sent to that service and is covered by its own privacy policy.
+      </li>
+    </ul>
+
+    <h2>Analytics, cookies and fonts</h2>
+    <ul>
+      <li>
+        We use Vercel Web Analytics to count page views. It does not use cookies and does not build a
+        profile of you across sites.
+      </li>
+      <li>This site sets no advertising or tracking cookies.</li>
+      <li>Fonts are loaded from Google Fonts, so your browser makes a request to Google when a page loads.</li>
+    </ul>
+
+    <h2>Your choices</h2>
+    <p>
+      You can ask us to show you, correct or delete anything you submitted through a form, and you can
+      unsubscribe from email at any time.
+    </p>
+
+    <h2>Contact</h2>
+    <p>Questions or requests: <strong>{CONTACT_EMAIL}</strong></p>
+
+    <p class="stack-lg"><a href="/terms">Terms →</a></p>
+  </section>
+</BaseLayout>

@@ -19,57 +19,85 @@ const jsonLd = {
   <section class="section">
     <p class="eyebrow">Free tool</p>
     <h1>Contrast checker</h1>
-    <p class="lead">Same ratio math as Designer's Receipts. Unlock the full report with email.</p>
-    <div class="tool-panel">
+    <p class="lead">The same WCAG ratio maths as Designer's Receipts, for white text on any button colour. Runs in your browser.</p>
+    <div class="tool-panel" data-reveal>
       <div>
         <label for="bg">Button background (hex)</label>
-        <input id="bg" value="#2563eb" />
-        <button class="btn btn-primary" id="run" style="margin-top:16px;width:100%">Check contrast</button>
+        <input id="bg" value="#2563eb" spellcheck="false" autocomplete="off" />
+        <button type="button" class="btn btn-primary" id="run" style="margin-top:16px;width:100%">Check contrast</button>
         <div class="email-gate" id="gate" hidden>
-          <p class="muted">Email for suggested fix + demo link.</p>
+          <p class="muted">Enter your email to see the suggested fix and join the newsletter.</p>
           <label for="email">Email</label>
-          <input id="email" type="email" placeholder="you@company.com" />
-          <button class="btn btn-ghost" id="unlock" style="margin-top:8px;width:100%">Unlock report</button>
+          <input id="email" type="email" autocomplete="email" placeholder="you@company.com" />
+          <span class="hp" aria-hidden="true">
+            <label for="website">Website (leave this empty)</label>
+            <input id="website" name="website" type="text" tabindex="-1" autocomplete="off" />
+          </span>
+          <button type="button" class="btn btn-ghost" id="unlock" style="margin-top:8px;width:100%">Show suggested fix</button>
           <p class="form-status muted" hidden></p>
         </div>
       </div>
-      <div class="result-box" id="result"><p class="muted">Results appear here.</p></div>
+      <div class="result-box" id="result" aria-live="polite"><p class="muted">Results appear here.</p></div>
     </div>
-    <p style="margin-top:24px"><a href={DEMO_APP}>Open BluePainter demo →</a></p>
+    <p class="stack-lg"><a href="/tools">← All tools</a> · <a href={DEMO_APP}>Open the live studio →</a></p>
   </section>
   <script is:inline src="/js/receipts.js"></script>
   <script is:inline define:vars={{ DEMO_APP, WAITLIST_URL }}>
-    let last = null;
-    document.getElementById('run').onclick = function () {
-      last = BluePainterTools.evaluateContrast(document.getElementById('bg').value);
-      document.getElementById('result').innerHTML =
-        '<div class="score-big ' + (last.passesAA ? 'ok' : 'bad') + '">' + last.ratio + ':1</div>' +
-        '<p>' + (last.passesAA ? 'Passes WCAG AA' : 'Fails WCAG AA') + ' (min ' + last.minRatio + ':1)</p>';
-      document.getElementById('gate').hidden = false;
-    };
-    document.getElementById('unlock').onclick = async function () {
-      const email = document.getElementById('email').value;
+    // DOM helpers — results are built with createElement/textContent, never innerHTML.
+    function el(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined && text !== null) node.textContent = String(text);
+      return node;
+    }
+    function demoButton(label) {
+      const p = el('p');
+      const a = el('a', 'btn btn-primary', label);
+      a.href = DEMO_APP;
+      p.appendChild(a);
+      return p;
+    }
+    async function unlock(source) {
       const status = document.querySelector('#gate .form-status');
+      const btn = document.getElementById('unlock');
+      btn.disabled = true;
       let data;
       try {
         const res = await fetch(WAITLIST_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: email, source: 'contrast-checker' })
+          body: JSON.stringify({
+            email: document.getElementById('email').value,
+            website: document.getElementById('website').value,
+            source: source
+          })
         });
         data = await res.json();
       } catch {
-        status.hidden = false;
-        status.textContent = 'Network error — try again.';
-        return;
+        data = { ok: false, error: 'Network error — try again.' };
+      } finally {
+        btn.disabled = false;
       }
       status.hidden = false;
-      status.textContent = data.ok ? 'Unlocked.' : (data.error || 'Failed');
-      if (data.ok && last) {
-        document.getElementById('result').innerHTML +=
-          '<p class="ok">Suggested fix: <code>' + last.suggestedFix + '</code></p>' +
-          '<p><a class="btn btn-primary" href="' + DEMO_APP + '">Open in BluePainter</a></p>';
-      }
+      status.textContent = data.ok ? 'Unlocked — see the result panel.' : (data.error || 'Something went wrong.');
+      return Boolean(data.ok);
+    }
+    let last = null;
+    const result = document.getElementById('result');
+    document.getElementById('run').onclick = function () {
+      last = BluePainterTools.evaluateContrast(document.getElementById('bg').value);
+      result.replaceChildren(
+        el('div', 'score-big ' + (last.passesAA ? 'ok' : 'bad'), last.ratio + ':1'),
+        el('p', '', (last.passesAA ? 'Passes WCAG AA' : 'Fails WCAG AA') + ' (minimum ' + last.minRatio + ':1)')
+      );
+      document.getElementById('gate').hidden = false;
+    };
+    document.getElementById('unlock').onclick = async function () {
+      if (!(await unlock('contrast-checker')) || !last || result.querySelector('[data-unlocked]')) return;
+      const fix = el('p', 'ok', 'Suggested fix: ');
+      fix.setAttribute('data-unlocked', '');
+      fix.appendChild(el('code', '', last.suggestedFix));
+      result.append(fix, demoButton('Open in BluePainter'));
     };
   </script>
 </BaseLayout>

@@ -1,31 +1,31 @@
 ---
-title: "Best Figma to React tools for design systems teams"
-description: "How design-systems teams evaluate Figma→React handoff — and when BluePainter's AST sync + Designer's Receipts fit."
+title: "Best Figma to React tools for design-system teams"
+description: "How design-system teams evaluate Figma-to-React handoff — and when BluePainter's AST sync fits."
 pattern: "best-for-niche"
+generated: true
 pubDate: 2026-07-21
 ---
 
-# Best Figma to React tools for design systems teams
+# Best Figma to React tools for design-system teams
 
-Design-systems teams ship React UI under review. One-way Figma exports create throwaway code that fails token and a11y checks. BluePainter keeps canvas and TSX in sync with stable `id` attributes and enforces Designer's Receipts (contrast, spacing, CTA, clutter).
+How design-system teams evaluate Figma-to-React handoff — and when BluePainter's AST sync fits.
+
+## The design-system handoff problem
+
+Design-system teams own the spacing, radius and colour scales everyone else is supposed to follow. One-way Figma exports produce code nobody wants to maintain; BluePainter instead keeps the canvas and your existing TSX in sync through stable `id` attributes.
 
 ## Evaluation checklist
 
-1. Do edits need to survive in the real repo (not a sandbox)?
-2. Do you need contrast/spacing/CTA policy — not only generation?
-3. Is a design–dev pair the buyer?
-4. Do components already use (or can adopt) stable JSX `id`s?
+1. Do visual edits need to land in the real repo, as small diffs?
+2. Do you need contrast, spacing and CTA policy enforced — not only code generated?
+3. Is a designer–engineer pair going to use it together?
 
 ## When BluePainter fits
 
-Choose BluePainter when AST-preserving round-trip and team policy matter more than prompt-to-app generation.
-
-- [Free studio demo](https://bluepainter-studio.vercel.app/#/app)
-- [Request a pilot](https://bluepainter-launch.vercel.app/pilot)
-- [Knowledge catalog](https://bluepainter-launch.vercel.app/knowledge)
+Choose BluePainter when format-preserving round-trips and Designer's Receipts matter more than prompt-to-app generation. Try the [free demo](https://bluepainter-studio.vercel.app/#/app) or [request a pilot](/pilot).
 
 ## FAQ
 
-**Is it free?** Yes during validation — live demo open; pilots capacity-limited (~8/wave).
+**Is it free?** Yes during validation — the live demo is open, and pilots are capacity-limited.
 
-**Does it replace Figma?** No. It complements repo-native editing after design exploration.
+**Does it replace Figma?** No. It complements Figma: explore there, then edit repo-native components here.

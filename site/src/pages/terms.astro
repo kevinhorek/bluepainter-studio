@@ -1,0 +1,76 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { BRAND, CONTACT_EMAIL } from '../lib/constants';
+
+const updated = '12 November 2026';
+---
+
+<!--
+  TEMPLATE — NEEDS LEGAL REVIEW BEFORE LAUNCH.
+  Plain-language terms for a free validation prototype. Not reviewed by a lawyer. Before
+  launch: name the legal entity and governing law, add a real contact address
+  (CONTACT_EMAIL in src/lib/constants.ts), and confirm the liability wording.
+-->
+<BaseLayout
+  title="Terms — BluePainter"
+  description="Plain-language terms for using the BluePainter site, free tools and Studio demo during validation."
+>
+  <section class="section prose">
+    <p class="eyebrow">Terms</p>
+    <h1>Terms of use</h1>
+    <p class="muted">Last updated {updated}</p>
+    <p>
+      These terms cover this website, the free tools and the {BRAND.name} Studio demo. By using them you
+      agree to the points below.
+    </p>
+
+    <h2>It's a prototype</h2>
+    <p>
+      {BRAND.name} is a validation prototype. It is free to use, it may change or go offline without notice,
+      and it comes with no uptime commitment or support guarantee. Do not rely on it as your only copy of
+      anything.
+    </p>
+
+    <h2>Your code and designs stay yours</h2>
+    <p>
+      You keep all rights to the code, designs and content you bring to the Studio or the tools. We claim no
+      ownership of what you create or export.
+    </p>
+
+    <h2>Use it reasonably</h2>
+    <ul>
+      <li>Only use content and access tokens you have the right to use.</li>
+      <li>Do not try to break, overload or misuse the service or its forms.</li>
+      <li>Check anything you export before you ship it — you are responsible for what you deploy.</li>
+    </ul>
+
+    <h2>Third-party services</h2>
+    <p>
+      Pushing to GitHub, deploying to Vercel, importing from Figma and generating copy with OpenAI are
+      optional and use your own accounts. Those services have their own terms.
+    </p>
+
+    <h2>Pilots</h2>
+    <p>
+      Pilot sessions are free, limited in number, and offered at our discretion. Requesting one does not
+      guarantee a seat.
+    </p>
+
+    <h2>No warranty</h2>
+    <p>
+      The site, tools and Studio are provided “as is”, without warranties of any kind. To the extent the law
+      allows, we are not liable for losses arising from your use of them.
+    </p>
+
+    <h2>Changes</h2>
+    <p>
+      If these terms change we will update this page and its date. If paid plans are introduced, pricing
+      will be published on the <a href="/pricing">pricing page</a> first.
+    </p>
+
+    <h2>Contact</h2>
+    <p>Questions: <strong>{CONTACT_EMAIL}</strong></p>
+
+    <p class="stack-lg"><a href="/privacy">Privacy →</a></p>
+  </section>
+</BaseLayout>

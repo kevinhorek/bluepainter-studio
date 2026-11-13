@@ -19,62 +19,99 @@ const jsonLd = {
   <section class="section">
     <p class="eyebrow">Free tool</p>
     <h1>TSX id analyzer</h1>
-    <p class="lead">BluePainter joins canvas nodes to JSX via stable <code>id</code> attributes. Paste a component to count syncable ids.</p>
-    <div class="tool-panel">
+    <p class="lead">BluePainter joins canvas layers to JSX through stable <code>id</code> attributes. Paste a component to see which elements the canvas can map. Your code stays in your browser.</p>
+    <div class="tool-panel" data-reveal>
       <div>
         <label for="code">TSX / JSX</label>
-        <textarea id="code">{`export function PricingCard() {
+        <textarea id="code" spellcheck="false">{`export function PricingCard() {
   return (
     <div id="pricing-card-frame" style={{ padding: 32 }}>
       <button id="cta-button">Submit</button>
     </div>
   );
 }`}</textarea>
-        <button class="btn btn-primary" id="run" style="margin-top:16px;width:100%">Analyze</button>
+        <button type="button" class="btn btn-primary" id="run" style="margin-top:16px;width:100%">Analyze</button>
         <div class="email-gate" id="gate" hidden>
-          <label for="email">Email for VS Code extension tips</label>
-          <input id="email" type="email" />
-          <button class="btn btn-ghost" id="unlock" style="margin-top:8px;width:100%">Unlock</button>
+          <p class="muted">Enter your email for VS Code extension tips and the newsletter.</p>
+          <label for="email">Email</label>
+          <input id="email" type="email" autocomplete="email" placeholder="you@company.com" />
+          <span class="hp" aria-hidden="true">
+            <label for="website">Website (leave this empty)</label>
+            <input id="website" name="website" type="text" tabindex="-1" autocomplete="off" />
+          </span>
+          <button type="button" class="btn btn-ghost" id="unlock" style="margin-top:8px;width:100%">Send me the tips</button>
           <p class="form-status muted" hidden></p>
         </div>
       </div>
-      <div class="result-box" id="result"><p class="muted">Ids appear here.</p></div>
+      <div class="result-box" id="result" aria-live="polite"><p class="muted">Ids appear here.</p></div>
     </div>
-    <p style="margin-top:24px"><a href={DEMO_APP}>Open BluePainter demo →</a></p>
+    <p class="stack-lg"><a href="/tools">← All tools</a> · <a href={DEMO_APP}>Open the live studio →</a></p>
   </section>
   <script is:inline src="/js/receipts.js"></script>
   <script is:inline define:vars={{ DEMO_APP, WAITLIST_URL }}>
-    let last = null;
-    document.getElementById('run').onclick = function () {
-      last = BluePainterTools.analyzeTsxIds(document.getElementById('code').value);
-      document.getElementById('result').innerHTML =
-        '<div class="score-big">' + last.count + '</div><p>syncable id(s)</p><code>' +
-        last.ids.map(function (id) { return String(id).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }).join(', ') + '</code>';
-      document.getElementById('gate').hidden = false;
-    };
-    document.getElementById('unlock').onclick = async function () {
-      const email = document.getElementById('email').value;
+    // DOM helpers — results are built with createElement/textContent, never innerHTML.
+    function el(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined && text !== null) node.textContent = String(text);
+      return node;
+    }
+    function demoButton(label) {
+      const p = el('p');
+      const a = el('a', 'btn btn-primary', label);
+      a.href = DEMO_APP;
+      p.appendChild(a);
+      return p;
+    }
+    async function unlock(source) {
       const status = document.querySelector('#gate .form-status');
+      const btn = document.getElementById('unlock');
+      btn.disabled = true;
       let data;
       try {
         const res = await fetch(WAITLIST_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: email, source: 'tsx-id-analyzer' })
+          body: JSON.stringify({
+            email: document.getElementById('email').value,
+            website: document.getElementById('website').value,
+            source: source
+          })
         });
         data = await res.json();
       } catch {
-        status.hidden = false;
-        status.textContent = 'Network error — try again.';
-        return;
+        data = { ok: false, error: 'Network error — try again.' };
+      } finally {
+        btn.disabled = false;
       }
       status.hidden = false;
-      status.textContent = data.ok ? 'Unlocked.' : (data.error || 'Failed');
-      if (data.ok) {
-        document.getElementById('result').innerHTML +=
-          '<p class="muted" style="margin-top:16px">Tip: install the VS Code extension from the repo <code>extension/</code> folder, then run BluePainter: Sync Canvas from File.</p>' +
-          '<p><a class="btn btn-primary" href="' + DEMO_APP + '">Open demo</a></p>';
+      status.textContent = data.ok ? 'Unlocked — see the result panel.' : (data.error || 'Something went wrong.');
+      return Boolean(data.ok);
+    }
+    const result = document.getElementById('result');
+    document.getElementById('run').onclick = function () {
+      // Pasted source is untrusted: ids are only ever written as text nodes.
+      const last = BluePainterTools.analyzeTsxIds(document.getElementById('code').value);
+      const nodes = [el('div', 'score-big', last.count), el('p', '', last.count === 1 ? 'syncable id' : 'syncable ids')];
+      if (last.ids.length) {
+        const list = el('ul');
+        last.ids.forEach(function (id) {
+          const li = el('li');
+          li.appendChild(el('code', '', id));
+          list.appendChild(li);
+        });
+        nodes.push(list);
+      } else {
+        nodes.push(el('p', 'muted', 'No id="…" attributes found. Add one to each element you want to edit on the canvas.'));
       }
+      result.replaceChildren.apply(result, nodes);
+      document.getElementById('gate').hidden = false;
+    };
+    document.getElementById('unlock').onclick = async function () {
+      if (!(await unlock('tsx-id-analyzer')) || result.querySelector('[data-unlocked]')) return;
+      const tip = el('p', 'muted', 'Tip: install the VS Code extension from the repo’s extension/ folder, then run “BluePainter: Sync Canvas from File”.');
+      tip.setAttribute('data-unlocked', '');
+      result.append(tip, demoButton('Open the live studio'));
     };
   </script>
 </BaseLayout>

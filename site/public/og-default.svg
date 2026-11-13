@@ -1,12 +1,44 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <!-- Source for og-default.png. Render with `npm run og` (site/scripts/build-og.mjs). -->
   <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#090d16"/>
-      <stop offset="100%" stop-color="#1d4ed8"/>
+    <radialGradient id="bloom" cx="0.82" cy="-0.05" r="0.85">
+      <stop offset="0" stop-color="#2f6bff" stop-opacity="0.55"/>
+      <stop offset="0.55" stop-color="#2f6bff" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#2f6bff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="violet" cx="0" cy="0.9" r="0.6">
+      <stop offset="0" stop-color="#a78bfa" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#a78bfa" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="mark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2f6bff"/>
+      <stop offset="1" stop-color="#6d4dff"/>
     </linearGradient>
+    <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.05"/>
+      <stop offset="0.7" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <pattern id="grid" width="56" height="56" patternUnits="userSpaceOnUse">
+      <path d="M56 0H0V56" fill="none" stroke="url(#fade)" stroke-width="1"/>
+    </pattern>
   </defs>
-  <rect width="1200" height="630" fill="url(#g)"/>
-  <text x="80" y="200" fill="#ffffff" font-family="system-ui,sans-serif" font-size="64" font-weight="800">BluePainter</text>
-  <text x="80" y="300" fill="#93c5fd" font-family="system-ui,sans-serif" font-size="40">Design, code, ship  one surface.</text>
-  <text x="80" y="420" fill="#94a3b8" font-family="system-ui,sans-serif" font-size="28">Free demo � Request a pilot</text>
+  <rect width="1200" height="630" fill="#060913"/>
+  <rect width="1200" height="630" fill="url(#grid)" opacity="0.9"/>
+  <rect width="1200" height="630" fill="url(#bloom)"/>
+  <rect width="1200" height="630" fill="url(#violet)"/>
+
+  <!-- Logo -->
+  <rect x="80" y="72" width="52" height="52" rx="15" fill="url(#mark)"/>
+  <circle cx="106" cy="98" r="9.5" fill="#fff"/>
+  <text x="150" y="111" fill="#ffffff" font-family="'Bricolage Grotesque','Avenir Next','Helvetica Neue',Arial,sans-serif" font-size="38" font-weight="700" letter-spacing="-0.8">BluePainter</text>
+
+  <!-- Headline with the paint stroke behind the second line -->
+  <text x="76" y="318" fill="#e8edf7" font-family="'Bricolage Grotesque','Avenir Next','Helvetica Neue',Arial,sans-serif" font-size="112" font-weight="800" letter-spacing="-5">Design, code, ship —</text>
+  <path d="M84 418 C 190 372, 330 452, 470 404 S 640 370, 760 412" fill="none" stroke="#2f6bff" stroke-width="54" stroke-linecap="round" opacity="0.95"/>
+  <path d="M110 446 C 240 418, 400 462, 560 430 S 700 418, 742 440" fill="none" stroke="#6d4dff" stroke-width="20" stroke-linecap="round" opacity="0.75"/>
+  <text x="76" y="436" fill="#ffffff" font-family="'Bricolage Grotesque','Avenir Next','Helvetica Neue',Arial,sans-serif" font-size="112" font-weight="800" letter-spacing="-5">one surface.</text>
+
+  <!-- Footer line -->
+  <rect x="80" y="533" width="26" height="3" rx="1.5" fill="#2f6bff"/>
+  <text x="120" y="543" fill="#8f9bb3" font-family="'Geist Mono',Menlo,'SF Mono',monospace" font-size="24" letter-spacing="1.5">CANVAS ↔ TSX SYNC  ·  DESIGNER'S RECEIPTS  ·  FREE LIVE DEMO</text>
 </svg>

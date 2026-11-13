@@ -5,6 +5,7 @@ import {
   buildScorecardSharePayload,
   buildSyncWrappedPayload,
   copyShareLink,
+  getSharePageUrl,
   openNativeShare
 } from '../utils/shareViral';
 
@@ -29,8 +30,15 @@ export default function ValidationScorecardModal({ isOpen, onClose }) {
 
   const handleShareWrapped = async () => {
     const payload = buildSyncWrappedPayload(scorecard.learning);
-    await openNativeShare(payload);
-    setShareStatus('Opened share sheet');
+    try {
+      const result = await openNativeShare(payload);
+      if (result.method === 'native') setShareStatus('Opened share sheet');
+      else if (result.method === 'window') setShareStatus(`Opened share link in a new tab: ${result.url}`);
+      else setShareStatus(''); // user dismissed the share sheet
+    } catch {
+      // Never let a share failure surface as an unhandled rejection.
+      setShareStatus(`Share: ${getSharePageUrl(payload)}`);
+    }
   };
 
   return (

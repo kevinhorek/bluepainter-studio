@@ -8,21 +8,24 @@ import { DEMO_APP, WAITLIST_URL } from '../lib/constants';
   description="Request a facilitated BluePainter validation pilot — scorecard, session export, priority feedback."
 >
   <section class="section">
-    <p class="eyebrow">Pilot</p>
-    <h1>Request a facilitated pilot</h1>
-    <p class="lead">
-      Tell us about your team. We schedule ~8 pilots per wave. Meanwhile, the <a href={DEMO_APP}>free demo</a> is open to everyone.
-    </p>
+    <div class="page-head" data-reveal>
+      <p class="eyebrow">Pilot</p>
+      <h1>Request a facilitated pilot</h1>
+      <p class="lead">
+        Tell us about your team. We schedule about eight pilots per wave — a 30–45 minute guided session on your own
+        components. Meanwhile, the <a href={DEMO_APP}>free demo</a> is open to everyone.
+      </p>
+    </div>
 
-    <form class="card" style="max-width:520px;margin-top:32px" id="pilot-form" data-waitlist-url={WAITLIST_URL}>
+    <form class="card form-stack stack-lg" style="max-width:520px" id="pilot-form" data-waitlist-url={WAITLIST_URL} data-reveal="80">
       <label for="name">Name</label>
-      <input id="name" name="name" required placeholder="Alex Designer" />
+      <input id="name" name="name" required autocomplete="name" placeholder="Alex Designer" />
 
       <label for="email">Work email</label>
-      <input id="email" name="email" type="email" required placeholder="alex@company.com" />
+      <input id="email" name="email" type="email" required autocomplete="email" placeholder="alex@company.com" />
 
       <label for="company">Company / team</label>
-      <input id="company" name="company" placeholder="Acme Design Systems" />
+      <input id="company" name="company" autocomplete="organization" placeholder="Acme Design Systems" />
 
       <label for="role">Role</label>
       <select id="role" name="role">
@@ -37,8 +40,13 @@ import { DEMO_APP, WAITLIST_URL } from '../lib/constants';
       <textarea id="message" name="message" placeholder="We lose spacing tokens on Figma handoff…"></textarea>
 
       <input type="hidden" name="source" value="pilot" />
-      <button type="submit" class="btn btn-primary" style="margin-top:16px;width:100%">Submit request</button>
-      <p class="form-status muted" hidden style="margin-top:12px"></p>
+      <span class="hp" aria-hidden="true">
+        <label for="pilot-website">Website (leave this empty)</label>
+        <input id="pilot-website" name="website" type="text" tabindex="-1" autocomplete="off" />
+      </span>
+      <button type="submit" class="btn btn-primary" style="margin-top:20px;width:100%">Request a pilot</button>
+      <p class="form-status muted" hidden role="status"></p>
+      <p class="muted" style="font-size:0.8rem;margin:14px 0 0">We only use this to contact you about a pilot. See <a href="/privacy">privacy</a>.</p>
     </form>
   </section>
 

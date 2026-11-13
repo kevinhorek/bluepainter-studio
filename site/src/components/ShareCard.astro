@@ -1,0 +1,40 @@
+---
+import { BRAND, DEMO_APP } from '../lib/constants';
+
+export interface SharePayload {
+  type: 'scorecard' | 'wrapped';
+  score: number;
+  label: string;
+  name: string;
+  nodes: number;
+  fixes: number;
+  contrastPasses: number;
+}
+
+interface Props {
+  payload: SharePayload;
+  shareUrl: string;
+}
+
+const { payload, shareUrl } = Astro.props;
+const text = `My BluePainter ${payload.label}: ${payload.score}. Canvas ↔ code with Designer's Receipts.`;
+const xHref = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
+const linkedInHref = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
+---
+
+<div class="share-card" data-share-card>
+  <p class="eyebrow">{BRAND.name}</p>
+  <p class="muted" data-share="name">{payload.name}</p>
+  <div class="score" data-share="score">{payload.score}</div>
+  <p data-share="label">{payload.label}</p>
+  <div class="share-stats">
+    <div><strong data-share="nodes">{payload.nodes}</strong><span class="muted">nodes synced</span></div>
+    <div><strong data-share="fixes">{payload.fixes}</strong><span class="muted">receipt fixes</span></div>
+    <div><strong data-share="contrastPasses">{payload.contrastPasses}</strong><span class="muted">contrast passes</span></div>
+  </div>
+  <div class="actions">
+    <a class="btn btn-primary" data-share="x" href={xHref} target="_blank" rel="noopener noreferrer">Share on X</a>
+    <a class="btn btn-ghost" data-share="linkedin" href={linkedInHref} target="_blank" rel="noopener noreferrer">LinkedIn</a>
+    <a class="btn btn-ghost" href={DEMO_APP}>Try BluePainter</a>
+  </div>
+</div>

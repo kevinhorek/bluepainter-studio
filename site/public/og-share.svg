@@ -1,13 +1,58 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <!-- Source for og-share.png (scorecard / Sync Wrapped share pages). Render with `npm run og`. -->
   <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#0f172a"/>
-      <stop offset="100%" stop-color="#1e3a8a"/>
+    <radialGradient id="bloom" cx="0.82" cy="-0.05" r="0.85">
+      <stop offset="0" stop-color="#2f6bff" stop-opacity="0.5"/>
+      <stop offset="0.55" stop-color="#2f6bff" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#2f6bff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="mark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2f6bff"/>
+      <stop offset="1" stop-color="#6d4dff"/>
     </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0c1220"/>
+      <stop offset="1" stop-color="#1b3a9c"/>
+    </linearGradient>
+    <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.05"/>
+      <stop offset="0.7" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <pattern id="grid" width="56" height="56" patternUnits="userSpaceOnUse">
+      <path d="M56 0H0V56" fill="none" stroke="url(#fade)" stroke-width="1"/>
+    </pattern>
   </defs>
-  <rect width="1200" height="630" fill="url(#g)"/>
-  <text x="80" y="160" fill="#93c5fd" font-family="system-ui,sans-serif" font-size="36" font-weight="700">BluePainter</text>
-  <text x="80" y="280" fill="#ffffff" font-family="system-ui,sans-serif" font-size="72" font-weight="800">Design policy score</text>
-  <text x="80" y="400" fill="#e2e8f0" font-family="system-ui,sans-serif" font-size="48">Canvas ” code · Receipts · Ship</text>
-  <text x="80" y="520" fill="#94a3b8" font-family="system-ui,sans-serif" font-size="28">bluepainter.dev</text>
+  <rect width="1200" height="630" fill="#060913"/>
+  <rect width="1200" height="630" fill="url(#grid)" opacity="0.9"/>
+  <rect width="1200" height="630" fill="url(#bloom)"/>
+
+  <!-- Logo -->
+  <rect x="80" y="72" width="52" height="52" rx="15" fill="url(#mark)"/>
+  <circle cx="106" cy="98" r="9.5" fill="#fff"/>
+  <text x="150" y="111" fill="#ffffff" font-family="'Bricolage Grotesque','Avenir Next','Helvetica Neue',Arial,sans-serif" font-size="38" font-weight="700" letter-spacing="-0.8">BluePainter</text>
+
+  <!-- Headline -->
+  <text x="76" y="290" fill="#e8edf7" font-family="'Bricolage Grotesque','Avenir Next','Helvetica Neue',Arial,sans-serif" font-size="92" font-weight="800" letter-spacing="-4">Design policy</text>
+  <path d="M84 372 C 160 338, 260 396, 360 360 S 470 342, 520 366" fill="none" stroke="#2f6bff" stroke-width="46" stroke-linecap="round" opacity="0.95"/>
+  <text x="76" y="390" fill="#ffffff" font-family="'Bricolage Grotesque','Avenir Next','Helvetica Neue',Arial,sans-serif" font-size="92" font-weight="800" letter-spacing="-4">scorecard.</text>
+  <text x="80" y="462" fill="#8f9bb3" font-family="'Geist','Avenir Next','Helvetica Neue',Arial,sans-serif" font-size="30">Canvas â†” code, checked by Designer's Receipts.</text>
+
+  <rect x="80" y="533" width="26" height="3" rx="1.5" fill="#2f6bff"/>
+  <text x="120" y="543" fill="#8f9bb3" font-family="'Geist Mono',Menlo,'SF Mono',monospace" font-size="24" letter-spacing="1.5">SHARED FROM THE BLUEPAINTER STUDIO</text>
+
+  <!-- Score card -->
+  <g transform="translate(760 96)">
+    <rect width="360" height="438" rx="30" fill="url(#card)" stroke="#93c5fd" stroke-opacity="0.35" stroke-width="1.5"/>
+    <circle cx="180" cy="150" r="84" fill="none" stroke="#ffffff" stroke-opacity="0.12" stroke-width="16"/>
+    <path d="M180 66 A84 84 0 1 1 100.1 124" fill="none" stroke="#34d399" stroke-width="16" stroke-linecap="round"/>
+    <path d="M146 152 l24 24 l46 -50" fill="none" stroke="#ffffff" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+    <g font-family="'Geist Mono',Menlo,'SF Mono',monospace" font-size="21">
+      <rect x="36" y="272" width="288" height="40" rx="12" fill="#ffffff" fill-opacity="0.07"/>
+      <text x="54" y="299" fill="#86efc5">âœ“ Contrast passes AA</text>
+      <rect x="36" y="322" width="288" height="40" rx="12" fill="#ffffff" fill-opacity="0.07"/>
+      <text x="54" y="349" fill="#86efc5">âœ“ Spacing on grid</text>
+      <rect x="36" y="372" width="288" height="40" rx="12" fill="#ffffff" fill-opacity="0.07"/>
+      <text x="54" y="399" fill="#86efc5">âœ“ Strong CTA copy</text>
+    </g>
+  </g>
 </svg>

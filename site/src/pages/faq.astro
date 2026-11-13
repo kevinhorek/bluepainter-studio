@@ -19,12 +19,15 @@ const jsonLd = {
   jsonLd={jsonLd}
 >
   <section class="section">
-    <p class="eyebrow">FAQ</p>
-    <h1>Frequently asked questions</h1>
-    <p class="lead">
-      BluePainter is a free validation prototype for AST-preserving canvas ↔ TSX sync with Designer's Receipts. Direct answers below are written for humans and AI citation.
-    </p>
-    <div class="prose" style="margin-top:32px;max-width:800px">
+    <div class="page-head" data-reveal>
+      <p class="eyebrow">FAQ</p>
+      <h1>Frequently asked questions</h1>
+      <p class="lead">
+        BluePainter is a free validation prototype for AST-preserving canvas ↔ TSX sync with Designer's Receipts.
+        Straight answers below — if yours is missing, <a href="/pilot">ask us in a pilot request</a>.
+      </p>
+    </div>
+    <div class="prose stack-lg" style="max-width:800px">
       {FAQ_ITEMS.map((item) => (
         <div class="faq-item">
           <h3>{item.q}</h3>

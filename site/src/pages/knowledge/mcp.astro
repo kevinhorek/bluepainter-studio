@@ -1,19 +1,23 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import { REPO_URL } from '../../lib/constants';
 ---
 
 <BaseLayout
   title="BluePainter MCP Server"
-  description="Install the BluePainter MCP server so AI assistants can open the demo, analyze TSX, evaluate receipts, and request pilots."
+  description="Install the BluePainter MCP server so AI assistants can analyze TSX ids, evaluate Designer's Receipts and look up product facts."
 >
   <section class="section prose">
     <p class="eyebrow">MCP</p>
-    <h1>MCP server — sales team for agents</h1>
+    <h1>MCP server</h1>
     <p>
-      BluePainter exposes an MCP server so Claude, Cursor, and other assistants can discover the product with zero CAC. Public read tools are open; write tools need API keys where noted.
+      BluePainter ships an MCP server so Claude, Cursor and other assistants can grade a component against
+      policy, check which JSX the canvas can map, and look up product facts. Read tools need no credentials;
+      tools that call other services need a token where noted.
     </p>
     <h2>Install</h2>
-    <pre style="background:#0f1623;padding:16px;border-radius:8px;overflow:auto"><code>cd mcp && npm install
+    <p>From a clone of the <a href={REPO_URL}>repository</a>:</p>
+    <pre class="code-block"><code>cd mcp && npm install
 npx @modelcontextprotocol/inspector node src/index.js</code></pre>
     <h2>Tools</h2>
     <ul>
@@ -24,7 +28,11 @@ npx @modelcontextprotocol/inspector node src/index.js</code></pre>
       <li><code>bluepainter_request_pilot</code> — submit pilot waitlist entry</li>
       <li><code>bluepainter_figma_import</code> — Figma fetch (requires FIGMA_TOKEN)</li>
     </ul>
-    <h2>Registries</h2>
-    <p>Submit the package on Smithery / Open Tools using <code>mcp/README.md</code>. Point the server command at <code>node mcp/src/index.js</code> from the repo root.</p>
+    <h2>Use it from your assistant</h2>
+    <p>
+      Point your MCP client's server command at <code>node mcp/src/index.js</code> from the repo root. Setup notes
+      for each client are in <code>mcp/README.md</code>.
+    </p>
+    <p class="stack-lg"><a href="/knowledge">← Knowledge catalog</a></p>
   </section>
 </BaseLayout>

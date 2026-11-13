@@ -3,7 +3,8 @@ import { DEMO_APP, DEMO_HOME, DEMO_URL, REPO_URL, SITE_URL } from './constants';
 export const knowledgeCatalog = {
   brand: 'BluePainter',
   status: 'validation_prototype',
-  updated: '2026-07-21',
+  statusLabel: 'Validation prototype',
+  updated: '2026-11-12',
   urls: {
     site: SITE_URL,
     demo: DEMO_URL,
@@ -13,6 +14,11 @@ export const knowledgeCatalog = {
     pricing: `${SITE_URL}/pricing`,
     pilot: `${SITE_URL}/pilot`,
     faq: `${SITE_URL}/faq`,
+    tools: `${SITE_URL}/tools`,
+    guides: `${SITE_URL}/guides`,
+    mcp: `${SITE_URL}/knowledge/mcp`,
+    privacy: `${SITE_URL}/privacy`,
+    terms: `${SITE_URL}/terms`,
     knowledge: `${SITE_URL}/knowledge`,
     llms: `${SITE_URL}/llms.txt`,
     knowledgeJson: `${SITE_URL}/knowledge.json`
@@ -68,6 +74,11 @@ export const knowledgeCatalog = {
       description: 'Sidebar canvas, inspector, receipts, AST write-back (v0.2 scaffold).'
     },
     {
+      id: 'free-tools',
+      name: 'Free browser tools',
+      description: 'Contrast checker, receipt grader and TSX id analyzer — run client-side, no account.'
+    },
+    {
       id: 'mcp',
       name: 'MCP server',
       description: 'Agent tools for demo links, TSX analysis, receipts, knowledge, pilot requests.'
@@ -77,7 +88,7 @@ export const knowledgeCatalog = {
     syncContract:
       'JSX elements must use id="node-id" matching the canvas node map. Synced fields: inline style, text, img src.',
     pilotProcess:
-      'Submit /pilot → wait for seat → 30–45m facilitated session → scorecard JSON export → feedback.',
+      `Submit ${SITE_URL}/pilot → wait for seat → 30–45m facilitated session → scorecard JSON export → feedback.`,
     validationGoal: 'Decide go/no-go after ~8 structured sessions.'
   },
   credentials: {

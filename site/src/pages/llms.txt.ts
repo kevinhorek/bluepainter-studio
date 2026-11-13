@@ -7,7 +7,7 @@ export async function GET() {
     `# ${BRAND.name}`,
     `> ${BRAND.description}`,
     '',
-    `Status: ${knowledgeCatalog.status}`,
+    `Status: ${knowledgeCatalog.statusLabel} (updated ${knowledgeCatalog.updated})`,
     `Demo: ${knowledgeCatalog.urls.demo}`,
     `Site: ${knowledgeCatalog.urls.site}`,
     `Repo: ${knowledgeCatalog.urls.repo}`,
@@ -27,9 +27,17 @@ export async function GET() {
     '',
     '## FAQ',
     ...FAQ_ITEMS.flatMap((f) => [`### ${f.q}`, f.a, '']),
+    '## Pages',
+    `- Pricing: ${knowledgeCatalog.urls.pricing}`,
+    `- Request a pilot: ${knowledgeCatalog.urls.pilot}`,
+    `- FAQ: ${knowledgeCatalog.urls.faq}`,
+    `- Free tools: ${knowledgeCatalog.urls.tools}`,
+    `- Guides: ${knowledgeCatalog.urls.guides}`,
+    `- Privacy: ${knowledgeCatalog.urls.privacy}`,
+    '',
     '## Optional',
     `- Full JSON: ${knowledgeCatalog.urls.knowledgeJson}`,
-    `- MCP docs: ${knowledgeCatalog.urls.site}/knowledge/mcp`
+    `- MCP docs: ${knowledgeCatalog.urls.mcp}`
   ].join('\n');
 
   return new Response(lines, {

@@ -19,8 +19,8 @@ const jsonLd = {
   <section class="section">
     <p class="eyebrow">Free tool</p>
     <h1>Receipt grader</h1>
-    <p class="lead">Score a component against BluePainter team policy. Email unlocks the full checklist and demo CTA.</p>
-    <div class="tool-panel">
+    <p class="lead">Score a component against BluePainter's default team policy — spacing, contrast, CTA copy, radius and clutter. Runs in your browser.</p>
+    <div class="tool-panel" data-reveal>
       <div>
         <label for="padding">Padding (px)</label>
         <input id="padding" type="number" value="32" />
@@ -32,21 +32,66 @@ const jsonLd = {
         <input id="radius" type="number" value="12" />
         <label for="features">Feature count</label>
         <input id="features" type="number" value="6" />
-        <button class="btn btn-primary" id="run" style="margin-top:16px;width:100%">Grade</button>
+        <button type="button" class="btn btn-primary" id="run" style="margin-top:16px;width:100%">Grade</button>
         <div class="email-gate" id="gate" hidden>
-          <label for="email">Email for full report</label>
-          <input id="email" type="email" />
-          <button class="btn btn-ghost" id="unlock" style="margin-top:8px;width:100%">Unlock</button>
+          <p class="muted">Enter your email to see the suggested fixes and join the newsletter.</p>
+          <label for="email">Email</label>
+          <input id="email" type="email" autocomplete="email" placeholder="you@company.com" />
+          <span class="hp" aria-hidden="true">
+            <label for="website">Website (leave this empty)</label>
+            <input id="website" name="website" type="text" tabindex="-1" autocomplete="off" />
+          </span>
+          <button type="button" class="btn btn-ghost" id="unlock" style="margin-top:8px;width:100%">Show suggested fixes</button>
           <p class="form-status muted" hidden></p>
         </div>
       </div>
-      <div class="result-box" id="result"><p class="muted">Score appears here.</p></div>
+      <div class="result-box" id="result" aria-live="polite"><p class="muted">Score appears here.</p></div>
     </div>
-    <p style="margin-top:24px"><a href={DEMO_APP}>Open BluePainter demo →</a></p>
+    <p class="stack-lg"><a href="/tools">← All tools</a> · <a href={DEMO_APP}>Open the live studio →</a></p>
   </section>
   <script is:inline src="/js/receipts.js"></script>
   <script is:inline define:vars={{ DEMO_APP, WAITLIST_URL }}>
+    // DOM helpers — results are built with createElement/textContent, never innerHTML.
+    function el(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined && text !== null) node.textContent = String(text);
+      return node;
+    }
+    function demoButton(label) {
+      const p = el('p');
+      const a = el('a', 'btn btn-primary', label);
+      a.href = DEMO_APP;
+      p.appendChild(a);
+      return p;
+    }
+    async function unlock(source) {
+      const status = document.querySelector('#gate .form-status');
+      const btn = document.getElementById('unlock');
+      btn.disabled = true;
+      let data;
+      try {
+        const res = await fetch(WAITLIST_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: document.getElementById('email').value,
+            website: document.getElementById('website').value,
+            source: source
+          })
+        });
+        data = await res.json();
+      } catch {
+        data = { ok: false, error: 'Network error — try again.' };
+      } finally {
+        btn.disabled = false;
+      }
+      status.hidden = false;
+      status.textContent = data.ok ? 'Unlocked — see the result panel.' : (data.error || 'Something went wrong.');
+      return Boolean(data.ok);
+    }
     let last = null;
+    const result = document.getElementById('result');
     document.getElementById('run').onclick = function () {
       last = BluePainterTools.gradeSimpleReceipts({
         padding: document.getElementById('padding').value,
@@ -55,39 +100,22 @@ const jsonLd = {
         borderRadius: document.getElementById('radius').value,
         featureCount: document.getElementById('features').value
       });
-      const summary = last.rules.map(function (r) {
-        return '<li class="' + (r.valid ? 'ok' : 'bad') + '">' + r.title + '</li>';
-      }).join('');
-      document.getElementById('result').innerHTML =
-        '<div class="score-big">' + last.score + '</div><p>Policy score</p><ul>' + summary + '</ul>';
+      const list = el('ul');
+      last.rules.forEach(function (r) {
+        list.appendChild(el('li', r.valid ? 'ok' : 'bad', (r.valid ? '✓ ' : '✕ ') + r.title));
+      });
+      result.replaceChildren(el('div', 'score-big', last.score), el('p', '', 'Policy score'), list);
       document.getElementById('gate').hidden = false;
     };
     document.getElementById('unlock').onclick = async function () {
-      const email = document.getElementById('email').value;
-      const status = document.querySelector('#gate .form-status');
-      let data;
-      try {
-        const res = await fetch(WAITLIST_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: email, source: 'receipt-grader' })
-        });
-        data = await res.json();
-      } catch {
-        status.hidden = false;
-        status.textContent = 'Network error — try again.';
-        return;
-      }
-      status.hidden = false;
-      status.textContent = data.ok ? 'Unlocked — see fixes below.' : (data.error || 'Failed');
-      if (data.ok && last) {
-        const fixes = last.rules.filter(function (r) { return r.fix; }).map(function (r) {
-          return '<li>' + r.id + ' → ' + r.fix + '</li>';
-        }).join('') || '<li>No fixes needed</li>';
-        document.getElementById('result').innerHTML +=
-          '<h3>Suggested fixes</h3><ul>' + fixes + '</ul>' +
-          '<p><a class="btn btn-primary" href="' + DEMO_APP + '">Open in BluePainter</a></p>';
-      }
+      if (!(await unlock('receipt-grader')) || !last || result.querySelector('[data-unlocked]')) return;
+      const heading = el('h3', '', 'Suggested fixes');
+      heading.setAttribute('data-unlocked', '');
+      const list = el('ul');
+      const fixes = last.rules.filter(function (r) { return r.fix !== null && r.fix !== undefined; });
+      if (!fixes.length) list.appendChild(el('li', '', 'No fixes needed'));
+      fixes.forEach(function (r) { list.appendChild(el('li', '', r.id + ' → ' + r.fix)); });
+      result.append(heading, list, demoButton('Open in BluePainter'));
     };
   </script>
 </BaseLayout>

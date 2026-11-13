@@ -1,36 +1,30 @@
 ---
 title: "Figma Dev Mode vs BluePainter"
-description: "Figma Dev Mode helps inspect designs. BluePainter keeps canvas and TSX in sync with Designer's Receipts inside your React repo."
+description: "Figma Dev Mode focuses on inspecting designs and copying specs and snippets out of Figma. BluePainter keeps canvas and TSX in sync inside your repo and checks design policy with Designer's Receipts."
 pattern: "vs"
+generated: true
 pubDate: 2026-07-21
 ---
 
 # Figma Dev Mode vs BluePainter
 
-Figma Dev Mode is built for inspecting designs and handing specs to engineers. BluePainter is built for **AST-preserving canvas ↔ TSX sync** plus team policy receipts inside an existing React repo.
+Figma Dev Mode focuses on inspecting designs and copying specs and snippets out of Figma. BluePainter keeps canvas and TSX in sync inside your repo and checks design policy with Designer's Receipts.
 
 ## Short answer
 
-Use **Figma Dev Mode** when the source of truth is the Figma file and engineers implement from specs. Use **BluePainter** when shippable TSX must stay editable visually *and* in code — with contrast, spacing, and CTA policy enforced before merge.
+**Figma Dev Mode** focuses on inspecting designs and copying specs and snippets out of Figma. **BluePainter** focuses on AST-preserving canvas ↔ TSX sync plus team policy checks, inside the repo you already have. Many teams will use both.
 
-## Comparison
+## Comparison lens
 
-| Lens | Figma Dev Mode | BluePainter |
-|------|----------------|-------------|
-| Primary job | Inspect / handoff | Bidirectional edit in-repo |
-| Code output | Specs / snippets | Format-preserving AST patches |
-| Design policy | Outside Figma | Designer's Receipts (live) |
-| Repo-native VS Code | No | Extension scaffold |
-| Pricing (validation) | Figma seats | Free demo + request pilot |
+| Lens | What to ask of Figma Dev Mode | BluePainter |
+|------|------------------------|-------------|
+| Starting point | Does it start from a design, a prompt, or your code? | Your existing TSX files |
+| Editing existing code | Does a visual edit keep your comments and formatting? | Core — one-line diffs |
+| Design policy | Can it enforce your contrast, spacing and copy rules? | Core — Designer's Receipts |
+| Where the result lives | Its platform, or your repo? | Your repo |
 
-## When BluePainter fits
+This page describes positioning, not a feature-by-feature benchmark — check Figma Dev Mode's own documentation for its current capabilities.
 
-- You already ship React/TSX components
-- Handoff loses spacing tokens, contrast, or CTA quality
-- A design–dev pair wants one surface for review
+## Try before you decide
 
-## Try it
-
-- [Free demo](https://bluepainter-studio.vercel.app/#/app)
-- [Pricing / pilot](https://bluepainter-launch.vercel.app/pricing)
-- [Free contrast checker](https://bluepainter-launch.vercel.app/tools/contrast-checker)
+Use the [free demo](https://bluepainter-studio.vercel.app/#/app), or request a [pilot](/pilot) if you want a facilitated session on your own components.
