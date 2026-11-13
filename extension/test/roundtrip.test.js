@@ -67,15 +67,10 @@ test('text edit only touches the button text and re-parses', () => {
   const out = generateTSX(edited, source);
   const changed = changedLines(source, out);
   const lines = out.split('\n');
-  // Known limitation (shared with src/utils/astSyncEngine.js): recast re-indents
-  // multi-line JSX text and its closing tag, so up to two lines change — but
-  // only whitespace differs on the closing tag, and nothing else moves.
-  assert.ok(changed.length >= 1 && changed.length <= 2, `expected 1–2 changed lines, got ${changed.length}`);
+  // Text is spliced into the source, so exactly the text line changes.
+  assert.strictEqual(changed.length, 1, `expected 1 changed line, got ${changed.length}`);
   assert.strictEqual(lines[changed[0]].trim(), 'Start free trial');
-  if (changed[1] !== undefined) {
-    assert.strictEqual(changed[1], changed[0] + 1);
-    assert.strictEqual(lines[changed[1]].trim(), '</button>');
-  }
+  assert.strictEqual(lines[changed[0]].match(/^\s*/)[0], source.split('\n')[changed[0]].match(/^\s*/)[0], 'indentation kept');
   assert.strictEqual(parseTSX(out, boot.nodesMap)['cta-button'].text, 'Start free trial');
 });
 

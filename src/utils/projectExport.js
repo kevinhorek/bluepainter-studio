@@ -142,7 +142,7 @@ The project is TypeScript (\`src/*.tsx\`, strict). \`npm run typecheck\` runs \`
 
 ## Notes
 
-- Element \`id\`s come from the canvas. A component placed more than once on a page renders the same ids for each instance (duplicate DOM ids) — rename them or switch to \`className\` if you target them from CSS or scripts.
+- Element \`id\`s come from the canvas. A component placed more than once on a page would repeat its ids, so such components carry \`data-bp-id\` instead of \`id\` (no duplicate DOM ids). BluePainter reads either attribute, so the files still open on the canvas; target them from CSS with \`[data-bp-id="…"]\` or add your own \`className\`.
 `;
 
 /**
@@ -186,10 +186,37 @@ function triggerDownload(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
+/** How many times each component file is placed across the exported files. */
+function countComponentInstances(fileIds, nodesByFile) {
+  const counts = {};
+  fileIds.forEach((fileId) => {
+    Object.values(nodesByFile[fileId] || {}).forEach((node) => {
+      if (node?.type === 'component-instance' && node.refFile) counts[node.refFile] = (counts[node.refFile] || 0) + 1;
+    });
+  });
+  return counts;
+}
+
+/**
+ * A component rendered more than once must not repeat DOM ids. Its elements keep
+ * their layer identity in `data-bp-id`, which the sync engine reads like `id`.
+ */
+export function toLayerIdAttribute(code) {
+  return code.replace(/(<[A-Za-z][\w.]*\s+)id="/g, '$1data-bp-id="');
+}
+
+function exportCodeFor(fileId, nodesByFile, instanceCounts) {
+  const file = WORKSPACE_FILES[fileId];
+  const code = fixImportPaths(generateTSX(file.rootId, exportNodesFor(fileId, nodesByFile)));
+  return !file.isPage && (instanceCounts[fileId] || 0) > 1 ? toLayerIdAttribute(code) : code;
+}
+
 export function getExportPreview(nodesByFile) {
-  return getExportFileIds(nodesByFile).map((fileId) => {
+  const fileIds = getExportFileIds(nodesByFile);
+  const instanceCounts = countComponentInstances(fileIds, nodesByFile);
+  return fileIds.map((fileId) => {
     const file = WORKSPACE_FILES[fileId];
-    const code = fixImportPaths(generateTSX(file.rootId, exportNodesFor(fileId, nodesByFile)));
+    const code = exportCodeFor(fileId, nodesByFile, instanceCounts);
     return { path: `src/${exportFilename(file.label)}`, lines: code.split('\n').length };
   });
 }
@@ -198,10 +225,11 @@ export function buildProjectFileMap(nodesByFile, projectName = 'my-bluepainter-a
   const safeName = projectName.trim().replace(/[^a-z0-9-]/gi, '-').toLowerCase() || 'my-bluepainter-app';
   const files = {};
 
-  getExportFileIds(nodesByFile).forEach((fileId) => {
+  const fileIds = getExportFileIds(nodesByFile);
+  const instanceCounts = countComponentInstances(fileIds, nodesByFile);
+  fileIds.forEach((fileId) => {
     const file = WORKSPACE_FILES[fileId];
-    const code = fixImportPaths(generateTSX(file.rootId, exportNodesFor(fileId, nodesByFile)));
-    files[`src/${exportFilename(file.label)}`] = code;
+    files[`src/${exportFilename(file.label)}`] = exportCodeFor(fileId, nodesByFile, instanceCounts);
   });
 
   const pageId = FILE_ORDER.find((id) => WORKSPACE_FILES[id].isPage && id !== 'marketing') || 'dashboard';

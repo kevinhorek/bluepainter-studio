@@ -20,16 +20,26 @@ const babelParser = {
   }
 };
 
+/** Attribute that identifies a layer when `id` can't be used (a component rendered more than once). */
+const LAYER_ID_ATTRIBUTE = 'data-bp-id';
+
 function getJsxId(openingElement) {
   if (!openingElement?.attributes) return null;
+  let fallback = null;
   for (const attr of openingElement.attributes) {
-    if (!t.isJSXAttribute(attr) || !t.isJSXIdentifier(attr.name, { name: 'id' })) continue;
-    if (t.isStringLiteral(attr.value)) return attr.value.value;
-    if (t.isJSXExpressionContainer(attr.value) && t.isStringLiteral(attr.value.expression)) {
-      return attr.value.expression.value;
+    if (!t.isJSXAttribute(attr)) continue;
+    const isId = t.isJSXIdentifier(attr.name, { name: 'id' });
+    if (!isId && !t.isJSXIdentifier(attr.name, { name: LAYER_ID_ATTRIBUTE })) continue;
+    let value = null;
+    if (t.isStringLiteral(attr.value)) value = attr.value.value;
+    else if (t.isJSXExpressionContainer(attr.value) && t.isStringLiteral(attr.value.expression)) {
+      value = attr.value.expression.value;
     }
+    if (value == null) continue;
+    if (isId) return value;
+    fallback = value;
   }
-  return null;
+  return fallback;
 }
 
 function literalForValue(val) {
@@ -632,6 +642,54 @@ function patchClassName(openingElement, node) {
 }
 
 /**
+ * Apply plain-text edits straight to the source, before any AST printing.
+ * Recast reprints a whole element when one of its children changes, which
+ * re-indented multi-line text and its tags; splicing the characters between the
+ * opening and closing tag leaves every other byte of the file alone.
+ */
+function spliceTextEdits(code, nodesMap) {
+  let ast;
+  try {
+    ast = babelParser.parse(code);
+  } catch {
+    return code;
+  }
+  const edits = [];
+  const seen = new Set();
+  traverse(ast, {
+    JSXElement(path) {
+      const element = path.node;
+      const id = getJsxId(element.openingElement);
+      const node = id ? nodesMap[id] : null;
+      if (!node || seen.has(id)) return;
+      seen.add(id);
+      if (!TEXT_NODE_TYPES.has(node.type) || node.text === undefined || node.text === null) return;
+      if (!element.closingElement) return; // self-closing: the AST pass opens it
+      const current = readJsxText(element);
+      if (current === null) return; // dynamic or nested content is the author's
+      const next = String(node.text);
+      if (current === normalizeJsxText(next)) return;
+      const start = element.openingElement.end;
+      const end = element.closingElement.start;
+      if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return;
+      const raw = code.slice(start, end);
+      const body = jsxTextNeedsExpression(next) ? `{${JSON.stringify(next)}}` : next;
+      // Keep the author's line breaks and indentation around multi-line text.
+      const lead = raw.trim() ? (/^\s*\n\s*/.exec(raw)?.[0] ?? '') : '';
+      const trail = raw.trim() ? (/\s*\n\s*$/.exec(raw)?.[0] ?? '') : '';
+      edits.push({ start, end, text: next ? `${lead}${body}${trail}` : '' });
+    }
+  });
+  if (!edits.length) return code;
+  edits.sort((x, y) => y.start - x.start);
+  let out = code;
+  edits.forEach((edit) => {
+    out = out.slice(0, edit.start) + edit.text + out.slice(edit.end);
+  });
+  return out;
+}
+
+/**
  * Patch existing TSX from nodes while preserving formatting/comments.
  *
  * `expectedIds` (optional) is the id order the node tree would render. When the
@@ -645,6 +703,8 @@ export function patchTSXWithAST(code, nodesMap, expectedIds = null, options = {}
   const { renderNode = null } = options;
 
   try {
+    // Text first, as source splices; the AST pass below then finds it unchanged.
+    code = spliceTextEdits(code, nodesMap);
     const ast = recast.parse(code, { parser: babelParser });
 
     if (expectedIds) {
@@ -726,7 +786,7 @@ export function prepareTSXForCanvas(code) {
         const opening = path.node;
         const tag = jsxTagName(opening);
         if (!tag || !/^[a-z]/.test(tag) || SKIP_ID_TAGS.has(tag)) return;
-        if (findAttribute(opening, 'id') >= 0) return;
+        if (findAttribute(opening, 'id') >= 0 || findAttribute(opening, LAYER_ID_ATTRIBUTE) >= 0) return;
         if (opening.attributes.some((a) => t.isJSXSpreadAttribute(a))) return;
         // (start above this element so the <svg> itself still gets an id)
         const inSvg = path.parentPath.findParent((p) => p.isJSXElement() && jsxTagName(p.node.openingElement) === 'svg');
@@ -813,6 +873,7 @@ export function getASTMeta(nodesMap) {
 // Building blocks for hosts that walk the AST themselves (the VS Code extension).
 export {
   getJsxId,
+  LAYER_ID_ATTRIBUTE,
   babelParser,
   TEXT_NODE_TYPES,
   findAttribute,

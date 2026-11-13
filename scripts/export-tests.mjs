@@ -17,6 +17,7 @@ import {
   getExportFileIds
 } from '../src/utils/projectExport.js';
 import { buildLandingSiteFileMap } from '../src/utils/marketingKit.js';
+import { importTSXFile, generateTSX } from '../src/utils/syncEngine.js';
 import { getFreshPricingNodes, getFreshHeroNodes, getFreshDashboardNodes } from '../src/utils/demoScenarios.js';
 import { getFreshMarketingNodes } from '../src/data/marketingPage.js';
 import { getEmptyFigmaImportNodes, figmaFileToNodes } from '../src/utils/figmaImport.js';
@@ -244,12 +245,29 @@ function run() {
     assert.ok(files['src/PricingCard.tsx'].includes(JSON.stringify("'Inter', \"Helvetica Neue\", sans-serif")), 'quoted fontFamily');
   });
 
-  test('app export: twice-instanced component renders twice and is documented', () => {
+  test('app export: twice-instanced component renders twice without duplicate DOM ids', () => {
     const { files } = byName['app-awkward'];
     const page = files['src/DashboardPage.tsx'];
     assert.strictEqual(page.match(/<PricingCard \/>/g)?.length, 2);
     assert.strictEqual(page.match(/import \{ PricingCard \}/g)?.length, 1, 'imported once');
-    assert.match(files['DEPLOY.md'], /duplicate DOM ids/i);
+    // The repeated component identifies its layers with data-bp-id instead of id.
+    const card = files['src/PricingCard.tsx'];
+    assert.ok(!/\sid="/.test(card), 'repeated component still has id attributes');
+    assert.ok(card.includes('data-bp-id="pricing-card-frame"') && card.includes('data-bp-id="cta-button"'));
+    // A component used once keeps plain ids, and so does the page.
+    assert.ok(byName['app-fresh'].files['src/PricingCard.tsx'].includes(' id="pricing-card-frame"'));
+    assert.ok(page.includes(' id="dashboard-page"'));
+    assert.match(files['DEPLOY.md'], /data-bp-id/);
+  });
+
+  test('app export: a data-bp-id component still opens and syncs on the canvas', () => {
+    const card = byName['app-awkward'].files['src/PricingCard.tsx'];
+    const opened = importTSXFile(card, 'PricingCard.tsx');
+    assert.strictEqual(opened.addedIds, 0, 'layers already identified');
+    assert.ok(opened.nodes['cta-button'] && opened.nodes['pricing-card-frame']);
+    const edited = { ...opened.nodes, 'cta-button': { ...opened.nodes['cta-button'], text: 'Buy now' } };
+    const out = generateTSX(opened.rootId, edited, opened.code);
+    assert.ok(out.includes('Buy now') && out.includes('data-bp-id="cta-button"') && !/\sid="/.test(out), 'patched in place, attribute kept');
   });
 
   test('app export: component roots are in flow', () => {

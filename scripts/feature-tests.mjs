@@ -332,9 +332,16 @@ test('text edit keeps multi-line formatting', () => {
   };
   const code = 'export function A() {\n  return (\n    <div id="root">\n      <button id="btn">\n        Submit\n      </button>\n    </div>\n  );\n}';
   const out = generateTSX('root', nodes, code);
-  // recast may re-indent the changed text, but it must stay on its own line
-  assert.ok(/<button id="btn">\n\s+Go now\n\s+<\/button>/.test(out), out);
-  assert.ok(out.includes('<div id="root">\n      <button id="btn">'), 'untouched lines reformatted');
+  // Only the words change: indentation, line breaks and every other byte stay put.
+  assert.strictEqual(out, code.replace('Submit', 'Go now'));
+  // Awkward formatting around the element survives too.
+  const messy = 'export function A() {\n  return (\n    <div id="root">\n        <button   id="btn"\n          onClick={() => 1}\n        >\n            Submit\n            now\n        </button>\n    </div>\n  );\n}';
+  assert.strictEqual(
+    generateTSX('root', nodes, messy),
+    messy.replace('Submit\n            now', 'Go now')
+  );
+  const special = generateTSX('root', { ...nodes, btn: { ...nodes.btn, text: 'A <b> & c' } }, code);
+  assert.strictEqual(special, code.replace('Submit', '{"A <b> & c"}'));
   assert.strictEqual(parseTSX(out, nodes).btn.text, 'Go now');
 });
 
