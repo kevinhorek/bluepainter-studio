@@ -5,8 +5,13 @@
       "name": "BluePainter Extension",
       "type": "extensionHost",
       "request": "launch",
-      "args": ["--extensionDevelopmentPath=${workspaceFolder}/extension"],
-      "outFiles": ["${workspaceFolder}/extension/**/*.js"]
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/extension"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/extension/dist/**/*.js"
+      ],
+      "preLaunchTask": "bundle extension"
     }
   ]
 }

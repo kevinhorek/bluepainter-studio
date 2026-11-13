@@ -6,7 +6,7 @@
   "publisher": "bluepainter",
   "private": false,
   "license": "MIT",
-  "icon": "media/icon.svg",
+  "icon": "media/icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/kevinhorek/bluepainter-studio.git"
@@ -59,7 +59,7 @@
     "onCommand:bluepainter.syncFromFile",
     "onCommand:bluepainter.writeToFile"
   ],
-  "main": "./extension.js",
+  "main": "./dist/extension.js",
   "dependencies": {
     "@babel/generator": "^7.29.7",
     "@babel/parser": "^7.28.0",
@@ -132,14 +132,6 @@
           "items": {
             "type": "string"
           },
-          "default": ["submit", "click here", "send", "button", "ok", "enter"],
-          "markdownDescription": "Weak CTA words that trigger conversion receipts. These generic terms are flagged for replacement with more specific, action-oriented copy. For team-wide settings, create a `.bluepainter.json` file in your repo root."
-        },
-        "bluepainter.weakCtaWords": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
           "default": [
             "submit",
             "click here",
@@ -187,12 +179,15 @@
     }
   },
   "scripts": {
-    "test": "node test/roundtrip.test.js",
-    "package": "vsce package --no-dependencies && echo '\n✅ Package created: bluepainter-0.3.0.vsix' && echo '\n📦 Next steps:' && echo '   1. Test locally: code --install-extension bluepainter-0.3.0.vsix' && echo '   2. See MARKETPLACE.md for publishing instructions' && echo '   3. Or run: npm run publish:marketplace (requires vsce login)\n'",
+    "bundle": "rolldown extension.js --platform node --format cjs --external vscode --file dist/extension.js",
+    "vscode:prepublish": "npm run bundle",
+    "test": "node test/roundtrip.test.js && npm run bundle && node test/bundle.test.js",
+    "package": "vsce package --no-dependencies",
     "publish:marketplace": "vsce publish --no-dependencies",
     "package:check": "vsce ls --no-dependencies"
   },
   "devDependencies": {
-    "@vscode/vsce": "^3.9.2"
+    "@vscode/vsce": "^3.9.2",
+    "rolldown": "^1.0.0-rc.1"
   }
 }
