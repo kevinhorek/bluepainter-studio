@@ -1,14 +1,12 @@
-export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+import { preflight, readJsonBody } from './_lib/http.js';
 
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+export default async function handler(req, res) {
+  if (preflight(req, res, { blockDisallowedOrigin: true })) return;
 
   try {
-    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    const { token, projectName, files, teamId, staticSite = false } = body || {};
+    const parsed = readJsonBody(req);
+    if (!parsed.ok) return res.status(400).json({ error: 'Invalid JSON body' });
+    const { token, projectName, files, teamId, staticSite = false } = parsed.body;
 
     if (typeof token !== 'string' || !token.trim()) return res.status(400).json({ error: 'Vercel token is required' });
     if (typeof projectName !== 'string' || !projectName.trim()) return res.status(400).json({ error: 'Project name is required' });

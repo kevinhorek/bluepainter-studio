@@ -1,26 +1,79 @@
 const GITHUB_TOKEN_KEY = 'bluepainter-github-token';
 const VERCEL_TOKEN_KEY = 'bluepainter-vercel-token';
+const FIGMA_TOKEN_KEY = 'bluepainter-figma-token';
+const OPENAI_KEY_KEY = 'bluepainter-openai-key';
 
-export function loadGithubToken() {
-  try { return localStorage.getItem(GITHUB_TOKEN_KEY) || ''; } catch { return ''; }
+const ALL_CREDENTIAL_KEYS = [GITHUB_TOKEN_KEY, VERCEL_TOKEN_KEY, FIGMA_TOKEN_KEY, OPENAI_KEY_KEY];
+
+function getStorage(kind) {
+  try {
+    return kind === 'session' ? globalThis.sessionStorage : globalThis.localStorage;
+  } catch {
+    return null; // access can throw when storage is blocked
+  }
 }
 
-export function saveGithubToken(token) {
+function readFrom(kind, key) {
+  try { return getStorage(kind)?.getItem(key) || ''; } catch { return ''; }
+}
+
+function writeTo(kind, key, value) {
   try {
-    if (token) localStorage.setItem(GITHUB_TOKEN_KEY, token);
-    else localStorage.removeItem(GITHUB_TOKEN_KEY);
+    const storage = getStorage(kind);
+    if (!storage) return;
+    if (value) storage.setItem(key, value);
+    else storage.removeItem(key);
   } catch { /* ignore */ }
+}
+
+/** Reads a credential: this tab's session copy first, then the remembered (localStorage) one. */
+export function loadCredential(key) {
+  return readFrom('session', key) || readFrom('local', key);
+}
+
+/**
+ * Stores a credential.
+ * - remember: true (default) → localStorage, persists on this device.
+ * - remember: false → sessionStorage only (gone when the tab closes); any remembered copy is cleared.
+ * An empty value removes it from both.
+ */
+export function saveCredential(key, value, { remember = true } = {}) {
+  writeTo('local', key, value && remember ? value : '');
+  writeTo('session', key, value && !remember ? value : '');
+}
+
+/** True when the credential is persisted on this device (useful to pre-check a "remember" box). */
+export function isCredentialRemembered(key) {
+  return Boolean(readFrom('local', key));
+}
+
+export function loadGithubToken() {
+  return loadCredential(GITHUB_TOKEN_KEY);
+}
+
+export function saveGithubToken(token, options) {
+  saveCredential(GITHUB_TOKEN_KEY, token, options);
+}
+
+export function isGithubTokenRemembered() {
+  return isCredentialRemembered(GITHUB_TOKEN_KEY);
 }
 
 export function loadVercelToken() {
-  try { return localStorage.getItem(VERCEL_TOKEN_KEY) || ''; } catch { return ''; }
+  return loadCredential(VERCEL_TOKEN_KEY);
 }
 
-export function saveVercelToken(token) {
-  try {
-    if (token) localStorage.setItem(VERCEL_TOKEN_KEY, token);
-    else localStorage.removeItem(VERCEL_TOKEN_KEY);
-  } catch { /* ignore */ }
+export function saveVercelToken(token, options) {
+  saveCredential(VERCEL_TOKEN_KEY, token, options);
+}
+
+export function isVercelTokenRemembered() {
+  return isCredentialRemembered(VERCEL_TOKEN_KEY);
+}
+
+/** Removes every stored token/key (GitHub, Vercel, Figma, OpenAI) from both storages. */
+export function clearAllCredentials() {
+  ALL_CREDENTIAL_KEYS.forEach((key) => saveCredential(key, ''));
 }
 
 export function maskToken(token) {

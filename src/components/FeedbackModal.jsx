@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { saveFeedback } from '../utils/feedbackStorage';
+import { submitFeedback } from '../utils/feedbackStorage';
 
 export default function FeedbackModal({ isOpen, onClose }) {
   const [interest, setInterest] = useState('');
@@ -22,7 +22,7 @@ export default function FeedbackModal({ isOpen, onClose }) {
       timestamp: new Date().toISOString()
     };
 
-    saveFeedback(entry);
+    submitFeedback(entry);
     setSubmitted(true);
   };
 

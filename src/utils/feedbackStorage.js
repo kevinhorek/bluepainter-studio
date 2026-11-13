@@ -21,6 +21,29 @@ export function saveFeedback(entry) {
   }
 }
 
+/**
+ * Saves feedback locally (as before) AND sends it to /api/feedback in the background.
+ * Returns the local-save result synchronously. Never throws and never waits on the network:
+ * a missing endpoint (404 under plain `npm run dev`), offline, or a 503 are all tolerated —
+ * the local copy remains and can still be exported from the facilitator tools.
+ */
+export function submitFeedback(entry) {
+  const savedLocally = saveFeedback(entry);
+  try {
+    if (typeof fetch === 'function') {
+      fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(entry),
+        keepalive: true // let it finish if the tab closes right after the thank-you
+      }).catch(() => {});
+    }
+  } catch {
+    // serialisation or fetch setup failed — local copy is still there
+  }
+  return savedLocally;
+}
+
 export function getFeedbackSummary() {
   const responses = getStoredFeedback();
   const summary = {

@@ -1,20 +1,18 @@
+import { loadCredential, saveCredential, isCredentialRemembered } from './deployCredentials.js';
+
 const STORAGE_KEY = 'bluepainter-openai-key';
 
 export function loadOpenAIKey() {
-  try {
-    return localStorage.getItem(STORAGE_KEY) || '';
-  } catch {
-    return '';
-  }
+  return loadCredential(STORAGE_KEY);
 }
 
-export function saveOpenAIKey(key) {
-  try {
-    if (key) localStorage.setItem(STORAGE_KEY, key);
-    else localStorage.removeItem(STORAGE_KEY);
-  } catch {
-    /* ignore */
-  }
+/** saveOpenAIKey(key, { remember }) — remember: false keeps it in sessionStorage only. */
+export function saveOpenAIKey(key, options) {
+  saveCredential(STORAGE_KEY, key, options);
+}
+
+export function isOpenAIKeyRemembered() {
+  return isCredentialRemembered(STORAGE_KEY);
 }
 
 export function maskKey(key) {

@@ -1,4 +1,5 @@
 import { GENERATION_SCHEMAS } from '../src/utils/aiPrompts.js';
+import { preflight, rateLimited, readJsonBody } from './_lib/http.js';
 
 const DEFAULT_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 
@@ -37,21 +38,12 @@ ${JSON.stringify(context, null, 2)}`;
 }
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-OpenAI-Key');
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  if (preflight(req, res, { allowHeaders: 'Content-Type, X-OpenAI-Key', blockDisallowedOrigin: true })) return;
 
   try {
-    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    const { type = 'custom', prompt = '', context = {} } = body || {};
+    const parsed = readJsonBody(req);
+    if (!parsed.ok) return res.status(400).json({ error: 'Invalid JSON body' });
+    const { type = 'custom', prompt = '', context = {} } = parsed.body;
 
     if (typeof prompt !== 'string' || !prompt.trim()) {
       return res.status(400).json({ error: 'Prompt is required' });
@@ -71,6 +63,9 @@ export default async function handler(req, res) {
     if (!apiKey) {
       return res.status(503).json({ error: 'AI not configured', code: 'NO_KEY' });
     }
+
+    // Only requests billed to the server key are throttled; bring-your-own-key callers are not.
+    if (!userKey && await rateLimited(req, res, { name: 'generate', limit: 20 })) return;
 
     const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
