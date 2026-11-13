@@ -15,19 +15,19 @@ MCP server so AI assistants (Claude, Cursor, ChatGPT tools) can discover BluePai
 
 ## Install / run
 
+Requires Node 18+.
+
 ```bash
 cd mcp
 npm install
-npm start
+npm start        # stdio server
+npm test         # offline smoke test: initialize, tools/list, every tool
+npm run inspect  # MCP Inspector
 ```
 
-Inspector:
+### Client config (Cursor / Claude Desktop / Claude Code)
 
-```bash
-npm run inspect
-```
-
-### Cursor / Claude config example
+From a checkout of this repo (works today):
 
 ```json
 {
@@ -36,7 +36,7 @@ npm run inspect
       "command": "node",
       "args": ["/absolute/path/to/bluepainter-studio/mcp/src/index.js"],
       "env": {
-        "BLUEPAINTER_SITE_URL": "https://bluepainter.dev",
+        "BLUEPAINTER_SITE_URL": "https://bluepainter-launch.vercel.app",
         "BLUEPAINTER_WAITLIST_URL": "https://bluepainter-studio.vercel.app/api/waitlist",
         "FIGMA_TOKEN": "figd_…"
       }
@@ -45,9 +45,50 @@ npm run inspect
 }
 ```
 
+With `npx` (once `bluepainter-mcp` is published to npm — it is not yet; see below):
+
+```json
+{
+  "mcpServers": {
+    "bluepainter": {
+      "command": "npx",
+      "args": ["-y", "bluepainter-mcp"],
+      "env": { "FIGMA_TOKEN": "figd_…" }
+    }
+  }
+}
+```
+
+Until then the same launcher works against a local tarball: run `npm pack` in `mcp/` and use
+`"args": ["-y", "--package=/absolute/path/to/bluepainter-mcp-<version>.tgz", "bluepainter-mcp"]`.
+
+### Environment
+
+All optional — the defaults point at the live demo and site.
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `BLUEPAINTER_SITE_URL` | `https://bluepainter-launch.vercel.app` | Marketing site links returned by `bluepainter_open_demo` |
+| `BLUEPAINTER_WAITLIST_URL` | `https://bluepainter-studio.vercel.app/api/waitlist` | Endpoint for `bluepainter_request_pilot` |
+| `BLUEPAINTER_API_BASE` | `https://bluepainter-studio.vercel.app` | Origin for `bluepainter_figma_import` |
+| `BLUEPAINTER_TIMEOUT_MS` | `15000` | Network tool timeout |
+| `FIGMA_TOKEN` | — | Figma personal access token for `bluepainter_figma_import` |
+
+## Publishing (maintainers)
+
+The package is publishable (`bin`, `files`, `engines`, MIT `LICENSE`) but has **not** been published.
+The server version reported to clients is read from `package.json`.
+
+```bash
+cd mcp
+npm test
+npm pack --dry-run   # check the tarball: src/, README.md, LICENSE, package.json
+npm publish          # needs an npm login that owns the name
+```
+
 ## Registry submission (Smithery / Open Tools)
 
-Config ready: [`smithery.yaml`](./smithery.yaml) · Cursor example: [`mcp.json`](./mcp.json)
+Config ready: [`smithery.yaml`](./smithery.yaml) · repo-local client example: [`mcp.json`](./mcp.json)
 
 1. https://smithery.ai → New Server → connect `kevinhorek/bluepainter-studio`
 2. Subdirectory: `mcp/`

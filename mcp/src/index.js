@@ -13,6 +13,16 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+/** Version reported to MCP clients — read from package.json so it can't drift. */
+function readPackageVersion() {
+  try {
+    return JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf8')).version || '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+}
+const VERSION = readPackageVersion();
 const DEMO_URL = 'https://bluepainter-studio.vercel.app';
 const SITE_URL = process.env.BLUEPAINTER_SITE_URL || 'https://bluepainter-launch.vercel.app';
 const WAITLIST_URL = process.env.BLUEPAINTER_WAITLIST_URL || `${DEMO_URL}/api/waitlist`;
@@ -175,7 +185,7 @@ function loadKnowledge() {
 }
 
 const server = new Server(
-  { name: 'bluepainter', version: '0.1.0' },
+  { name: 'bluepainter', version: VERSION },
   { capabilities: { tools: {} } }
 );
 

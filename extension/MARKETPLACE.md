@@ -5,7 +5,9 @@
 - [x] `private: false` in package.json
 - [x] Icon `media/icon.png`
 - [x] Repository / homepage / license fields
-- [x] VSIX built: `extension/bluepainter-0.2.0.vsix`
+- [x] `CHANGELOG.md` (shown on the Marketplace listing)
+- [x] `npm test` passes (round-trip on `test-fixtures/PricingCard.tsx`)
+- [x] VSIX builds with runtime dependencies bundled: `cd extension && npm install && npm run package` → `bluepainter-0.3.0.vsix` (git-ignored build artefact — rebuild, don't commit)
 
 ## Your account (required to publish)
 
@@ -15,15 +17,16 @@
 
 ```bash
 npx vsce login bluepainter
-npx vsce publish
+npm run publish:marketplace
 ```
 
-Or upload `bluepainter-0.2.0.vsix` in the publisher portal.
+Or upload `bluepainter-0.3.0.vsix` in the publisher portal.
 
 ## Sideload without Marketplace (works now)
 
 ```bash
-code --install-extension extension/bluepainter-0.2.0.vsix
+cd extension && npm install && npm run package
+code --install-extension bluepainter-0.3.0.vsix
 ```
 
 ## Listing copy

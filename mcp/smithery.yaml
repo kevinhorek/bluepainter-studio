@@ -12,13 +12,17 @@ startCommand:
       BLUEPAINTER_WAITLIST_URL:
         type: string
         default: https://bluepainter-studio.vercel.app/api/waitlist
+      FIGMA_TOKEN:
+        type: string
+        description: Optional Figma personal access token for bluepainter_figma_import
   commandFunction: |
     (config) => ({
       command: 'node',
       args: ['src/index.js'],
       env: {
         BLUEPAINTER_SITE_URL: config.BLUEPAINTER_SITE_URL,
-        BLUEPAINTER_WAITLIST_URL: config.BLUEPAINTER_WAITLIST_URL
+        BLUEPAINTER_WAITLIST_URL: config.BLUEPAINTER_WAITLIST_URL,
+        ...(config.FIGMA_TOKEN ? { FIGMA_TOKEN: config.FIGMA_TOKEN } : {})
       }
     })
 
